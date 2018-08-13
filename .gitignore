@@ -3,6 +3,10 @@
 .*.sw?
 *~
 
+# Eclipse
+.project
+.settings
+
 ## Java
 
 # Compiled class file
