@@ -21,21 +21,28 @@ public final class CommandInitDb {
   private String dbPath;
 
   @Parameter(
+      names = "--ref-path",
+      description = "Path to reference FASTA file, used for variant normalization",
+      required = true)
+  private String refPath;
+
+  @Parameter(
       names = "--exac-path",
       description =
-          "Path to ExAC TSV file to use for import, " + "see documentation for more information")
+          "Path to ExAC TSV file to use for import, see documentation for more information")
   private String exacPath;
 
   @Parameter(
       names = "--clinvar-path",
       description =
-          "Path to Clinvar TSV file(s) to use for "
-              + "import, see documentation for more information")
+          "Path to Clinvar TSV file(s) to use for import, see documentation for more information")
   private List<String> clinvarPaths;
 
   public boolean isHelp() {
     return help;
   }
+
+  public String getRefPath() { return refPath; }
 
   public String getDbPath() {
     return dbPath;
@@ -51,14 +58,20 @@ public final class CommandInitDb {
 
   @Override
   public String toString() {
-    return "CommandInitDb [help="
+    return "CommandInitDb{"
+        + "help="
         + help
-        + ", dbPath="
+        + ", dbPath='"
         + dbPath
-        + ", exacPath="
+        + '\''
+        + ", refPath='"
+        + refPath
+        + '\''
+        + ", exacPath='"
         + exacPath
+        + '\''
         + ", clinvarPaths="
         + clinvarPaths
-        + "]";
+        + '}';
   }
 }

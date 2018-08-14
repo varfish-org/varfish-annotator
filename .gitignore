@@ -3,6 +3,10 @@
 .*.sw?
 *~
 
+# Intellij
+.idea/
+*.iml
+
 # Eclipse
 .project
 .settings

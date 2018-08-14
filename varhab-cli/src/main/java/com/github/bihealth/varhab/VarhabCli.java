@@ -2,6 +2,7 @@ package com.github.bihealth.varhab;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
+import com.github.bihealth.varhab.init_db.InitDb;
 
 public class VarhabCli {
 
@@ -35,10 +36,10 @@ public class VarhabCli {
 
     switch (cmd) {
       case "init-db":
-        System.err.println("init-db: " + initDb);
         if (initDb.isHelp()) {
           jc.usage("init-db");
-          return;
+        } else {
+          new InitDb(initDb).run();
         }
         break;
       case "annotate":
