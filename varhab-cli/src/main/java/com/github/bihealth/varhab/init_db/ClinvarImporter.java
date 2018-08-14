@@ -118,8 +118,8 @@ public class ClinvarImporter {
             + "chrom VARCHAR(20) NOT NULL, "
             + "pos INTEGER NOT NULL, "
             + "pos_end INTEGER NOT NULL, "
-            + "ref VARCHAR(100) NOT NULL, "
-            + "alt VARCHAR(100) NOT NULL, "
+            + "ref VARCHAR(500) NOT NULL, "
+            + "alt VARCHAR(500) NOT NULL, "
             + ")";
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();

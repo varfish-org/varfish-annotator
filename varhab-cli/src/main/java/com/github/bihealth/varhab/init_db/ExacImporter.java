@@ -53,9 +53,14 @@ public final class ExacImporter {
 
     System.err.println("Importing ExAC...");
     final VariantNormalizer normalizer = new VariantNormalizer(refFastaPath);
+    String prevChr = null;
     try (VCFFileReader reader = new VCFFileReader(new File(exacVcfPath), true)) {
       for (VariantContext ctx : reader) {
+        if (!ctx.getChr().equals(prevChr)) {
+          System.err.println("Now on chrom " + ctx.getChr());
+        }
         importVariantContext(normalizer, ctx);
+        prevChr = ctx.getChr();
       }
     } catch (SQLException e) {
       throw new VarhabException("Problem with inserting into exac_vars table", e);
@@ -84,8 +89,8 @@ public final class ExacImporter {
             + "chrom VARCHAR(20) NOT NULL, "
             + "pos INTEGER NOT NULL, "
             + "pos_end INTEGER NOT NULL, "
-            + "ref VARCHAR(100) NOT NULL, "
-            + "alt VARCHAR(100) NOT NULL, "
+            + "ref VARCHAR(500) NOT NULL, "
+            + "alt VARCHAR(500) NOT NULL, "
             + "exac_hom INTEGER NOT NULL, "
             + "exac_af_popmax DOUBLE NOT NULL, "
             + ")";
