@@ -1,11 +1,11 @@
-package com.github.bihealth.varhab.init_db;
+package com.github.bihealth.varhab.utils;
 
 /**
  * Simple variant description, for use with variant normalization
  *
  * @author <a href="mailto:manuel.holtgrewe@bihealth.de">Manuel Holtgrewe</a>
  */
-final class VariantDescription {
+public final class VariantDescription {
 
   /** Name of the chromosome */
   private final String chrom;

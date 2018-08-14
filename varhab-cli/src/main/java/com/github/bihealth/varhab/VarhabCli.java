@@ -2,13 +2,16 @@ package com.github.bihealth.varhab;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
+import com.github.bihealth.varhab.annotate.AnnotateArgs;
+import com.github.bihealth.varhab.annotate.AnnotateVcf;
 import com.github.bihealth.varhab.init_db.InitDb;
+import com.github.bihealth.varhab.init_db.InitDbArgs;
 
 public class VarhabCli {
 
   public static void main(String[] args) {
-    final CommandInitDb initDb = new CommandInitDb();
-    final CommandInitDb annotate = new CommandInitDb();
+    final InitDbArgs initDb = new InitDbArgs();
+    final AnnotateArgs annotate = new AnnotateArgs();
 
     final JCommander jc =
         JCommander.newBuilder()
@@ -44,9 +47,10 @@ public class VarhabCli {
         break;
       case "annotate":
         System.err.println("annotate: " + annotate);
-        if (initDb.isHelp()) {
+        if (annotate.isHelp()) {
           jc.usage("annotate");
-          return;
+        } else {
+          new AnnotateVcf(annotate).run();
         }
         break;
       default:

@@ -1,4 +1,4 @@
-package com.github.bihealth.varhab;
+package com.github.bihealth.varhab.init_db;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
@@ -10,7 +10,7 @@ import java.util.List;
  * @author <a href="mailto:manuel.holtgrewe@bihealth.de">Manuel Holtgrewe</a>
  */
 @Parameters(commandDescription = "Initialize or update DB")
-public final class CommandInitDb {
+public final class InitDbArgs {
   @Parameter(names = "--help", help = true)
   private boolean help = false;
 
@@ -60,7 +60,7 @@ public final class CommandInitDb {
 
   @Override
   public String toString() {
-    return "CommandInitDb{"
+    return "InitDbArgs{"
         + "help="
         + help
         + ", dbPath='"

@@ -44,6 +44,18 @@
       <artifactId>htsjdk</artifactId>
       <version>${htsjdk.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>de.charite.compbio</groupId>
+      <artifactId>jannovar-core</artifactId>
+      <version>${jannovar.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>de.charite.compbio</groupId>
+      <artifactId>jannovar-htsjdk</artifactId>
+      <version>${jannovar.version}</version>
+    </dependency>
   </dependencies>
 
   <build>

@@ -1,6 +1,5 @@
 package com.github.bihealth.varhab.init_db;
 
-import com.github.bihealth.varhab.CommandInitDb;
 import com.github.bihealth.varhab.VarhabException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,10 +9,10 @@ import java.sql.SQLException;
 public final class InitDb {
 
   /** Configuration for the command. */
-  private final CommandInitDb args;
+  private final InitDbArgs args;
 
   /** Construct with the given configuration. */
-  public InitDb(CommandInitDb args) {
+  public InitDb(InitDbArgs args) {
     this.args = args;
   }
 

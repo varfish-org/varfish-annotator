@@ -1,6 +1,8 @@
 package com.github.bihealth.varhab.init_db;
 
 import com.github.bihealth.varhab.VarhabException;
+import com.github.bihealth.varhab.utils.VariantDescription;
+import com.github.bihealth.varhab.utils.VariantNormalizer;
 import com.google.common.collect.ImmutableList;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;

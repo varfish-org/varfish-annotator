@@ -1,4 +1,4 @@
-package com.github.bihealth.varhab.init_db;
+package com.github.bihealth.varhab.utils;
 
 import com.github.bihealth.varhab.VarhabException;
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
@@ -17,7 +17,7 @@ import java.io.FileNotFoundException;
  *
  * @author <a href="mailto:manuel.holtgrewe@bihealth.de">Manuel Holtgrewe</a>
  */
-final class VariantNormalizer {
+public final class VariantNormalizer {
 
   /** Path to indexed FASTA path to use */
   final String fastaPath;
