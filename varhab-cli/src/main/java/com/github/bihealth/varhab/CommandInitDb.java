@@ -42,7 +42,9 @@ public final class CommandInitDb {
     return help;
   }
 
-  public String getRefPath() { return refPath; }
+  public String getRefPath() {
+    return refPath;
+  }
 
   public String getDbPath() {
     return dbPath;

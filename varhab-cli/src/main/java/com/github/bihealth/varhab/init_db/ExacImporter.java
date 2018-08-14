@@ -11,7 +11,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Implementation of ExAC import. */
+/**
+ * Implementation of ExAC import.
+ *
+ * <p>The code will also normalize the ExAC data per-variant.
+ */
 public final class ExacImporter {
 
   /** The name of the table in the database. */
@@ -108,8 +112,6 @@ public final class ExacImporter {
   @SuppressWarnings("unchecked")
   private void importVariantContext(VariantNormalizer normalizer, VariantContext ctx)
       throws SQLException {
-    // TODO: normalize and left-shift variant
-
     final String insertQuery =
         "INSERT INTO "
             + TABLE_NAME
