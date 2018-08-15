@@ -115,6 +115,7 @@ public class ClinvarImporter {
         "CREATE TABLE "
             + TABLE_NAME
             + "("
+            + "release VARCHAR(10) NOT NULL, "
             + "chrom VARCHAR(20) NOT NULL, "
             + "pos INTEGER NOT NULL, "
             + "pos_end INTEGER NOT NULL, "
@@ -129,8 +130,8 @@ public class ClinvarImporter {
 
     final ImmutableList<String> indexQueries =
         ImmutableList.of(
-            "CREATE INDEX ON " + TABLE_NAME + "(chrom, pos, ref, alt)",
-            "CREATE INDEX ON " + TABLE_NAME + "(chrom, pos, pos_end)");
+            "CREATE PRIMARY KEY ON " + TABLE_NAME + " (release, chrom, pos, ref, alt)",
+            "CREATE INDEX ON " + TABLE_NAME + " (release, chrom, pos, pos_end)");
     for (String query : indexQueries) {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
@@ -145,10 +146,10 @@ public class ClinvarImporter {
     System.err.println("Importing TSV: " + pathTsvFile);
 
     final String insertQuery =
-        "INSERT INTO "
+        "MERGE INTO "
             + TABLE_NAME
-            + " (chrom, pos, pos_end, ref, alt)"
-            + " VALUES (?, ?, ?, ?, ?)";
+            + " (release, chrom, pos, pos_end, ref, alt)"
+            + " VALUES ('GRCh37', ?, ?, ?, ?, ?)";
 
     String line = null;
     String headerLine = null;

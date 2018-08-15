@@ -17,6 +17,12 @@ public final class AnnotateArgs {
   private String serPath;
 
   @Parameter(
+      names = "--ref-path",
+      description = "Path to reference FASTA file, used for variant normalization",
+      required = true)
+  private String refPath;
+
+  @Parameter(
       names = "--db-path",
       description = "Path to H2 file to initialize/update",
       required = true)
@@ -54,6 +60,10 @@ public final class AnnotateArgs {
     return serPath;
   }
 
+  public String getRefPath() {
+    return refPath;
+  }
+
   public String getDbPath() {
     return dbPath;
   }
@@ -83,6 +93,9 @@ public final class AnnotateArgs {
     return "AnnotateArgs{"
         + "help="
         + help
+        + ", refPath='"
+        + refPath
+        + '\''
         + ", serPath='"
         + serPath
         + '\''

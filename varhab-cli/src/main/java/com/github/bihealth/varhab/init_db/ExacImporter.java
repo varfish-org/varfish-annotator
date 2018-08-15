@@ -58,11 +58,11 @@ public final class ExacImporter {
     String prevChr = null;
     try (VCFFileReader reader = new VCFFileReader(new File(exacVcfPath), true)) {
       for (VariantContext ctx : reader) {
-        if (!ctx.getChr().equals(prevChr)) {
-          System.err.println("Now on chrom " + ctx.getChr());
+        if (!ctx.getContig().equals(prevChr)) {
+          System.err.println("Now on chrom " + ctx.getContig());
         }
         importVariantContext(normalizer, ctx);
-        prevChr = ctx.getChr();
+        prevChr = ctx.getContig();
       }
     } catch (SQLException e) {
       throw new VarhabException("Problem with inserting into exac_vars table", e);
@@ -88,6 +88,7 @@ public final class ExacImporter {
         "CREATE TABLE "
             + TABLE_NAME
             + "("
+            + "release VARCHAR(10) NOT NULL, "
             + "chrom VARCHAR(20) NOT NULL, "
             + "pos INTEGER NOT NULL, "
             + "pos_end INTEGER NOT NULL, "
@@ -104,8 +105,8 @@ public final class ExacImporter {
 
     final ImmutableList<String> indexQueries =
         ImmutableList.of(
-            "CREATE INDEX ON " + TABLE_NAME + "(chrom, pos, ref, alt)",
-            "CREATE INDEX ON " + TABLE_NAME + "(chrom, pos, pos_end)");
+            "CREATE PRIMARY KEY ON " + TABLE_NAME + " (release, chrom, pos, ref, alt)",
+            "CREATE INDEX ON " + TABLE_NAME + " (release, chrom, pos, pos_end)");
     for (String query : indexQueries) {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
@@ -120,31 +121,25 @@ public final class ExacImporter {
   private void importVariantContext(VariantNormalizer normalizer, VariantContext ctx)
       throws SQLException {
     final String insertQuery =
-        "INSERT INTO "
+        "MERGE INTO "
             + TABLE_NAME
-            + " (chrom, pos, pos_end, ref, alt, exac_hom, exac_af_popmax)"
-            + " VALUES (?, ?, ?, ?, ?, ?, ?)";
+            + " (release, chrom, pos, pos_end, ref, alt, exac_hom, exac_af_popmax)"
+            + " VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
       final VariantDescription rawVariant =
           new VariantDescription(
-              ctx.getChr(),
+              ctx.getContig(),
               ctx.getStart() - 1,
               ctx.getReference().getBaseString(),
               ctx.getAlleles().get(i).getBaseString());
-      final VariantDescription normVariant = normalizer.normalizeVariant(rawVariant);
-      final VariantDescription finalVariant;
-      if (normVariant.getRef().isEmpty()) {
-        finalVariant = normalizer.normalizeInsertion(rawVariant);
-      } else {
-        finalVariant = normVariant;
-      }
+      final VariantDescription finalVariant = normalizer.normalizeInsertion(rawVariant);
 
       final PreparedStatement stmt = conn.prepareStatement(insertQuery);
       stmt.setString(1, finalVariant.getChrom());
       stmt.setInt(2, finalVariant.getPos());
-      stmt.setInt(3, finalVariant.getEnd());
+      stmt.setInt(3, finalVariant.getPos() + finalVariant.getRef().length());
       stmt.setString(4, finalVariant.getRef());
       stmt.setString(5, finalVariant.getAlt());
 
