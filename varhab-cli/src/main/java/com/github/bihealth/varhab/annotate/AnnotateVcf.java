@@ -1,7 +1,6 @@
 package com.github.bihealth.varhab.annotate;
 
 import com.github.bihealth.varhab.VarhabException;
-import com.github.bihealth.varhab.utils.DnaUtils;
 import com.github.bihealth.varhab.utils.VariantDescription;
 import com.github.bihealth.varhab.utils.VariantNormalizer;
 import com.google.common.base.Joiner;
@@ -15,12 +14,6 @@ import de.charite.compbio.jannovar.data.JannovarData;
 import de.charite.compbio.jannovar.data.JannovarDataSerializer;
 import de.charite.compbio.jannovar.data.SerializationException;
 import de.charite.compbio.jannovar.hgvs.AminoAcidCode;
-import de.charite.compbio.jannovar.hgvs.nts.change.NucleotideChange;
-import de.charite.compbio.jannovar.hgvs.nts.change.NucleotideDeletion;
-import de.charite.compbio.jannovar.hgvs.nts.change.NucleotideDuplication;
-import de.charite.compbio.jannovar.hgvs.nts.change.NucleotideIndel;
-import de.charite.compbio.jannovar.hgvs.nts.change.NucleotideInsertion;
-import de.charite.compbio.jannovar.hgvs.nts.change.NucleotideInversion;
 import de.charite.compbio.jannovar.htsjdk.InvalidCoordinatesException;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator.Options;
@@ -39,16 +32,27 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /** Implementation of the <tt>annotate</tt> command. */
 public final class AnnotateVcf {
 
   /** Name of table with ExAC variants. */
-  public static final String EXAC_TABLE_NAME = "exac_var";
+  public static final String EXAC_PREFIX = "exac";
+
+  /** Name of table with gnomAD exomes variants. */
+  public static final String GNOMAD_EXOMES_PREFIX = "gnomad_exome";
+
+  /** Name of table with gnomAD genomes variants. */
+  public static final String GNOMAD_GENOMES_PREFIX = "gnomad_genome";
+
+  /** Name of table with Thousand Genomes variants. */
+  public static final String THOUSAND_GENOMES_PREFIX = "thousand_genomes";
 
   /** Header fields for the genotypes file. */
   public static final ImmutableList<String> HEADERS_GT =
@@ -59,19 +63,36 @@ public final class AnnotateVcf {
           "reference",
           "alternative",
           "case_id",
-          "frequency",
-          "homozygous",
-          "effect",
           "genotype",
           "in_clinvar",
-          "gene_id",
-          "transcript_id",
-          "transcript_coding",
-          "hgvs_c",
-          "hgvs_p",
-          "before_change",
-          "after_change",
-          "inserted_bases");
+          "exac_frequency",
+          "exac_homozygous",
+          "exac_heterozygous",
+          "exac_hemizygous",
+          "thousand_genomes_frequency",
+          "thousand_genomes_homozygous",
+          "thousand_genomes_heterozygous",
+          "thousand_genomes_hemizygous",
+          "gnomad_exomes_frequency",
+          "gnomad_exomes_homozygous",
+          "gnomad_exomes_heterozygous",
+          "gnomad_exomes_hemizygous",
+          "gnomad_genomes_frequency",
+          "gnomad_genomes_homozygous",
+          "gnomad_genomes_heterozygous",
+          "gnomad_genomes_hemizygous",
+          "refseq_gene_id",
+          "refseq_transcript_id",
+          "refseq_transcript_coding",
+          "refseq_hgvs_c",
+          "refseq_hgvs_p",
+          "refseq_effect",
+          "ensembl_gene_id",
+          "ensembl_transcript_id",
+          "ensembl_transcript_coding",
+          "ensembl_hgvs_c",
+          "ensembl_hgvs_p",
+          "ensembl_effect");
 
   /** Header fields for the variant file. */
   public static final ImmutableList<String> HEADERS_VAR =
@@ -81,6 +102,7 @@ public final class AnnotateVcf {
           "position",
           "reference",
           "alternative",
+          "database",
           "effect",
           "gene_id",
           "transcript_id",
@@ -109,9 +131,10 @@ public final class AnnotateVcf {
         FileWriter varWriter = new FileWriter(new File(args.getOutputVars()));
         BufferedWriter varBufWriter = new BufferedWriter(varWriter)) {
       System.err.println("Deserializing Jannovar file...");
-      JannovarData jannovarData = new JannovarDataSerializer(args.getSerPath()).load();
+      JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
+      JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
       final VariantNormalizer normalizer = new VariantNormalizer(args.getRefPath());
-      annotateVcf(conn, reader, jannovarData, normalizer, gtWriter, varWriter);
+      annotateVcf(conn, reader, refseqJvData, ensemblJvData, normalizer, gtWriter, varWriter);
     } catch (SQLException e) {
       System.err.println("Problem with database conection");
       e.printStackTrace();
@@ -136,7 +159,8 @@ public final class AnnotateVcf {
    *
    * @param conn Database connection for getting ExAC/ClinVar information from.
    * @param reader Reader for the input VCF file.
-   * @param jannovarData Deserialized transcript database for Jannovar.
+   * @param refseqJv Deserialized RefSeq transcript database for Jannovar.
+   * @param ensemblJv Deserialized ENSEMBL transcript database for Jannovar.
    * @param normalizer Helper for normalizing variants.
    * @param gtWriter Writer for variant call ("genotype") TSV file.
    * @param varWriter Writer for variant annotation ("annotation") TSV file.
@@ -145,7 +169,8 @@ public final class AnnotateVcf {
   private void annotateVcf(
       Connection conn,
       VCFFileReader reader,
-      JannovarData jannovarData,
+      JannovarData refseqJv,
+      JannovarData ensemblJv,
       VariantNormalizer normalizer,
       FileWriter gtWriter,
       FileWriter varWriter)
@@ -159,10 +184,15 @@ public final class AnnotateVcf {
       throw new VarhabException("Could not write out headers", e);
     }
 
-    final VariantContextAnnotator annotator =
+    final VariantContextAnnotator refseqAnnotator =
         new VariantContextAnnotator(
-            jannovarData.getRefDict(),
-            jannovarData.getChromosomes(),
+            refseqJv.getRefDict(),
+            refseqJv.getChromosomes(),
+            new Options(false, AminoAcidCode.ONE_LETTER, false, false, false, false, false));
+    final VariantContextAnnotator ensemblAnnotator =
+        new VariantContextAnnotator(
+            ensemblJv.getRefDict(),
+            ensemblJv.getChromosomes(),
             new Options(false, AminoAcidCode.ONE_LETTER, false, false, false, false, false));
 
     String prevChr = null;
@@ -170,7 +200,8 @@ public final class AnnotateVcf {
       if (!ctx.getContig().equals(prevChr)) {
         System.err.println("Now on chrom " + ctx.getContig());
       }
-      annotateVariantContext(conn, annotator, normalizer, ctx, gtWriter, varWriter);
+      annotateVariantContext(
+          conn, refseqAnnotator, ensemblAnnotator, normalizer, ctx, gtWriter, varWriter);
       prevChr = ctx.getContig();
     }
   }
@@ -180,7 +211,8 @@ public final class AnnotateVcf {
    * variant to <tt>varWriter</tt>.
    *
    * @param conn Database connection.
-   * @param annotator Helper class to use for annotation of variants.
+   * @param refseqAnnotator Helper class to use for annotation of variants with Refseq
+   * @param ensemblAnnotator Helper class to use for annotation of variants with ENSEMBL
    * @param normalizer Helper for normalizing variants.
    * @param ctx The variant to annotate.
    * @param gtWriter Writer for annotated genotypes.
@@ -189,173 +221,82 @@ public final class AnnotateVcf {
    */
   private void annotateVariantContext(
       Connection conn,
-      VariantContextAnnotator annotator,
+      VariantContextAnnotator refseqAnnotator,
+      VariantContextAnnotator ensemblAnnotator,
       VariantNormalizer normalizer,
       VariantContext ctx,
       FileWriter gtWriter,
       FileWriter varWriter)
       throws VarhabException {
-    ImmutableList<VariantAnnotations> annotationsList = null;
-    try {
-      annotationsList = annotator.buildAnnotations(ctx);
-    } catch (InvalidCoordinatesException e) {
-      // Swallow.
-    }
+    ImmutableList<VariantAnnotations> refseqAnnotationsList =
+        silentBuildAnnotations(ctx, refseqAnnotator);
+    ImmutableList<VariantAnnotations> ensemblAnnotationsList =
+        silentBuildAnnotations(ctx, ensemblAnnotator);
 
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
-      // Collect gene IDs for which we already wrote an effect.
-      final List<String> seenGeneIds = new ArrayList<>();
+      // Normalize the from the VCF (will probably pad variant to the left).
+      final VariantDescription normalizedVar =
+          normalizer.normalizeInsertion(
+              new VariantDescription(
+                  ctx.getContig(),
+                  ctx.getStart(),
+                  ctx.getReference().getBaseString(),
+                  ctx.getAlternateAllele(i - 1).getBaseString()));
+
       // Get annotations sorted descendingly by variant effect.
-      final List<Annotation> sortedAnnos;
-      if (annotationsList == null) {
-        sortedAnnos = new ArrayList<>();
-      } else {
-        sortedAnnos =
-            annotationsList
-                .get(i - 1)
-                .getAnnotations()
-                .stream()
-                .sorted(
-                    Comparator.<Annotation, VariantEffect>comparing(
-                            Annotation::getMostPathogenicVarType,
-                            (t1, t2) -> {
-                              if (t1 == null && t2 == null) {
-                                return 0;
-                              } else if (t2 == null) {
-                                return -1;
-                              } else if (t1 == null) {
-                                return 1;
-                              } else {
-                                return t1.compareTo(t2);
-                              }
-                            })
-                        .reversed())
-                .collect(Collectors.toList());
-      }
+      final List<Annotation> sortedRefseqAnnos = sortAnnos(refseqAnnotationsList, i);
+      final List<Annotation> sortedEnsemblAnnos = sortAnnos(ensemblAnnotationsList, i);
 
       // Write out unannotated record to output file in case of problems with annotation.
       //
       // TODO: report errors?
-      if (sortedAnnos.isEmpty()) {
-        try {
-          varWriter.append(
-              Joiner.on("\t")
-                      .join(
-                          args.getRelease(),
-                          ctx.getContig(),
-                          ctx.getStart(),
-                          ctx.getReference(),
-                          ctx.getAlternateAllele(i - 1).getBaseString(),
-                          ".",
-                          ".",
-                          ".",
-                          ".",
-                          ".",
-                          ".")
-                  + "\n");
-        } catch (IOException e) {
-          throw new VarhabException("Problem writing to variant annotation file.", e);
-        }
+      if (sortedRefseqAnnos.isEmpty() && sortedEnsemblAnnos.isEmpty()) {
+        writeEmptyAnnoLine(normalizedVar, varWriter, i);
         continue; // short-circuit
       }
 
-      for (Annotation annotation : sortedAnnos) {
+      // Write out variant annotation, collecting RefSeq and ENSEMBL annotations per gene.
+      final HashMap<String, Annotation> refseqAnnoByGene = new HashMap<>();
+      for (Annotation annotation : sortedRefseqAnnos) {
+        writeVariantAnnotation(varWriter, annotation, normalizedVar, "refseq");
+        String geneId = annotation.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID");
+        if (geneId == null) {
+          geneId = annotation.getTranscript().getGeneID();
+        }
+        System.err.println("refseq geneId = " + geneId);
+        if (!refseqAnnoByGene.containsKey(geneId)) {
+          refseqAnnoByGene.put(geneId, annotation);
+        }
+      }
+      final HashMap<String, Annotation> ensemblAnnoByGene = new HashMap<>();
+      for (Annotation annotation : sortedEnsemblAnnos) {
+        writeVariantAnnotation(varWriter, annotation, normalizedVar, "ensembl");
         final String geneId = annotation.getTranscript().getGeneID();
-
-        // Query information in ExAC.
-        final ExacInfo exacInfo =
-            getExacInfo(
-                conn,
-                args.getRelease(),
-                ctx.getContig(),
-                ctx.getStart(),
-                annotation.getRef(),
-                annotation.getAlt());
-
-        // Normalize the from the annotation (will probably pad variant to the left).
-        final VariantDescription normalizedVar =
-            normalizer.normalizeInsertion(
-                new VariantDescription(
-                    annotation.getChrName(),
-                    annotation.getPos(),
-                    annotation.getRef(),
-                    annotation.getAlt()));
-
-        // Write to variant annotation file.
-        //
-        // Construct output record.
-        final List<String> varOutRecord =
-            Lists.newArrayList(
-                args.getRelease(),
-                normalizedVar.getChrom(),
-                String.valueOf(normalizedVar.getPos() + 1),
-                normalizedVar.getRef(),
-                normalizedVar.getAlt(),
-                (annotation == null) ? "." : buildEffectsValue(annotation.getEffects()),
-                geneId,
-                annotation.getTranscript().getAccession(),
-                annotation.getTranscript().isCoding() ? "TRUE" : "FALSE",
-                annotation.getCDSNTChange() == null
-                    ? "."
-                    : (annotation.getTranscript().isCoding() ? "c." : "n.")
-                        + annotation.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
-                annotation.getProteinChange() == null
-                    ? "."
-                    : "p."
-                        + annotation
-                            .getProteinChange()
-                            .withOnlyPredicted(false)
-                            .toHGVSString(AminoAcidCode.ONE_LETTER));
-
-        // Write record to output stream.
-        try {
-          varWriter.append(Joiner.on("\t").join(varOutRecord) + "\n");
-        } catch (IOException e) {
-          throw new VarhabException("Problem writing to variant annotation file.", e);
+        System.err.println("ensembl geneId = " + geneId);
+        if (!ensemblAnnoByGene.containsKey(geneId)) {
+          ensemblAnnoByGene.put(geneId, annotation);
         }
+      }
+      final TreeSet<String> geneIds = new TreeSet<>();
+      geneIds.addAll(refseqAnnoByGene.keySet());
+      geneIds.addAll(ensemblAnnoByGene.keySet());
 
-        // Guard against writing out genotype call twice.
-        if (seenGeneIds.contains(geneId)) {
-          continue; // Already wrote out genotype annotation for gene.
-        } else {
-          seenGeneIds.add(geneId);
-        }
+      // Query information in databases.
+      final DbInfo exacInfo = getDbInfo(conn, args.getRelease(), normalizedVar, EXAC_PREFIX);
+      final DbInfo gnomadExomesInfo =
+          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_EXOMES_PREFIX);
+      final DbInfo gnomadGenomesInfo =
+          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_GENOMES_PREFIX);
+      final DbInfo thousandGenomesInfo =
+          getDbInfo(conn, args.getRelease(), normalizedVar, THOUSAND_GENOMES_PREFIX);
+      final boolean inClinvar = getClinVarInfo(conn, args.getRelease(), normalizedVar);
 
-        // Write to genotypes call file.
-        //
-        // Get detailed information about the location of possibly deleted bases.
-        Integer beforeChange = null;
-        Integer afterChange = null;
-        String insertedBases = null;
-        if (annotation.getCDSNTChange() != null) {
-          final NucleotideChange change = annotation.getCDSNTChange();
-          if (change instanceof NucleotideDeletion) {
-            final NucleotideDeletion castChange = (NucleotideDeletion) change;
-            beforeChange = castChange.getRange().getFirstPos().getBasePos();
-            afterChange = castChange.getRange().getLastPos().getBasePos() + 2;
-          } else if (change instanceof NucleotideInsertion) {
-            final NucleotideInsertion castChange = (NucleotideInsertion) change;
-            beforeChange = castChange.getRange().getFirstPos().getBasePos();
-            afterChange = castChange.getRange().getLastPos().getBasePos() + 2;
-            insertedBases = castChange.getSeq().getNucleotides();
-          } else if (change instanceof NucleotideDuplication) {
-            final NucleotideDuplication castChange = (NucleotideDuplication) change;
-            beforeChange = castChange.getRange().getFirstPos().getBasePos();
-            afterChange = castChange.getRange().getLastPos().getBasePos() + 2;
-            insertedBases = castChange.getSeq().getNucleotides();
-          } else if (change instanceof NucleotideIndel) {
-            final NucleotideIndel castChange = (NucleotideIndel) change;
-            beforeChange = castChange.getRange().getFirstPos().getBasePos();
-            afterChange = castChange.getRange().getLastPos().getBasePos() + 2;
-            insertedBases = castChange.getInsSeq().getNucleotides();
-          } else if (change instanceof NucleotideInversion) {
-            final NucleotideInversion castChange = (NucleotideInversion) change;
-            beforeChange = castChange.getRange().getFirstPos().getBasePos();
-            afterChange = castChange.getRange().getLastPos().getBasePos() + 2;
-            insertedBases = DnaUtils.reverseComplement(castChange.getSeq().getNucleotides());
-          }
-        }
+      // Write one entry for each gene into the annotated genotype call file.
+      for (String geneId : geneIds) {
+        Annotation refseqAnno = refseqAnnoByGene.get(geneId);
+        Annotation ensemblAnno = ensemblAnnoByGene.get(geneId);
+        Annotation annotation = refseqAnno != null ? refseqAnno : ensemblAnno;
 
         // Construct output record.
         final String gene_name = annotation.getTranscript().getAltGeneIDs().get("HGNC_SYMBOL");
@@ -367,39 +308,71 @@ public final class AnnotateVcf {
                 normalizedVar.getRef(),
                 normalizedVar.getAlt(),
                 args.getCaseId(),
+                buildGenotypeValue(ctx, i),
+                // ClinVar
+                inClinvar ? "TRUE" : "FALSE",
+                // EXAC
                 exacInfo.getAfPopmaxStr(),
                 exacInfo.getHomTotalStr(),
-                (annotation == null) ? "." : buildEffectsValue(annotation.getEffects()),
-                buildGenotypeValue(ctx, i),
-                getClinVarInfo(
-                        conn,
-                        args.getRelease(),
-                        ctx.getContig(),
-                        ctx.getStart(),
-                        annotation.getRef(),
-                        annotation.getAlt())
-                    ? "TRUE"
-                    : "FALSE",
-                geneId,
-                annotation.getTranscript().getAccession(),
-                annotation.getTranscript().isCoding() ? "TRUE" : "FALSE",
-                annotation.getCDSNTChange() == null
+                exacInfo.getHetTotalStr(),
+                exacInfo.getHemiTotalStr(),
+                // Thousand Genomes
+                thousandGenomesInfo.getAfPopmaxStr(),
+                thousandGenomesInfo.getHomTotalStr(),
+                thousandGenomesInfo.getHetTotalStr(),
+                thousandGenomesInfo.getHemiTotalStr(),
+                // gnomAD exomes
+                gnomadExomesInfo.getAfPopmaxStr(),
+                gnomadExomesInfo.getHomTotalStr(),
+                gnomadExomesInfo.getHetTotalStr(),
+                gnomadExomesInfo.getHemiTotalStr(),
+                // gnomAD genomes
+                gnomadGenomesInfo.getAfPopmaxStr(),
+                gnomadGenomesInfo.getHomTotalStr(),
+                gnomadGenomesInfo.getHetTotalStr(),
+                gnomadGenomesInfo.getHemiTotalStr(),
+                // RefSeq
+                refseqAnno == null ? "." : refseqAnno.getTranscript().getGeneID(),
+                refseqAnno == null ? "." : refseqAnno.getTranscript().getAccession(),
+                refseqAnno == null ? "." : refseqAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
+                refseqAnno == null
                     ? "."
-                    : (annotation.getTranscript().isCoding() ? "c." : "n.")
-                        + annotation.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
-                annotation.getProteinChange() == null
+                    : refseqAnno.getCDSNTChange() == null
+                        ? "."
+                        : (refseqAnno.getTranscript().isCoding() ? "c." : "n.")
+                            + refseqAnno.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
+                refseqAnno == null
                     ? "."
-                    : "p."
-                        + annotation
-                            .getProteinChange()
-                            .withOnlyPredicted(false)
-                            .toHGVSString(AminoAcidCode.ONE_LETTER),
-                beforeChange == null ? "." : beforeChange.toString(),
-                afterChange == null ? "." : afterChange.toString(),
-                (insertedBases == null || insertedBases.isEmpty())
+                    : refseqAnno.getProteinChange() == null
+                        ? "."
+                        : "p."
+                            + refseqAnno
+                                .getProteinChange()
+                                .withOnlyPredicted(false)
+                                .toHGVSString(AminoAcidCode.ONE_LETTER),
+                (refseqAnno == null) ? "." : buildEffectsValue(refseqAnno.getEffects()),
+                // ENSEMBL
+                ensemblAnno == null ? "." : ensemblAnno.getTranscript().getGeneID(),
+                ensemblAnno == null ? "." : ensemblAnno.getTranscript().getAccession(),
+                ensemblAnno == null
                     ? "."
-                    : insertedBases.toString());
-
+                    : ensemblAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
+                ensemblAnno == null
+                    ? "."
+                    : ensemblAnno.getCDSNTChange() == null
+                        ? "."
+                        : (ensemblAnno.getTranscript().isCoding() ? "c." : "n.")
+                            + ensemblAnno.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
+                ensemblAnno == null
+                    ? "."
+                    : ensemblAnno.getProteinChange() == null
+                        ? "."
+                        : "p."
+                            + ensemblAnno
+                                .getProteinChange()
+                                .withOnlyPredicted(false)
+                                .toHGVSString(AminoAcidCode.ONE_LETTER),
+                (ensemblAnno == null) ? "." : buildEffectsValue(ensemblAnno.getEffects()));
         // Write record to output stream.
         try {
           gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
@@ -407,6 +380,108 @@ public final class AnnotateVcf {
           throw new VarhabException("Problem writing to genotypes call file.", e);
         }
       }
+    }
+  }
+
+  private void writeVariantAnnotation(
+      FileWriter varWriter, Annotation annotation, VariantDescription normalizedVar, String dbName)
+      throws VarhabException {
+    final String geneId = annotation.getTranscript().getGeneID();
+
+    // Write to variant annotation file.
+    //
+    // Construct output record.
+    final List<String> varOutRecord =
+        Lists.newArrayList(
+            args.getRelease(),
+            normalizedVar.getChrom(),
+            String.valueOf(normalizedVar.getPos() + 1),
+            normalizedVar.getRef(),
+            normalizedVar.getAlt(),
+            dbName,
+            (annotation == null) ? "." : buildEffectsValue(annotation.getEffects()),
+            geneId,
+            annotation.getTranscript().getAccession(),
+            annotation.getTranscript().isCoding() ? "TRUE" : "FALSE",
+            annotation.getCDSNTChange() == null
+                ? "."
+                : (annotation.getTranscript().isCoding() ? "c." : "n.")
+                    + annotation.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
+            annotation.getProteinChange() == null
+                ? "."
+                : "p."
+                    + annotation
+                        .getProteinChange()
+                        .withOnlyPredicted(false)
+                        .toHGVSString(AminoAcidCode.ONE_LETTER));
+
+    // Write record to output stream.
+    try {
+      varWriter.append(Joiner.on("\t").join(varOutRecord) + "\n");
+    } catch (IOException e) {
+      throw new VarhabException("Problem writing to variant annotation file.", e);
+    }
+  }
+
+  private ImmutableList<VariantAnnotations> silentBuildAnnotations(
+      VariantContext ctx, VariantContextAnnotator annotator) {
+    try {
+      return annotator.buildAnnotations(ctx);
+    } catch (InvalidCoordinatesException e) {
+      return null;
+    }
+  }
+
+  private void writeEmptyAnnoLine(VariantDescription normalizedVar, FileWriter varWriter, int i)
+      throws VarhabException {
+    try {
+      // TODO: normalize variant
+      varWriter.append(
+          Joiner.on("\t")
+                  .join(
+                      args.getRelease(),
+                      normalizedVar.getChrom(),
+                      normalizedVar.getPos() + 1,
+                      normalizedVar.getRef(),
+                      normalizedVar.getAlt(),
+                      ".",
+                      ".",
+                      ".",
+                      ".",
+                      ".",
+                      ".",
+                      ".")
+              + "\n");
+    } catch (IOException e) {
+      throw new VarhabException("Problem writing to variant annotation file.", e);
+    }
+  }
+
+  private List<Annotation> sortAnnos(
+      ImmutableList<VariantAnnotations> refseqAnnotationsList, int i) {
+    if (refseqAnnotationsList == null) {
+      return new ArrayList<>();
+    } else {
+      return refseqAnnotationsList
+          .get(i - 1)
+          .getAnnotations()
+          .stream()
+          .sorted(
+              Comparator.<Annotation, VariantEffect>comparing(
+                      Annotation::getMostPathogenicVarType,
+                      (t1, t2) -> {
+                        if (t1 == null && t2 == null) {
+                          return 0;
+                        } else if (t2 == null) {
+                          return -1;
+                        } else if (t1 == null) {
+                          return 1;
+                        } else {
+                          return t1.compareTo(t2);
+                        }
+                      })
+                  .reversed())
+          .collect(Collectors.toList());
     }
   }
 
@@ -490,37 +565,43 @@ public final class AnnotateVcf {
   }
 
   /**
-   * Query ExAC for information about variant.
+   * Query DB for information about variant.
    *
    * @param conn Database connection to use for query.
    * @param release Genome release.
-   * @param contig Name of contig to query.
-   * @param start 1-based start position of variant.
-   * @param ref Reference bases.
-   * @param alt Alternative bases.
-   * @return {@link ExacInfo} with information from ExAC.
+   * @param normalizedVar Normalized variant.
+   * @param prefix Prefix for fields and table.
+   * @return {@link DbInfo} with information from ExAC.
    * @throw VarhabException in case of problems with obtaining information
    */
-  private ExacInfo getExacInfo(
-      Connection conn, String release, String contig, int start, String ref, String alt)
+  private DbInfo getDbInfo(
+      Connection conn, String release, VariantDescription normalizedVar, String prefix)
       throws VarhabException {
     final String query =
-        "SELECT exac_af_popmax, exac_hom FROM "
-            + EXAC_TABLE_NAME
-            + " WHERE (release = ?) AND (chrom = ?) AND (pos = ?) AND (ref = ?) AND (alt = ?)";
+        "SELECT "
+            + prefix
+            + "_af_popmax, "
+            + prefix
+            + "_het, "
+            + prefix
+            + "_hom, "
+            + prefix
+            + "_hemi FROM "
+            + prefix
+            + "_var WHERE (release = ?) AND (chrom = ?) AND (pos = ?) AND (ref = ?) AND (alt = ?)";
     try {
       final PreparedStatement stmt = conn.prepareStatement(query);
       stmt.setString(1, release);
-      stmt.setString(2, contig);
-      stmt.setInt(3, start);
-      stmt.setString(4, ref);
-      stmt.setString(5, alt);
+      stmt.setString(2, normalizedVar.getChrom());
+      stmt.setInt(3, normalizedVar.getPos() + 1);
+      stmt.setString(4, normalizedVar.getRef());
+      stmt.setString(5, normalizedVar.getAlt());
 
       try (ResultSet rs = stmt.executeQuery()) {
         if (!rs.next()) {
-          return ExacInfo.nullValue();
+          return DbInfo.nullValue();
         }
-        final ExacInfo result = new ExacInfo(rs.getDouble(1), rs.getInt(2));
+        final DbInfo result = new DbInfo(rs.getDouble(1), rs.getInt(2), rs.getInt(3), rs.getInt(4));
         if (rs.next()) {
           throw new VarhabException("ExAC returned more than one result");
         }
@@ -536,15 +617,11 @@ public final class AnnotateVcf {
    *
    * @param conn Database connection to use for query.
    * @param release Genome release.
-   * @param contig Name of contig to query.
-   * @param start 1-based start position of variant.
-   * @param ref Reference bases.
-   * @param alt Alternative bases.
+   * @param normalizedVar Normalized variant to query with.
    * @return {@code bool} specifying whether variant is in ClinVar.
    * @throw VarhabException in case of problems with obtaining information
    */
-  private boolean getClinVarInfo(
-      Connection conn, String release, String contig, int start, String ref, String alt)
+  private boolean getClinVarInfo(Connection conn, String release, VariantDescription normalizedVar)
       throws VarhabException {
     final String query =
         "SELECT COUNT(*) FROM clinvar_var "
@@ -552,10 +629,10 @@ public final class AnnotateVcf {
     try {
       final PreparedStatement stmt = conn.prepareStatement(query);
       stmt.setString(1, release);
-      stmt.setString(2, contig);
-      stmt.setInt(3, start);
-      stmt.setString(4, ref);
-      stmt.setString(5, alt);
+      stmt.setString(2, normalizedVar.getChrom());
+      stmt.setInt(3, normalizedVar.getPos() + 1);
+      stmt.setString(4, normalizedVar.getRef());
+      stmt.setString(5, normalizedVar.getAlt());
 
       try (ResultSet rs = stmt.executeQuery()) {
         if (!rs.next()) {
@@ -572,22 +649,32 @@ public final class AnnotateVcf {
     }
   }
 
-  /** ExAC information for variant. */
-  private static class ExacInfo {
+  /** Information from variant from DB. */
+  private static class DbInfo {
+
     /** Allele frequency in population with maximal frequency. */
     private final Double afPopmax;
+
+    /** Number of total heterozygous state observation. */
+    private final Integer hetTotal;
+
     /** Number of total homozygous state observation. */
     private final Integer homTotal;
 
+    /** Number of total hemizygous state observation. */
+    private final Integer hemiTotal;
+
     /** Construct with null values. */
-    public static ExacInfo nullValue() {
-      return new ExacInfo(null, null);
+    public static DbInfo nullValue() {
+      return new DbInfo(null, null, null, null);
     }
 
     /** Constructor. */
-    public ExacInfo(Double afPopmax, Integer homTotal) {
+    public DbInfo(Double afPopmax, Integer hetTotal, Integer homTotal, Integer hemiTotal) {
       this.afPopmax = afPopmax;
+      this.hetTotal = hetTotal;
       this.homTotal = homTotal;
+      this.hemiTotal = hemiTotal;
     }
 
     /**
@@ -598,9 +685,19 @@ public final class AnnotateVcf {
       return afPopmax == null ? "." : afPopmax.toString();
     }
 
+    /** @return String with total number of heterozygous or "." if null. */
+    public String getHetTotalStr() {
+      return hetTotal == null ? "." : hetTotal.toString();
+    }
+
     /** @return String with total number of homozygous or "." if null. */
     public String getHomTotalStr() {
       return homTotal == null ? "." : homTotal.toString();
+    }
+
+    /** @return String with total number of hemizygous or "." if null. */
+    public String getHemiTotalStr() {
+      return hemiTotal == null ? "." : hemiTotal.toString();
     }
   }
 }

@@ -8,6 +8,8 @@ import java.sql.SQLException;
 /** Implementation of the <tt>init-db</tt> command. */
 public final class InitDb {
 
+  public static final int VARCHAR_LEN = 1000;
+
   /** Configuration for the command. */
   private final InitDbArgs args;
 
@@ -23,6 +25,10 @@ public final class InitDb {
     try (Connection conn =
         DriverManager.getConnection(
             "jdbc:h2:" + args.getDbPath() + ";MV_STORE=FALSE;MVCC=FALSE", "sa", "")) {
+      if (args.getThousandGenomesPaths() != null && args.getThousandGenomesPaths().size() > 0) {
+        System.err.println("Importing 1000 Genomes VCF files...");
+        new ThousandGenomesImporter(conn, args.getThousandGenomesPaths(), args.getRefPath()).run();
+      }
       if (args.getExacPath() != null) {
         System.err.println("Importing ExAC VCF files...");
         new ExacImporter(conn, args.getExacPath(), args.getRefPath()).run();
@@ -38,10 +44,6 @@ public final class InitDb {
       if (args.getGnomadGenomesPath() != null) {
         System.err.println("Importing gnomAD VCF files...");
         new GnomadGenomesImporter(conn, args.getGnomadGenomesPath(), args.getRefPath()).run();
-      }
-      if (args.getThousandGenomesPaths() != null && args.getThousandGenomesPaths().size() > 0) {
-        System.err.println("Importing 1000 Genomes VCF files...");
-        new ThousandGenomesImporter(conn, args.getThousandGenomesPaths(), args.getRefPath()).run();
       }
     } catch (SQLException e) {
       System.err.println("Problem with database conection");

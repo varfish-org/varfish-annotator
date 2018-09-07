@@ -119,8 +119,12 @@ public class ClinvarImporter {
             + "chrom VARCHAR(20) NOT NULL, "
             + "pos INTEGER NOT NULL, "
             + "pos_end INTEGER NOT NULL, "
-            + "ref VARCHAR(500) NOT NULL, "
-            + "alt VARCHAR(500) NOT NULL, "
+            + "ref VARCHAR("
+            + InitDb.VARCHAR_LEN
+            + ") NOT NULL, "
+            + "alt VARCHAR("
+            + InitDb.VARCHAR_LEN
+            + ") NOT NULL, "
             + ")";
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();
@@ -169,7 +173,7 @@ public class ClinvarImporter {
         } else {
           final PreparedStatement stmt = conn.prepareStatement(insertQuery);
           stmt.setString(1, arr.get(0));
-          stmt.setInt(2, Integer.parseInt(arr.get(4)) - 1);
+          stmt.setInt(2, Integer.parseInt(arr.get(4)));
           stmt.setInt(3, Integer.parseInt(arr.get(5)));
           stmt.setString(4, arr.get(2));
           stmt.setString(5, arr.get(3));

@@ -49,7 +49,7 @@ abstract class GnomadImporter {
     System.err.println("Re-creating table in database...");
     recreateTable();
 
-    System.err.println("Importing ExAC...");
+    System.err.println("Importing gnomAD...");
     final VariantNormalizer normalizer = new VariantNormalizer(refFastaPath);
     String prevChr = null;
     try (VCFFileReader reader = new VCFFileReader(new File(gnomadVcfPath), true)) {
@@ -88,8 +88,12 @@ abstract class GnomadImporter {
             + "chrom VARCHAR(20) NOT NULL, "
             + "pos INTEGER NOT NULL, "
             + "pos_end INTEGER NOT NULL, "
-            + "ref VARCHAR(500) NOT NULL, "
-            + "alt VARCHAR(500) NOT NULL, "
+            + "ref VARCHAR("
+            + InitDb.VARCHAR_LEN
+            + ") NOT NULL, "
+            + "alt VARCHAR("
+            + InitDb.VARCHAR_LEN
+            + ") NOT NULL, "
             + getFieldPrefix()
             + "_het INTEGER NOT NULL, "
             + getFieldPrefix()
@@ -147,7 +151,7 @@ abstract class GnomadImporter {
 
       final PreparedStatement stmt = conn.prepareStatement(insertQuery);
       stmt.setString(1, finalVariant.getChrom());
-      stmt.setInt(2, finalVariant.getPos());
+      stmt.setInt(2, finalVariant.getPos() + 1);
       stmt.setInt(3, finalVariant.getPos() + finalVariant.getRef().length());
       stmt.setString(4, finalVariant.getRef());
       stmt.setString(5, finalVariant.getAlt());

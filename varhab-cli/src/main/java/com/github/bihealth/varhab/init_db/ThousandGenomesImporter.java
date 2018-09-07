@@ -93,8 +93,12 @@ public final class ThousandGenomesImporter {
             + "chrom VARCHAR(20) NOT NULL, "
             + "pos INTEGER NOT NULL, "
             + "pos_end INTEGER NOT NULL, "
-            + "ref VARCHAR(500) NOT NULL, "
-            + "alt VARCHAR(500) NOT NULL, "
+            + "ref VARCHAR("
+            + InitDb.VARCHAR_LEN
+            + ") NOT NULL, "
+            + "alt VARCHAR("
+            + InitDb.VARCHAR_LEN
+            + ") NOT NULL, "
             + "thousand_genomes_hom INTEGER NOT NULL, "
             + "thousand_genomes_het INTEGER NOT NULL, "
             + "thousand_genomes_hemi INTEGER NOT NULL, "
@@ -140,9 +144,20 @@ public final class ThousandGenomesImporter {
               ctx.getAlleles().get(i).getBaseString());
       final VariantDescription finalVariant = normalizer.normalizeInsertion(rawVariant);
 
+      if (finalVariant.getRef().length() > InitDb.VARCHAR_LEN) {
+        System.err.println(
+            "Skipping variant at "
+                + ctx.getContig()
+                + ":"
+                + ctx.getStart()
+                + " length = "
+                + finalVariant.getRef().length());
+        continue;
+      }
+
       final PreparedStatement stmt = conn.prepareStatement(insertQuery);
       stmt.setString(1, finalVariant.getChrom());
-      stmt.setInt(2, finalVariant.getPos());
+      stmt.setInt(2, finalVariant.getPos() + 1);
       stmt.setInt(3, finalVariant.getPos() + finalVariant.getRef().length());
       stmt.setString(4, finalVariant.getRef());
       stmt.setString(5, finalVariant.getAlt());

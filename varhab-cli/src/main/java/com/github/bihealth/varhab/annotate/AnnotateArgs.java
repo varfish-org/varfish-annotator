@@ -10,11 +10,21 @@ import com.beust.jcommander.Parameters;
  */
 @Parameters(commandDescription = "Annotate VCF to TSV files")
 public final class AnnotateArgs {
+
   @Parameter(names = "--help", help = true)
   private boolean help = false;
 
-  @Parameter(names = "--ser-path", description = "Path to Jannovar .ser file", required = true)
-  private String serPath;
+  @Parameter(
+      names = "--refseq-ser-path",
+      description = "Path to Jannovar .ser file for RefSeq",
+      required = true)
+  private String refseqSerPath;
+
+  @Parameter(
+      names = "--ensembl-ser-path",
+      description = "Path to Jannovar .ser file for ENSEMBL",
+      required = true)
+  private String ensemblSerPath;
 
   @Parameter(
       names = "--ref-path",
@@ -56,8 +66,12 @@ public final class AnnotateArgs {
     return help;
   }
 
-  public String getSerPath() {
-    return serPath;
+  public String getRefseqSerPath() {
+    return refseqSerPath;
+  }
+
+  public String getEnsemblSerPath() {
+    return ensemblSerPath;
   }
 
   public String getRefPath() {
@@ -93,11 +107,14 @@ public final class AnnotateArgs {
     return "AnnotateArgs{"
         + "help="
         + help
+        + ", refseqSerPath='"
+        + refseqSerPath
+        + '\''
+        + ", ensemblSerPath='"
+        + ensemblSerPath
+        + '\''
         + ", refPath='"
         + refPath
-        + '\''
-        + ", serPath='"
-        + serPath
         + '\''
         + ", dbPath='"
         + dbPath
