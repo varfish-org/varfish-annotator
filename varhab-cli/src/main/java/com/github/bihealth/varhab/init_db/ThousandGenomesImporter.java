@@ -14,65 +14,66 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Implementation of ExAC import.
+ * Implementation of Thousand Genomes import.
  *
- * <p>The code will also normalize the ExAC data per-variant.
+ * <p>The code will also normalize the thousand genomes data per-variant.
  */
-public final class ExacImporter {
+public final class ThousandGenomesImporter {
 
   /** The name of the table in the database. */
-  public static final String TABLE_NAME = "exac_var";
+  public static final String TABLE_NAME = "thousand_genomes_var";
 
   /** The population names. */
-  public static final ImmutableList<String> popNames =
-      ImmutableList.of("AFR", "AMR", "EAS", "FIN", "NFE", "OTH", "SAS");
+  public static final ImmutableList<String> popNames = ImmutableList.of("AFR", "AMR", "ASN", "EUR");
 
   /** The JDBC connection. */
   private final Connection conn;
 
-  /** Path to ExAC VCF path. */
-  private final String vcfPath;
+  /** Path to Thousand Genomes VCF path. */
+  private final List<String> vcfPaths;
 
   /** Helper to use for variant normalization. */
   private final String refFastaPath;
 
   /**
-   * Construct the <tt>ExacImporter</tt> object.
+   * Construct the <tt>ThousandGenomesImporter</tt> object.
    *
    * @param conn Connection to database
-   * @param vcfPath Path to ExAC VCF path.
+   * @param vcfPaths Path to Thousand Genomes VCF path.
    */
-  public ExacImporter(Connection conn, String vcfPath, String refFastaPath) {
+  public ThousandGenomesImporter(Connection conn, List<String> vcfPaths, String refFastaPath) {
     this.conn = conn;
-    this.vcfPath = vcfPath;
+    this.vcfPaths = ImmutableList.copyOf(vcfPaths);
     this.refFastaPath = refFastaPath;
   }
 
-  /** Execute ExAC import. */
+  /** Execute Thousand Genomes import. */
   public void run() throws VarhabException {
     System.err.println("Re-creating table in database...");
     recreateTable();
 
-    System.err.println("Importing ExAC...");
+    System.err.println("Importing Thousand Genomes...");
     final VariantNormalizer normalizer = new VariantNormalizer(refFastaPath);
     String prevChr = null;
-    try (VCFFileReader reader = new VCFFileReader(new File(vcfPath), true)) {
-      for (VariantContext ctx : reader) {
-        if (!ctx.getContig().equals(prevChr)) {
-          System.err.println("Now on chrom " + ctx.getContig());
+    for (String vcfPath : vcfPaths) {
+      try (VCFFileReader reader = new VCFFileReader(new File(vcfPath), true)) {
+        for (VariantContext ctx : reader) {
+          if (!ctx.getContig().equals(prevChr)) {
+            System.err.println("Now on chrom " + ctx.getContig());
+          }
+          importVariantContext(normalizer, ctx);
+          prevChr = ctx.getContig();
         }
-        importVariantContext(normalizer, ctx);
-        prevChr = ctx.getContig();
+      } catch (SQLException e) {
+        throw new VarhabException("Problem with inserting into " + TABLE_NAME + " table", e);
       }
-    } catch (SQLException e) {
-      throw new VarhabException("Problem with inserting into exac_vars table", e);
     }
 
-    System.err.println("Done with importing ExAC...");
+    System.err.println("Done with importing Thousand Genomes...");
   }
 
   /**
-   * Re-create the ExAC table in the database.
+   * Re-create the Thousand Genomes table in the database.
    *
    * <p>After calling this method, the table has been created and is empty.
    */
@@ -94,10 +95,10 @@ public final class ExacImporter {
             + "pos_end INTEGER NOT NULL, "
             + "ref VARCHAR(500) NOT NULL, "
             + "alt VARCHAR(500) NOT NULL, "
-            + "exac_het INTEGER NOT NULL, "
-            + "exac_hom INTEGER NOT NULL, "
-            + "exac_hemi INTEGER NOT NULL, "
-            + "exac_af_popmax DOUBLE NOT NULL, "
+            + "thousand_genomes_hom INTEGER NOT NULL, "
+            + "thousand_genomes_het INTEGER NOT NULL, "
+            + "thousand_genomes_hemi INTEGER NOT NULL, "
+            + "thousand_genomes_af_popmax DOUBLE NOT NULL, "
             + ")";
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();
@@ -125,7 +126,8 @@ public final class ExacImporter {
     final String insertQuery =
         "MERGE INTO "
             + TABLE_NAME
-            + " (release, chrom, pos, pos_end, ref, alt, exac_het, exac_hom, exac_hemi, exac_af_popmax)"
+            + " (release, chrom, pos, pos_end, ref, alt, thousand_genomes_het, "
+            + "thousand_genomes_hom, thousand_genomes_hemi, thousand_genomes_af_popmax)"
             + " VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
@@ -148,11 +150,11 @@ public final class ExacImporter {
       int het = 0;
       final List<Integer> hets;
       if (numAlleles == 2) {
-        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Het", 0));
+        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Het", 0));
       } else {
         hets = new ArrayList<>();
         for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("AC_Het", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("Het", ImmutableList.<String>of())) {
           hets.add(Integer.parseInt(s));
         }
       }
@@ -164,11 +166,11 @@ public final class ExacImporter {
       int hom = 0;
       final List<Integer> homs;
       if (numAlleles == 2) {
-        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hom", 0));
+        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hom", 0));
       } else {
         homs = new ArrayList<>();
         for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("AC_Hom", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("Hom", ImmutableList.<String>of())) {
           homs.add(Integer.parseInt(s));
         }
       }
@@ -180,12 +182,11 @@ public final class ExacImporter {
       int hemi = 0;
       final List<Integer> hemis;
       if (numAlleles == 2) {
-        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hemi", 0));
+        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hemi", 0));
       } else {
         hemis = new ArrayList<>();
         for (String s :
-            (List<String>)
-                ctx.getCommonInfo().getAttribute("AC_Hemi", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("Hemi", ImmutableList.<String>of())) {
           hemis.add(Integer.parseInt(s));
         }
       }
@@ -194,7 +195,7 @@ public final class ExacImporter {
       }
       stmt.setInt(8, hemi);
 
-      double alleleFreqPopMax = 0.0;
+      double a = 0.0;
       for (String pop : popNames) {
         final List<Integer> acs;
         if (numAlleles == 2) {
@@ -209,12 +210,12 @@ public final class ExacImporter {
         }
         final int an = ctx.getCommonInfo().getAttributeAsInt("AN_" + pop, 0);
         if (an > 0 && acs.size() >= i) {
-          alleleFreqPopMax = Math.max(alleleFreqPopMax, ((double) acs.get(i - 1)) / ((double) an));
+          a = Math.max(a, ((double) acs.get(i - 1)) / ((double) an));
         } else if (an > 0) {
           System.err.println("Warning, could not update AF_POPMAX (" + pop + ") for " + ctx);
         }
       }
-      stmt.setDouble(9, alleleFreqPopMax);
+      stmt.setDouble(9, a);
 
       stmt.executeUpdate();
       stmt.close();

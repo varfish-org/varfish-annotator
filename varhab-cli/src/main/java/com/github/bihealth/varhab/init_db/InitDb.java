@@ -31,6 +31,18 @@ public final class InitDb {
         System.err.println("Importing Clinvar TSV files...");
         new ClinvarImporter(conn, args.getClinvarPaths()).run();
       }
+      if (args.getGnomadExomesPath() != null) {
+        System.err.println("Importing gnomAD VCF files...");
+        new GnomadExomesImporter(conn, args.getGnomadExomesPath(), args.getRefPath()).run();
+      }
+      if (args.getGnomadGenomesPath() != null) {
+        System.err.println("Importing gnomAD VCF files...");
+        new GnomadGenomesImporter(conn, args.getGnomadGenomesPath(), args.getRefPath()).run();
+      }
+      if (args.getThousandGenomesPaths() != null && args.getThousandGenomesPaths().size() > 0) {
+        System.err.println("Importing 1000 Genomes VCF files...");
+        new ThousandGenomesImporter(conn, args.getThousandGenomesPaths(), args.getRefPath()).run();
+      }
     } catch (SQLException e) {
       System.err.println("Problem with database conection");
       e.printStackTrace();

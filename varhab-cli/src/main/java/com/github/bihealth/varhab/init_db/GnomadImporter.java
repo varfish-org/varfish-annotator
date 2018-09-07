@@ -13,42 +13,38 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Implementation of ExAC import.
- *
- * <p>The code will also normalize the ExAC data per-variant.
- */
-public final class ExacImporter {
+/** Base class for gnomAD import. */
+abstract class GnomadImporter {
 
-  /** The name of the table in the database. */
-  public static final String TABLE_NAME = "exac_var";
+  protected abstract String getTableName();
 
-  /** The population names. */
+  protected abstract String getFieldPrefix();
+
   public static final ImmutableList<String> popNames =
-      ImmutableList.of("AFR", "AMR", "EAS", "FIN", "NFE", "OTH", "SAS");
+      ImmutableList.of("AFR", "AMR", "ASJ", "EAS", "FIN", "NFE", "OTH", "SAS");
 
   /** The JDBC connection. */
-  private final Connection conn;
+  protected final Connection conn;
 
-  /** Path to ExAC VCF path. */
-  private final String vcfPath;
+  /** Path to gnomAD VCF path. */
+  protected final String gnomadVcfPath;
 
   /** Helper to use for variant normalization. */
-  private final String refFastaPath;
+  protected final String refFastaPath;
 
   /**
-   * Construct the <tt>ExacImporter</tt> object.
+   * Construct the <tt>GnomadImporter</tt> object.
    *
    * @param conn Connection to database
-   * @param vcfPath Path to ExAC VCF path.
+   * @param gnomadVcfPath Path to gnomAD VCF path.
    */
-  public ExacImporter(Connection conn, String vcfPath, String refFastaPath) {
+  GnomadImporter(Connection conn, String gnomadVcfPath, String refFastaPath) {
     this.conn = conn;
-    this.vcfPath = vcfPath;
+    this.gnomadVcfPath = gnomadVcfPath;
     this.refFastaPath = refFastaPath;
   }
 
-  /** Execute ExAC import. */
+  /** Execute gnomAD import. */
   public void run() throws VarhabException {
     System.err.println("Re-creating table in database...");
     recreateTable();
@@ -56,7 +52,7 @@ public final class ExacImporter {
     System.err.println("Importing ExAC...");
     final VariantNormalizer normalizer = new VariantNormalizer(refFastaPath);
     String prevChr = null;
-    try (VCFFileReader reader = new VCFFileReader(new File(vcfPath), true)) {
+    try (VCFFileReader reader = new VCFFileReader(new File(gnomadVcfPath), true)) {
       for (VariantContext ctx : reader) {
         if (!ctx.getContig().equals(prevChr)) {
           System.err.println("Now on chrom " + ctx.getContig());
@@ -65,19 +61,19 @@ public final class ExacImporter {
         prevChr = ctx.getContig();
       }
     } catch (SQLException e) {
-      throw new VarhabException("Problem with inserting into exac_vars table", e);
+      throw new VarhabException("Problem with inserting into " + getTableName() + " table", e);
     }
 
-    System.err.println("Done with importing ExAC...");
+    System.err.println("Done with importing gnomAD...");
   }
 
   /**
-   * Re-create the ExAC table in the database.
+   * Re-create the gnomAD table in the database.
    *
    * <p>After calling this method, the table has been created and is empty.
    */
   private void recreateTable() throws VarhabException {
-    final String dropQuery = "DROP TABLE IF EXISTS " + TABLE_NAME;
+    final String dropQuery = "DROP TABLE IF EXISTS " + getTableName();
     try (PreparedStatement stmt = conn.prepareStatement(dropQuery)) {
       stmt.executeUpdate();
     } catch (SQLException e) {
@@ -86,7 +82,7 @@ public final class ExacImporter {
 
     final String createQuery =
         "CREATE TABLE "
-            + TABLE_NAME
+            + getTableName()
             + "("
             + "release VARCHAR(10) NOT NULL, "
             + "chrom VARCHAR(20) NOT NULL, "
@@ -94,10 +90,14 @@ public final class ExacImporter {
             + "pos_end INTEGER NOT NULL, "
             + "ref VARCHAR(500) NOT NULL, "
             + "alt VARCHAR(500) NOT NULL, "
-            + "exac_het INTEGER NOT NULL, "
-            + "exac_hom INTEGER NOT NULL, "
-            + "exac_hemi INTEGER NOT NULL, "
-            + "exac_af_popmax DOUBLE NOT NULL, "
+            + getFieldPrefix()
+            + "_het INTEGER NOT NULL, "
+            + getFieldPrefix()
+            + "_hom INTEGER NOT NULL, "
+            + getFieldPrefix()
+            + "_hemi INTEGER NOT NULL, "
+            + getFieldPrefix()
+            + "_af_popmax DOUBLE NOT NULL, "
             + ")";
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();
@@ -107,8 +107,8 @@ public final class ExacImporter {
 
     final ImmutableList<String> indexQueries =
         ImmutableList.of(
-            "CREATE PRIMARY KEY ON " + TABLE_NAME + " (release, chrom, pos, ref, alt)",
-            "CREATE INDEX ON " + TABLE_NAME + " (release, chrom, pos, pos_end)");
+            "CREATE PRIMARY KEY ON " + getTableName() + " (release, chrom, pos, ref, alt)",
+            "CREATE INDEX ON " + getTableName() + " (release, chrom, pos, pos_end)");
     for (String query : indexQueries) {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
@@ -124,9 +124,16 @@ public final class ExacImporter {
       throws SQLException {
     final String insertQuery =
         "MERGE INTO "
-            + TABLE_NAME
-            + " (release, chrom, pos, pos_end, ref, alt, exac_het, exac_hom, exac_hemi, exac_af_popmax)"
-            + " VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + getTableName()
+            + " (release, chrom, pos, pos_end, ref, alt, "
+            + getFieldPrefix()
+            + "_het, "
+            + getFieldPrefix()
+            + "_hom, "
+            + getFieldPrefix()
+            + "_hemi, "
+            + getFieldPrefix()
+            + "_af_popmax) VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
@@ -145,54 +152,53 @@ public final class ExacImporter {
       stmt.setString(4, finalVariant.getRef());
       stmt.setString(5, finalVariant.getAlt());
 
-      int het = 0;
+      int countHet = 0;
       final List<Integer> hets;
       if (numAlleles == 2) {
-        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Het", 0));
+        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Het", 0));
       } else {
         hets = new ArrayList<>();
         for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("AC_Het", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("Het", ImmutableList.<String>of())) {
           hets.add(Integer.parseInt(s));
         }
       }
       if (hets.size() >= i) {
-        het = hets.get(i - 1);
+        countHet = hets.get(i - 1);
       }
-      stmt.setInt(6, het);
+      stmt.setInt(6, countHet);
 
-      int hom = 0;
+      int countHom = 0;
       final List<Integer> homs;
       if (numAlleles == 2) {
-        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hom", 0));
+        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hom", 0));
       } else {
         homs = new ArrayList<>();
         for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("AC_Hom", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("Hom", ImmutableList.<String>of())) {
           homs.add(Integer.parseInt(s));
         }
       }
       if (homs.size() >= i) {
-        hom = homs.get(i - 1);
+        countHom = homs.get(i - 1);
       }
-      stmt.setInt(7, hom);
+      stmt.setInt(7, countHom);
 
-      int hemi = 0;
+      int countHemi = 0;
       final List<Integer> hemis;
       if (numAlleles == 2) {
-        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hemi", 0));
+        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hemi", 0));
       } else {
         hemis = new ArrayList<>();
         for (String s :
-            (List<String>)
-                ctx.getCommonInfo().getAttribute("AC_Hemi", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("Hemi", ImmutableList.<String>of())) {
           hemis.add(Integer.parseInt(s));
         }
       }
       if (hemis.size() >= i) {
-        hemi = hemis.get(i - 1);
+        countHemi = homs.get(i - 1);
       }
-      stmt.setInt(8, hemi);
+      stmt.setInt(8, countHemi);
 
       double alleleFreqPopMax = 0.0;
       for (String pop : popNames) {
