@@ -5,6 +5,7 @@ import com.github.bihealth.varhab.utils.VariantDescription;
 import com.github.bihealth.varhab.utils.VariantNormalizer;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
 import de.charite.compbio.jannovar.annotation.Annotation;
@@ -256,7 +257,12 @@ public final class AnnotateVcf {
         continue; // short-circuit
       }
 
-      // Write out variant annotation, collecting RefSeq and ENSEMBL annotations per gene.
+      // Write out variant annotation, collecting RefSeq and ENSEMBL annotations per gene.  We
+      // collect the variants by gene for RefSeq in the simplest way possible (mapping to
+      // ENSEMBL gene by using HGNC annotation from Jannovar).  However, we ignore intergenic
+      // annotations here as these are mostly on different genes anyway (because ENSEMBL has
+      // so many more genes/transcripts).  Further, if either only yields one gene we force it
+      // to be the same as the (lexicographically first) gene of the other.
       final HashMap<String, Annotation> refseqAnnoByGene = new HashMap<>();
       for (Annotation annotation : sortedRefseqAnnos) {
         writeVariantAnnotation(varWriter, annotation, normalizedVar, "refseq");
@@ -264,8 +270,8 @@ public final class AnnotateVcf {
         if (geneId == null) {
           geneId = annotation.getTranscript().getGeneID();
         }
-        System.err.println("refseq geneId = " + geneId);
-        if (!refseqAnnoByGene.containsKey(geneId)) {
+        if (!annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))
+            && !refseqAnnoByGene.containsKey(geneId)) {
           refseqAnnoByGene.put(geneId, annotation);
         }
       }
@@ -273,14 +279,26 @@ public final class AnnotateVcf {
       for (Annotation annotation : sortedEnsemblAnnos) {
         writeVariantAnnotation(varWriter, annotation, normalizedVar, "ensembl");
         final String geneId = annotation.getTranscript().getGeneID();
-        System.err.println("ensembl geneId = " + geneId);
-        if (!ensemblAnnoByGene.containsKey(geneId)) {
+        if (!annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))
+            && !ensemblAnnoByGene.containsKey(geneId)) {
           ensemblAnnoByGene.put(geneId, annotation);
         }
       }
       final TreeSet<String> geneIds = new TreeSet<>();
-      geneIds.addAll(refseqAnnoByGene.keySet());
-      geneIds.addAll(ensemblAnnoByGene.keySet());
+      if (refseqAnnoByGene.size() == 1 && ensemblAnnoByGene.size() > 0) {
+        geneIds.addAll(ensemblAnnoByGene.keySet());
+        final String keyEnsembl = ensemblAnnoByGene.keySet().iterator().next();
+        final String keyRefseq = refseqAnnoByGene.keySet().iterator().next();
+        refseqAnnoByGene.put(keyEnsembl, refseqAnnoByGene.get(keyRefseq));
+      } else if (refseqAnnoByGene.size() > 0 && ensemblAnnoByGene.size() == 1) {
+        geneIds.addAll(refseqAnnoByGene.keySet());
+        final String keyEnsembl = ensemblAnnoByGene.keySet().iterator().next();
+        final String keyRefseq = refseqAnnoByGene.keySet().iterator().next();
+        ensemblAnnoByGene.put(keyRefseq, ensemblAnnoByGene.get(keyEnsembl));
+      } else {
+        geneIds.addAll(ensemblAnnoByGene.keySet());
+        geneIds.addAll(refseqAnnoByGene.keySet());
+      }
 
       // Query information in databases.
       final DbInfo exacInfo = getDbInfo(conn, args.getRelease(), normalizedVar, EXAC_PREFIX);

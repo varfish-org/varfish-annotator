@@ -157,14 +157,22 @@ abstract class GnomadImporter {
       stmt.setString(5, finalVariant.getAlt());
 
       int countHet = 0;
-      final List<Integer> hets;
+      List<Integer> hets;
       if (numAlleles == 2) {
-        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Het", 0));
+        try {
+          hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Het", 0));
+        } catch (NumberFormatException e) {
+          hets = ImmutableList.of(0);
+        }
       } else {
         hets = new ArrayList<>();
         for (String s :
             (List<String>) ctx.getCommonInfo().getAttribute("Het", ImmutableList.<String>of())) {
-          hets.add(Integer.parseInt(s));
+          try {
+            hets.add(Integer.parseInt(s));
+          } catch (NumberFormatException e) {
+            hets.add(0);
+          }
         }
       }
       if (hets.size() >= i) {
@@ -173,14 +181,22 @@ abstract class GnomadImporter {
       stmt.setInt(6, countHet);
 
       int countHom = 0;
-      final List<Integer> homs;
+      List<Integer> homs;
       if (numAlleles == 2) {
-        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hom", 0));
+        try {
+          homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hom", 0));
+        } catch (NumberFormatException e) {
+          homs = ImmutableList.of(0);
+        }
       } else {
         homs = new ArrayList<>();
         for (String s :
             (List<String>) ctx.getCommonInfo().getAttribute("Hom", ImmutableList.<String>of())) {
-          homs.add(Integer.parseInt(s));
+          try {
+            homs.add(Integer.parseInt(s));
+          } catch (NumberFormatException e) {
+            homs.add(0);
+          }
         }
       }
       if (homs.size() >= i) {
@@ -189,14 +205,22 @@ abstract class GnomadImporter {
       stmt.setInt(7, countHom);
 
       int countHemi = 0;
-      final List<Integer> hemis;
+      List<Integer> hemis;
       if (numAlleles == 2) {
-        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hemi", 0));
+        try {
+          hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hemi", 0));
+        } catch (NumberFormatException e) {
+          hemis = ImmutableList.of(0);
+        }
       } else {
         hemis = new ArrayList<>();
         for (String s :
             (List<String>) ctx.getCommonInfo().getAttribute("Hemi", ImmutableList.<String>of())) {
-          hemis.add(Integer.parseInt(s));
+          try {
+            hemis.add(Integer.parseInt(s));
+          } catch (NumberFormatException e) {
+            hemis.add(0);
+          }
         }
       }
       if (hemis.size() >= i) {
