@@ -62,6 +62,11 @@ public final class AnnotateArgs {
       required = true)
   private String outputVars;
 
+  @Parameter(
+      names = "--contig-regex",
+      description = "Regular expression to use for selection of contigs")
+  private String contigRegex = "^(chr)?(\\d+|X|Y|M|MT)$";
+
   public boolean isHelp() {
     return help;
   }
@@ -102,6 +107,10 @@ public final class AnnotateArgs {
     return outputVars;
   }
 
+  public String getContigRegex() {
+    return contigRegex;
+  }
+
   @Override
   public String toString() {
     return "AnnotateArgs{"
@@ -133,6 +142,9 @@ public final class AnnotateArgs {
         + '\''
         + ", outputVars='"
         + outputVars
+        + '\''
+        + ", contigRegex='"
+        + contigRegex
         + '\''
         + '}';
   }

@@ -34,8 +34,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -196,10 +198,22 @@ public final class AnnotateVcf {
             ensemblJv.getChromosomes(),
             new Options(false, AminoAcidCode.ONE_LETTER, false, false, false, false, false));
 
+    // Collect names of skipped contigs.
+    Set<String> skippedContigs = new HashSet<>();
+
     String prevChr = null;
     for (VariantContext ctx : reader) {
+      // Check whether contigs should be skipped.
+      if (skippedContigs.contains(ctx.getContig())) {
+        continue; // skip silently
+      } else if (!ctx.getContig().matches(args.getContigRegex())) {
+        System.err.println("Skipping contig " + ctx.getContig());
+        skippedContigs.add(ctx.getContig());
+        continue;
+      }
+
       if (!ctx.getContig().equals(prevChr)) {
-        System.err.println("Now on chrom " + ctx.getContig());
+        System.err.println("Now on contig " + ctx.getContig());
       }
       annotateVariantContext(
           conn, refseqAnnotator, ensemblAnnotator, normalizer, ctx, gtWriter, varWriter);
@@ -368,7 +382,7 @@ public final class AnnotateVcf {
                                 .getProteinChange()
                                 .withOnlyPredicted(false)
                                 .toHGVSString(AminoAcidCode.ONE_LETTER),
-                (refseqAnno == null) ? "." : buildEffectsValue(refseqAnno.getEffects()),
+                (refseqAnno == null) ? "{}" : buildEffectsValue(refseqAnno.getEffects()),
                 // ENSEMBL
                 ensemblAnno == null ? "." : ensemblAnno.getTranscript().getGeneID(),
                 ensemblAnno == null ? "." : ensemblAnno.getTranscript().getAccession(),
@@ -390,7 +404,7 @@ public final class AnnotateVcf {
                                 .getProteinChange()
                                 .withOnlyPredicted(false)
                                 .toHGVSString(AminoAcidCode.ONE_LETTER),
-                (ensemblAnno == null) ? "." : buildEffectsValue(ensemblAnno.getEffects()));
+                (ensemblAnno == null) ? "{}" : buildEffectsValue(ensemblAnno.getEffects()));
         // Write record to output stream.
         try {
           gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
@@ -700,22 +714,22 @@ public final class AnnotateVcf {
      *     null.
      */
     public String getAfPopmaxStr() {
-      return afPopmax == null ? "." : afPopmax.toString();
+      return afPopmax == null ? "0" : afPopmax.toString();
     }
 
     /** @return String with total number of heterozygous or "." if null. */
     public String getHetTotalStr() {
-      return hetTotal == null ? "." : hetTotal.toString();
+      return hetTotal == null ? "0" : hetTotal.toString();
     }
 
     /** @return String with total number of homozygous or "." if null. */
     public String getHomTotalStr() {
-      return homTotal == null ? "." : homTotal.toString();
+      return homTotal == null ? "0" : homTotal.toString();
     }
 
     /** @return String with total number of hemizygous or "." if null. */
     public String getHemiTotalStr() {
-      return hemiTotal == null ? "." : hemiTotal.toString();
+      return hemiTotal == null ? "0" : hemiTotal.toString();
     }
   }
 }
