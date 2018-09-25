@@ -65,6 +65,7 @@ public final class AnnotateVcf {
           "position",
           "reference",
           "alternative",
+          "var_type",
           "case_id",
           "genotype",
           "in_clinvar",
@@ -330,6 +331,15 @@ public final class AnnotateVcf {
         Annotation ensemblAnno = ensemblAnnoByGene.get(geneId);
         Annotation annotation = refseqAnno != null ? refseqAnno : ensemblAnno;
 
+        final String varType;
+        if ((normalizedVar.getRef().length() == 1) && (normalizedVar.getAlt().length() == 1)) {
+          varType = "snv";
+        } else if (normalizedVar.getRef().length() == normalizedVar.getAlt().length()) {
+          varType = "mnv";
+        } else {
+          varType = "indel";
+        }
+
         // Construct output record.
         final String gene_name = annotation.getTranscript().getAltGeneIDs().get("HGNC_SYMBOL");
         final List<String> gtOutRec =
@@ -340,6 +350,7 @@ public final class AnnotateVcf {
                 normalizedVar.getRef(),
                 normalizedVar.getAlt(),
                 args.getCaseId(),
+                varType,
                 buildGenotypeValue(ctx, i),
                 // ClinVar
                 inClinvar ? "TRUE" : "FALSE",
