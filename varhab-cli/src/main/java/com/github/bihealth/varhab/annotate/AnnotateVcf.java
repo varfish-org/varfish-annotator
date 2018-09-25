@@ -349,8 +349,8 @@ public final class AnnotateVcf {
                 String.valueOf(normalizedVar.getPos() + 1),
                 normalizedVar.getRef(),
                 normalizedVar.getAlt(),
-                args.getCaseId(),
                 varType,
+                args.getCaseId(),
                 buildGenotypeValue(ctx, i),
                 // ClinVar
                 inClinvar ? "TRUE" : "FALSE",
