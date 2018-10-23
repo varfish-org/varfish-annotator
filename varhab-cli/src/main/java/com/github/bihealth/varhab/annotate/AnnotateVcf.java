@@ -128,7 +128,9 @@ public final class AnnotateVcf {
 
     try (Connection conn =
             DriverManager.getConnection(
-                "jdbc:h2:" + args.getDbPath() + ";MV_STORE=FALSE;MVCC=FALSE", "sa", "");
+                "jdbc:h2:" + args.getDbPath() + ";MV_STORE=FALSE;MVCC=FALSE;ACCESS_MODE_DATA=r",
+                "sa",
+                "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
         FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
         BufferedWriter gtBufWriter = new BufferedWriter(gtWriter);
@@ -140,11 +142,11 @@ public final class AnnotateVcf {
       final VariantNormalizer normalizer = new VariantNormalizer(args.getRefPath());
       annotateVcf(conn, reader, refseqJvData, ensemblJvData, normalizer, gtWriter, varWriter);
     } catch (SQLException e) {
-      System.err.println("Problem with database conection");
+      System.err.println("Problem with database connection");
       e.printStackTrace();
       System.exit(1);
     } catch (VarhabException e) {
-      System.err.println("Problem executing init-db");
+      System.err.println("Problem executing annotate");
       e.printStackTrace();
       System.exit(1);
     } catch (SerializationException e) {
