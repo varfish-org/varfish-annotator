@@ -256,7 +256,7 @@ public final class AnnotateVcf {
           normalizer.normalizeInsertion(
               new VariantDescription(
                   ctx.getContig(),
-                  ctx.getStart(),
+                  ctx.getStart() - 1,
                   ctx.getReference().getBaseString(),
                   ctx.getAlternateAllele(i - 1).getBaseString()));
 
