@@ -1,8 +1,8 @@
-package com.github.bihealth.varhab.annotate;
+package com.github.bihealth.varfish_annotator.annotate;
 
-import com.github.bihealth.varhab.VarhabException;
-import com.github.bihealth.varhab.utils.VariantDescription;
-import com.github.bihealth.varhab.utils.VariantNormalizer;
+import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
+import com.github.bihealth.varfish_annotator.utils.VariantDescription;
+import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -145,7 +145,7 @@ public final class AnnotateVcf {
       System.err.println("Problem with database connection");
       e.printStackTrace();
       System.exit(1);
-    } catch (VarhabException e) {
+    } catch (VarfishAnnotatorException e) {
       System.err.println("Problem executing annotate");
       e.printStackTrace();
       System.exit(1);
@@ -170,7 +170,7 @@ public final class AnnotateVcf {
    * @param normalizer Helper for normalizing variants.
    * @param gtWriter Writer for variant call ("genotype") TSV file.
    * @param varWriter Writer for variant annotation ("annotation") TSV file.
-   * @throws VarhabException in case of problems
+   * @throws VarfishAnnotatorException in case of problems
    */
   private void annotateVcf(
       Connection conn,
@@ -180,14 +180,14 @@ public final class AnnotateVcf {
       VariantNormalizer normalizer,
       FileWriter gtWriter,
       FileWriter varWriter)
-      throws VarhabException {
+      throws VarfishAnnotatorException {
 
     // Write out header.
     try {
       gtWriter.append(Joiner.on("\t").join(HEADERS_GT) + "\n");
       varWriter.append(Joiner.on("\t").join(HEADERS_VAR) + "\n");
     } catch (IOException e) {
-      throw new VarhabException("Could not write out headers", e);
+      throw new VarfishAnnotatorException("Could not write out headers", e);
     }
 
     final VariantContextAnnotator refseqAnnotator =
@@ -235,7 +235,7 @@ public final class AnnotateVcf {
    * @param ctx The variant to annotate.
    * @param gtWriter Writer for annotated genotypes.
    * @param varWriter Writer for variants.
-   * @throws VarhabException in case of problems
+   * @throws VarfishAnnotatorException in case of problems
    */
   private void annotateVariantContext(
       Connection conn,
@@ -245,7 +245,7 @@ public final class AnnotateVcf {
       VariantContext ctx,
       FileWriter gtWriter,
       FileWriter varWriter)
-      throws VarhabException {
+      throws VarfishAnnotatorException {
     ImmutableList<VariantAnnotations> refseqAnnotationsList =
         silentBuildAnnotations(ctx, refseqAnnotator);
     ImmutableList<VariantAnnotations> ensemblAnnotationsList =
@@ -422,7 +422,7 @@ public final class AnnotateVcf {
         try {
           gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
         } catch (IOException e) {
-          throw new VarhabException("Problem writing to genotypes call file.", e);
+          throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
         }
       }
     }
@@ -430,7 +430,7 @@ public final class AnnotateVcf {
 
   private void writeVariantAnnotation(
       FileWriter varWriter, Annotation annotation, VariantDescription normalizedVar, String dbName)
-      throws VarhabException {
+      throws VarfishAnnotatorException {
     final String geneId = annotation.getTranscript().getGeneID();
 
     // Write to variant annotation file.
@@ -464,7 +464,7 @@ public final class AnnotateVcf {
     try {
       varWriter.append(Joiner.on("\t").join(varOutRecord) + "\n");
     } catch (IOException e) {
-      throw new VarhabException("Problem writing to variant annotation file.", e);
+      throw new VarfishAnnotatorException("Problem writing to variant annotation file.", e);
     }
   }
 
@@ -478,7 +478,7 @@ public final class AnnotateVcf {
   }
 
   private void writeEmptyAnnoLine(VariantDescription normalizedVar, FileWriter varWriter, int i)
-      throws VarhabException {
+      throws VarfishAnnotatorException {
     try {
       // TODO: normalize variant
       varWriter.append(
@@ -498,7 +498,7 @@ public final class AnnotateVcf {
                       ".")
               + "\n");
     } catch (IOException e) {
-      throw new VarhabException("Problem writing to variant annotation file.", e);
+      throw new VarfishAnnotatorException("Problem writing to variant annotation file.", e);
     }
   }
 
@@ -617,11 +617,11 @@ public final class AnnotateVcf {
    * @param normalizedVar Normalized variant.
    * @param prefix Prefix for fields and table.
    * @return {@link DbInfo} with information from ExAC.
-   * @throw VarhabException in case of problems with obtaining information
+   * @throw VarfishAnnotatorException in case of problems with obtaining information
    */
   private DbInfo getDbInfo(
       Connection conn, String release, VariantDescription normalizedVar, String prefix)
-      throws VarhabException {
+      throws VarfishAnnotatorException {
     final String query =
         "SELECT "
             + prefix
@@ -648,12 +648,12 @@ public final class AnnotateVcf {
         }
         final DbInfo result = new DbInfo(rs.getDouble(1), rs.getInt(2), rs.getInt(3), rs.getInt(4));
         if (rs.next()) {
-          throw new VarhabException("ExAC returned more than one result");
+          throw new VarfishAnnotatorException("ExAC returned more than one result");
         }
         return result;
       }
     } catch (SQLException e) {
-      throw new VarhabException("Problem with querying ExAC", e);
+      throw new VarfishAnnotatorException("Problem with querying ExAC", e);
     }
   }
 
@@ -664,10 +664,10 @@ public final class AnnotateVcf {
    * @param release Genome release.
    * @param normalizedVar Normalized variant to query with.
    * @return {@code bool} specifying whether variant is in ClinVar.
-   * @throw VarhabException in case of problems with obtaining information
+   * @throw VarfishAnnotatorException in case of problems with obtaining information
    */
   private boolean getClinVarInfo(Connection conn, String release, VariantDescription normalizedVar)
-      throws VarhabException {
+      throws VarfishAnnotatorException {
     final String query =
         "SELECT COUNT(*) FROM clinvar_var "
             + "WHERE (release = ?) AND (chrom = ?) AND (pos = ?) AND (ref = ?) AND (alt = ?)";
@@ -681,16 +681,18 @@ public final class AnnotateVcf {
 
       try (ResultSet rs = stmt.executeQuery()) {
         if (!rs.next()) {
-          throw new VarhabException("ClinVar counter query returned less than one result");
+          throw new VarfishAnnotatorException(
+              "ClinVar counter query returned less than one result");
         }
         final boolean result = (rs.getInt(1) > 0);
         if (rs.next()) {
-          throw new VarhabException("ClinVar counter query returned more than one result");
+          throw new VarfishAnnotatorException(
+              "ClinVar counter query returned more than one result");
         }
         return result;
       }
     } catch (SQLException e) {
-      throw new VarhabException("Problem with querying ClinVar", e);
+      throw new VarfishAnnotatorException("Problem with querying ClinVar", e);
     }
   }
 

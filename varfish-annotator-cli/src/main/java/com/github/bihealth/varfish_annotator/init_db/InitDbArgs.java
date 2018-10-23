@@ -1,11 +1,11 @@
-package com.github.bihealth.varhab.init_db;
+package com.github.bihealth.varfish_annotator.init_db;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import java.util.List;
 
 /**
- * JCommander command for <tt>varhab init-db</tt>.
+ * JCommander command for <tt>varfish_annotator init-db</tt>.
  *
  * @author <a href="mailto:manuel.holtgrewe@bihealth.de">Manuel Holtgrewe</a>
  */

@@ -1,6 +1,6 @@
-package com.github.bihealth.varhab.init_db;
+package com.github.bihealth.varfish_annotator.init_db;
 
-import com.github.bihealth.varhab.VarhabException;
+import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.google.common.collect.ImmutableList;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -85,7 +85,7 @@ public class ClinvarImporter {
   }
 
   /** Execute Clinvar import. */
-  public void run() throws VarhabException {
+  public void run() throws VarfishAnnotatorException {
     System.err.println("Re-creating table in database...");
     recreateTable();
 
@@ -103,12 +103,12 @@ public class ClinvarImporter {
    *
    * <p>After calling this method, the table has been created and is empty.
    */
-  private void recreateTable() throws VarhabException {
+  private void recreateTable() throws VarfishAnnotatorException {
     final String dropQuery = "DROP TABLE IF EXISTS " + TABLE_NAME;
     try (PreparedStatement stmt = conn.prepareStatement(dropQuery)) {
       stmt.executeUpdate();
     } catch (SQLException e) {
-      throw new VarhabException("Problem with DROP TABLE statement", e);
+      throw new VarfishAnnotatorException("Problem with DROP TABLE statement", e);
     }
 
     final String createQuery =
@@ -129,7 +129,7 @@ public class ClinvarImporter {
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();
     } catch (SQLException e) {
-      throw new VarhabException("Problem with CREATE TABLE statement", e);
+      throw new VarfishAnnotatorException("Problem with CREATE TABLE statement", e);
     }
 
     final ImmutableList<String> indexQueries =
@@ -140,13 +140,13 @@ public class ClinvarImporter {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
       } catch (SQLException e) {
-        throw new VarhabException("Problem with CREATE INDEX statement", e);
+        throw new VarfishAnnotatorException("Problem with CREATE INDEX statement", e);
       }
     }
   }
 
   /** Import a ClinVar TSV file from the MacArthur repository. */
-  private void importTsvFile(String pathTsvFile) throws VarhabException {
+  private void importTsvFile(String pathTsvFile) throws VarfishAnnotatorException {
     System.err.println("Importing TSV: " + pathTsvFile);
 
     final String insertQuery =
@@ -167,7 +167,7 @@ public class ClinvarImporter {
         if (headerLine == null) {
           headerLine = line;
           if (!arr.equals(EXPECTED_HEADER)) {
-            throw new VarhabException(
+            throw new VarfishAnnotatorException(
                 "Unexpected header records: " + arr + ", expected: " + EXPECTED_HEADER);
           }
         } else {
@@ -182,9 +182,9 @@ public class ClinvarImporter {
         }
       }
     } catch (IOException e) {
-      throw new VarhabException("Problem reading gziped TSV file", e);
+      throw new VarfishAnnotatorException("Problem reading gziped TSV file", e);
     } catch (SQLException e) {
-      throw new VarhabException("Problem updating database", e);
+      throw new VarfishAnnotatorException("Problem updating database", e);
     }
   }
 }

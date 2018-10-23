@@ -1,10 +1,10 @@
-package com.github.bihealth.varhab.annotate;
+package com.github.bihealth.varfish_annotator.annotate;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
 /**
- * JCommander command for <tt>varhab annotate</tt>.
+ * JCommander command for <tt>varfish_annotator annotate</tt>.
  *
  * @author <a href="mailto:manuel.holtgrewe@bihealth.de">Manuel Holtgrewe</a>
  */

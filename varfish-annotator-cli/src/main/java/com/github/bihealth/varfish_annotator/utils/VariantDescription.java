@@ -1,4 +1,4 @@
-package com.github.bihealth.varhab.utils;
+package com.github.bihealth.varfish_annotator.utils;
 
 /**
  * Simple variant description, for use with variant normalization

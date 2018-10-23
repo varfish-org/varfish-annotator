@@ -1,13 +1,13 @@
-package com.github.bihealth.varhab;
+package com.github.bihealth.varfish_annotator;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
-import com.github.bihealth.varhab.annotate.AnnotateArgs;
-import com.github.bihealth.varhab.annotate.AnnotateVcf;
-import com.github.bihealth.varhab.init_db.InitDb;
-import com.github.bihealth.varhab.init_db.InitDbArgs;
+import com.github.bihealth.varfish_annotator.annotate.AnnotateArgs;
+import com.github.bihealth.varfish_annotator.annotate.AnnotateVcf;
+import com.github.bihealth.varfish_annotator.init_db.InitDb;
+import com.github.bihealth.varfish_annotator.init_db.InitDbArgs;
 
-public class VarhabCli {
+public class VarfishAnnotatorCli {
 
   public static void main(String[] args) {
     final InitDbArgs initDb = new InitDbArgs();

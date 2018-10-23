@@ -3,16 +3,16 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>varhab-cli</artifactId>
+  <artifactId>varfish-annotator-cli</artifactId>
   <packaging>jar</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
-  <description>CLI driver for Varhab</description>
-  <url>https://github.com/bihealth/varhab</url>
+  <description>CLI driver for VarfishAnnotator</description>
+  <url>https://github.com/bihealth/varfish-annotator</url>
 
   <parent>
     <groupId>com.github.bihealth</groupId>
-    <artifactId>Varhab</artifactId>
+    <artifactId>VarfishAnnotator</artifactId>
     <version>0.1-SNAPSHOT</version>
   </parent>
 
@@ -23,7 +23,7 @@
   <dependencies>
     <dependency>
       <groupId>com.github.bihealth</groupId>
-      <artifactId>varhab-core</artifactId>
+      <artifactId>varfish-annotator-core</artifactId>
       <version>${project.version}</version>
     </dependency>
 
@@ -136,7 +136,7 @@
               <!-- set useUniqueVersions=false in order that the classpath has the
                 SNAPSHOT instead of the build number prefixed to the dependency -->
               <useUniqueVersions>false</useUniqueVersions>
-              <mainClass>com.github.bihealth.varhab.VarhabCli</mainClass>
+              <mainClass>com.github.bihealth.varfish_annotator.VarfishAnnotatorCli</mainClass>
             </manifest>
           </archive>
           <compilerArgument>-Xlint:all</compilerArgument>
@@ -159,7 +159,7 @@
               <transformers>
                 <transformer
                   implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.github.bihealth.varhab.VarhabCli</mainClass>
+                  <mainClass>com.github.bihealth.varfish_annotator.VarfishAnnotatorCli</mainClass>
                 </transformer>
               </transformers>
             </configuration>

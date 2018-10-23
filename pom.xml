@@ -3,13 +3,13 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.github.bihealth</groupId>
-	<artifactId>Varhab</artifactId>
+	<artifactId>VarfishAnnotator</artifactId>
 	<packaging>pom</packaging>
 	<version>0.1-SNAPSHOT</version>
 
 	<name>${project.groupId}:${project.artifactId}</name>
-	<description>Variant import step for VarFish</description>
-	<url>https://github.com/bihealth/varhab</url>
+	<description>Variant annotation for Varfish</description>
+    <url>https://cubi-gitlab.bihealth.org/CUBI_Engineering/VarFish/varfish-annotator</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -28,8 +28,8 @@
 	</properties>
 
 	<modules>
-		<module>varhab-core</module>
-		<module>varhab-cli</module>
+		<module>varfish-annotator-core</module>
+		<module>varfish-annotator-cli</module>
 	</modules>
 
 	<!-- Inherit artifact from SonaType OSS pom.xml Following this article: 
@@ -62,9 +62,9 @@
 
 	<!-- SCM Information for Maven Central -->
 	<scm>
-		<connection>scm:git:git@github.com:bihealth/varhab.git</connection>
-		<developerConnection>scm:git:git@github.com:bihealth/varhab.git</developerConnection>
-		<url>scm:git:git@github.com:bihealth/varhab.git</url>
+		<connection>scm:git:git@github.com:bihealth/varfish-annotator.git</connection>
+		<developerConnection>scm:git:git@github.com:bihealth/varfish-annotator.git</developerConnection>
+		<url>scm:git:git@github.com:bihealth/varfish-annotator.git</url>
 	</scm>
 
 	<dependencies>

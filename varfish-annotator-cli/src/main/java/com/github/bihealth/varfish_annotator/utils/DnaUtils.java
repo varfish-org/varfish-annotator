@@ -1,4 +1,4 @@
-package com.github.bihealth.varhab.utils;
+package com.github.bihealth.varfish_annotator.utils;
 
 /** Utility class for DNA string manipulation. */
 public final class DnaUtils {

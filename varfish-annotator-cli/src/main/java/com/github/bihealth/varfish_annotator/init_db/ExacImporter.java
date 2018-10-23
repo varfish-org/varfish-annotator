@@ -1,8 +1,8 @@
-package com.github.bihealth.varhab.init_db;
+package com.github.bihealth.varfish_annotator.init_db;
 
-import com.github.bihealth.varhab.VarhabException;
-import com.github.bihealth.varhab.utils.VariantDescription;
-import com.github.bihealth.varhab.utils.VariantNormalizer;
+import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
+import com.github.bihealth.varfish_annotator.utils.VariantDescription;
+import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.collect.ImmutableList;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
@@ -14,75 +14,74 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Implementation of Thousand Genomes import.
+ * Implementation of ExAC import.
  *
- * <p>The code will also normalize the thousand genomes data per-variant.
+ * <p>The code will also normalize the ExAC data per-variant.
  */
-public final class ThousandGenomesImporter {
+public final class ExacImporter {
 
   /** The name of the table in the database. */
-  public static final String TABLE_NAME = "thousand_genomes_var";
+  public static final String TABLE_NAME = "exac_var";
 
   /** The population names. */
-  public static final ImmutableList<String> popNames = ImmutableList.of("AFR", "AMR", "ASN", "EUR");
+  public static final ImmutableList<String> popNames =
+      ImmutableList.of("AFR", "AMR", "EAS", "FIN", "NFE", "OTH", "SAS");
 
   /** The JDBC connection. */
   private final Connection conn;
 
-  /** Path to Thousand Genomes VCF path. */
-  private final List<String> vcfPaths;
+  /** Path to ExAC VCF path. */
+  private final String vcfPath;
 
   /** Helper to use for variant normalization. */
   private final String refFastaPath;
 
   /**
-   * Construct the <tt>ThousandGenomesImporter</tt> object.
+   * Construct the <tt>ExacImporter</tt> object.
    *
    * @param conn Connection to database
-   * @param vcfPaths Path to Thousand Genomes VCF path.
+   * @param vcfPath Path to ExAC VCF path.
    */
-  public ThousandGenomesImporter(Connection conn, List<String> vcfPaths, String refFastaPath) {
+  public ExacImporter(Connection conn, String vcfPath, String refFastaPath) {
     this.conn = conn;
-    this.vcfPaths = ImmutableList.copyOf(vcfPaths);
+    this.vcfPath = vcfPath;
     this.refFastaPath = refFastaPath;
   }
 
-  /** Execute Thousand Genomes import. */
-  public void run() throws VarhabException {
+  /** Execute ExAC import. */
+  public void run() throws VarfishAnnotatorException {
     System.err.println("Re-creating table in database...");
     recreateTable();
 
-    System.err.println("Importing Thousand Genomes...");
+    System.err.println("Importing ExAC...");
     final VariantNormalizer normalizer = new VariantNormalizer(refFastaPath);
     String prevChr = null;
-    for (String vcfPath : vcfPaths) {
-      try (VCFFileReader reader = new VCFFileReader(new File(vcfPath), true)) {
-        for (VariantContext ctx : reader) {
-          if (!ctx.getContig().equals(prevChr)) {
-            System.err.println("Now on chrom " + ctx.getContig());
-          }
-          importVariantContext(normalizer, ctx);
-          prevChr = ctx.getContig();
+    try (VCFFileReader reader = new VCFFileReader(new File(vcfPath), true)) {
+      for (VariantContext ctx : reader) {
+        if (!ctx.getContig().equals(prevChr)) {
+          System.err.println("Now on chrom " + ctx.getContig());
         }
-      } catch (SQLException e) {
-        throw new VarhabException("Problem with inserting into " + TABLE_NAME + " table", e);
+        importVariantContext(normalizer, ctx);
+        prevChr = ctx.getContig();
       }
+    } catch (SQLException e) {
+      throw new VarfishAnnotatorException("Problem with inserting into exac_vars table", e);
     }
 
-    System.err.println("Done with importing Thousand Genomes...");
+    System.err.println("Done with importing ExAC...");
   }
 
   /**
-   * Re-create the Thousand Genomes table in the database.
+   * Re-create the ExAC table in the database.
    *
    * <p>After calling this method, the table has been created and is empty.
    */
-  private void recreateTable() throws VarhabException {
+  private void recreateTable() throws VarfishAnnotatorException {
     final String dropQuery = "DROP TABLE IF EXISTS " + TABLE_NAME;
     try (PreparedStatement stmt = conn.prepareStatement(dropQuery)) {
       stmt.executeUpdate();
     } catch (SQLException e) {
-      throw new VarhabException("Problem with DROP TABLE statement", e);
+      throw new VarfishAnnotatorException("Problem with DROP TABLE statement", e);
     }
 
     final String createQuery =
@@ -99,15 +98,15 @@ public final class ThousandGenomesImporter {
             + "alt VARCHAR("
             + InitDb.VARCHAR_LEN
             + ") NOT NULL, "
-            + "thousand_genomes_hom INTEGER NOT NULL, "
-            + "thousand_genomes_het INTEGER NOT NULL, "
-            + "thousand_genomes_hemi INTEGER NOT NULL, "
-            + "thousand_genomes_af_popmax DOUBLE NOT NULL, "
+            + "exac_het INTEGER NOT NULL, "
+            + "exac_hom INTEGER NOT NULL, "
+            + "exac_hemi INTEGER NOT NULL, "
+            + "exac_af_popmax DOUBLE NOT NULL, "
             + ")";
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();
     } catch (SQLException e) {
-      throw new VarhabException("Problem with CREATE TABLE statement", e);
+      throw new VarfishAnnotatorException("Problem with CREATE TABLE statement", e);
     }
 
     final ImmutableList<String> indexQueries =
@@ -118,7 +117,7 @@ public final class ThousandGenomesImporter {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
       } catch (SQLException e) {
-        throw new VarhabException("Problem with CREATE INDEX statement", e);
+        throw new VarfishAnnotatorException("Problem with CREATE INDEX statement", e);
       }
     }
   }
@@ -130,8 +129,7 @@ public final class ThousandGenomesImporter {
     final String insertQuery =
         "MERGE INTO "
             + TABLE_NAME
-            + " (release, chrom, pos, pos_end, ref, alt, thousand_genomes_het, "
-            + "thousand_genomes_hom, thousand_genomes_hemi, thousand_genomes_af_popmax)"
+            + " (release, chrom, pos, pos_end, ref, alt, exac_het, exac_hom, exac_hemi, exac_af_popmax)"
             + " VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
@@ -144,17 +142,6 @@ public final class ThousandGenomesImporter {
               ctx.getAlleles().get(i).getBaseString());
       final VariantDescription finalVariant = normalizer.normalizeInsertion(rawVariant);
 
-      if (finalVariant.getRef().length() > InitDb.VARCHAR_LEN) {
-        System.err.println(
-            "Skipping variant at "
-                + ctx.getContig()
-                + ":"
-                + ctx.getStart()
-                + " length = "
-                + finalVariant.getRef().length());
-        continue;
-      }
-
       final PreparedStatement stmt = conn.prepareStatement(insertQuery);
       stmt.setString(1, finalVariant.getChrom());
       stmt.setInt(2, finalVariant.getPos() + 1);
@@ -165,11 +152,11 @@ public final class ThousandGenomesImporter {
       int het = 0;
       final List<Integer> hets;
       if (numAlleles == 2) {
-        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Het", 0));
+        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Het", 0));
       } else {
         hets = new ArrayList<>();
         for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("Het", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("AC_Het", ImmutableList.<String>of())) {
           hets.add(Integer.parseInt(s));
         }
       }
@@ -181,11 +168,11 @@ public final class ThousandGenomesImporter {
       int hom = 0;
       final List<Integer> homs;
       if (numAlleles == 2) {
-        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hom", 0));
+        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hom", 0));
       } else {
         homs = new ArrayList<>();
         for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("Hom", ImmutableList.<String>of())) {
+            (List<String>) ctx.getCommonInfo().getAttribute("AC_Hom", ImmutableList.<String>of())) {
           homs.add(Integer.parseInt(s));
         }
       }
@@ -197,11 +184,12 @@ public final class ThousandGenomesImporter {
       int hemi = 0;
       final List<Integer> hemis;
       if (numAlleles == 2) {
-        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hemi", 0));
+        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hemi", 0));
       } else {
         hemis = new ArrayList<>();
         for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("Hemi", ImmutableList.<String>of())) {
+            (List<String>)
+                ctx.getCommonInfo().getAttribute("AC_Hemi", ImmutableList.<String>of())) {
           hemis.add(Integer.parseInt(s));
         }
       }
@@ -210,7 +198,7 @@ public final class ThousandGenomesImporter {
       }
       stmt.setInt(8, hemi);
 
-      double a = 0.0;
+      double alleleFreqPopMax = 0.0;
       for (String pop : popNames) {
         final List<Integer> acs;
         if (numAlleles == 2) {
@@ -225,12 +213,12 @@ public final class ThousandGenomesImporter {
         }
         final int an = ctx.getCommonInfo().getAttributeAsInt("AN_" + pop, 0);
         if (an > 0 && acs.size() >= i) {
-          a = Math.max(a, ((double) acs.get(i - 1)) / ((double) an));
+          alleleFreqPopMax = Math.max(alleleFreqPopMax, ((double) acs.get(i - 1)) / ((double) an));
         } else if (an > 0) {
           System.err.println("Warning, could not update AF_POPMAX (" + pop + ") for " + ctx);
         }
       }
-      stmt.setDouble(9, a);
+      stmt.setDouble(9, alleleFreqPopMax);
 
       stmt.executeUpdate();
       stmt.close();

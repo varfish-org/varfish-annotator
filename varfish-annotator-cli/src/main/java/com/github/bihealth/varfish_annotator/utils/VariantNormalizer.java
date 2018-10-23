@@ -1,6 +1,6 @@
-package com.github.bihealth.varhab.utils;
+package com.github.bihealth.varfish_annotator.utils;
 
-import com.github.bihealth.varhab.VarhabException;
+import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -28,14 +28,14 @@ public final class VariantNormalizer {
    * Construct new variant normalizer object
    *
    * @param fastaPath Path to indexed FASTA file
-   * @throws VarhabException On problems with opening the FASTA/FAI file
+   * @throws VarfishAnnotatorException On problems with opening the FASTA/FAI file
    */
-  public VariantNormalizer(String fastaPath) throws VarhabException {
+  public VariantNormalizer(String fastaPath) throws VarfishAnnotatorException {
     this.fastaPath = fastaPath;
     try {
       this.fai = new IndexedFastaSequenceFile(new File(fastaPath));
     } catch (FileNotFoundException e) {
-      throw new VarhabException("Could not find FASTA/FAI file", e);
+      throw new VarfishAnnotatorException("Could not find FASTA/FAI file", e);
     }
   }
 

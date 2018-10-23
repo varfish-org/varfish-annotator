@@ -1,6 +1,6 @@
-package com.github.bihealth.varhab.init_db;
+package com.github.bihealth.varfish_annotator.init_db;
 
-import com.github.bihealth.varhab.VarhabException;
+import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -49,7 +49,7 @@ public final class InitDb {
       System.err.println("Problem with database conection");
       e.printStackTrace();
       System.exit(1);
-    } catch (VarhabException e) {
+    } catch (VarfishAnnotatorException e) {
       System.err.println("Problem executing init-db");
       e.printStackTrace();
       System.exit(1);
