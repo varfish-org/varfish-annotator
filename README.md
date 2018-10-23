@@ -1,4 +1,6 @@
-# Varhab - Variant annotation for import into Varfish
+# VarFish Annotator
+
+Annotation of VCF file for import into VarFish (through Web UI).
 
 ## Example
 
