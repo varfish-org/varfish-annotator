@@ -283,6 +283,9 @@ public final class AnnotateVcf {
       final HashMap<String, Annotation> refseqAnnoByGene = new HashMap<>();
       for (Annotation annotation : sortedRefseqAnnos) {
         writeVariantAnnotation(varWriter, annotation, normalizedVar, "refseq");
+        if (annotation.getTranscript() == null) {
+          continue; // skip, no transcript
+        }
         String geneId = annotation.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID");
         if (geneId == null) {
           geneId = annotation.getTranscript().getGeneID();
@@ -295,6 +298,9 @@ public final class AnnotateVcf {
       final HashMap<String, Annotation> ensemblAnnoByGene = new HashMap<>();
       for (Annotation annotation : sortedEnsemblAnnos) {
         writeVariantAnnotation(varWriter, annotation, normalizedVar, "ensembl");
+        if (annotation.getTranscript() == null) {
+          continue; // skip, no transcript
+        }
         final String geneId = annotation.getTranscript().getGeneID();
         if (!annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))
             && !ensemblAnnoByGene.containsKey(geneId)) {
@@ -431,6 +437,9 @@ public final class AnnotateVcf {
   private void writeVariantAnnotation(
       FileWriter varWriter, Annotation annotation, VariantDescription normalizedVar, String dbName)
       throws VarfishAnnotatorException {
+    if (annotation.getTranscript() == null) {
+      return; // no transcript, no annotation
+    }
     final String geneId = annotation.getTranscript().getGeneID();
 
     // Write to variant annotation file.
