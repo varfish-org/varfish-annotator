@@ -63,6 +63,12 @@ public final class AnnotateArgs {
   private String outputVars;
 
   @Parameter(
+      names = "--output-db-info",
+      description = "Path to output TSV file with annotation DB versions",
+      required = true)
+  private String outputDbInfos;
+
+  @Parameter(
       names = "--contig-regex",
       description = "Regular expression to use for selection of contigs")
   private String contigRegex = "^(chr)?(\\d+|X|Y|M|MT)$";
@@ -111,6 +117,10 @@ public final class AnnotateArgs {
     return contigRegex;
   }
 
+  public String getOutputDbInfos() {
+    return outputDbInfos;
+  }
+
   @Override
   public String toString() {
     return "AnnotateArgs{"
@@ -142,6 +152,9 @@ public final class AnnotateArgs {
         + '\''
         + ", outputVars='"
         + outputVars
+        + '\''
+        + ", outputDbInfos='"
+        + outputDbInfos
         + '\''
         + ", contigRegex='"
         + contigRegex

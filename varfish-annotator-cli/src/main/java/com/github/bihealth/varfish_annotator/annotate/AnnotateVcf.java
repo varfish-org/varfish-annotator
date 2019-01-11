@@ -1,6 +1,7 @@
 package com.github.bihealth.varfish_annotator.annotate;
 
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
+import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
 import com.github.bihealth.varfish_annotator.utils.VariantDescription;
 import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.base.Joiner;
@@ -135,12 +136,15 @@ public final class AnnotateVcf {
         FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
         BufferedWriter gtBufWriter = new BufferedWriter(gtWriter);
         FileWriter varWriter = new FileWriter(new File(args.getOutputVars()));
-        BufferedWriter varBufWriter = new BufferedWriter(varWriter)) {
+        BufferedWriter varBufWriter = new BufferedWriter(varWriter);
+        FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
+        BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
       final VariantNormalizer normalizer = new VariantNormalizer(args.getRefPath());
       annotateVcf(conn, reader, refseqJvData, ensemblJvData, normalizer, gtWriter, varWriter);
+      writeDbInfos(conn, dbInfoBufWriter);
     } catch (SQLException e) {
       System.err.println("Problem with database connection");
       e.printStackTrace();
@@ -157,6 +161,39 @@ public final class AnnotateVcf {
       System.err.println("Problem opening output files database");
       e.printStackTrace();
       System.exit(1);
+    }
+  }
+
+  /**
+   * Write information about used databases to TSV file.
+   *
+   * @param conn Database connection to get the information from.
+   * @param dbInfoWriter Writer for database information.
+   * @throws VarfishAnnotatorException in case of problems
+   */
+  private void writeDbInfos(Connection conn, BufferedWriter dbInfoWriter)
+      throws VarfishAnnotatorException {
+    try {
+      dbInfoWriter.write("db_name\trelease\n");
+    } catch (IOException e) {
+      throw new VarfishAnnotatorException("Could nto write out headers", e);
+    }
+
+    final String query =
+        "SELECT db_name, release FROM " + DbReleaseUpdater.TABLE_NAME + " ORDER BY db_name";
+    try {
+      final PreparedStatement stmt = conn.prepareStatement(query);
+
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (!rs.next()) {
+          return;
+        }
+        dbInfoWriter.write(rs.getString(1) + "\t" + rs.getString(2) + "\n");
+      }
+    } catch (SQLException e) {
+      throw new VarfishAnnotatorException("Problem with querying ExAC", e);
+    } catch (IOException e) {
+      throw new VarfishAnnotatorException("Could nto write TSV info", e);
     }
   }
 

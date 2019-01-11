@@ -57,6 +57,17 @@ public final class InitDbArgs {
           "Path to Clinvar TSV file(s) to use for import, see documentation for more information")
   private List<String> clinvarPaths;
 
+  @Parameter(
+      names = "--hgmd-public",
+      description =
+          "Path to HTMD Public tSV file to use for import, see documentation for more information")
+  private String hgmdPublicPath;
+
+  @Parameter(
+      names = "--db-release-info",
+      description = "Provide database release information as \"$db:$release\" for storage in DB")
+  private List<String> dbReleaseInfos;
+
   public boolean isHelp() {
     return help;
   }
@@ -89,6 +100,14 @@ public final class InitDbArgs {
     return clinvarPaths;
   }
 
+  public String getHgmdPublicPath() {
+    return hgmdPublicPath;
+  }
+
+  public List<String> getDbReleaseInfos() {
+    return dbReleaseInfos;
+  }
+
   @Override
   public String toString() {
     return "InitDbArgs{"
@@ -113,6 +132,11 @@ public final class InitDbArgs {
         + thousandGenomesPaths
         + ", clinvarPaths="
         + clinvarPaths
+        + ", hgmdPublicPath='"
+        + hgmdPublicPath
+        + '\''
+        + ", dbReleaseInfos="
+        + dbReleaseInfos
         + '}';
   }
 }

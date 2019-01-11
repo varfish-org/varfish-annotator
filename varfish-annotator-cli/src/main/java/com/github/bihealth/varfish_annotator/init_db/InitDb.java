@@ -45,6 +45,14 @@ public final class InitDb {
         System.err.println("Importing Clinvar TSV files...");
         new ClinvarImporter(conn, args.getClinvarPaths()).run();
       }
+      if (args.getHgmdPublicPath() != null) {
+        System.err.println("Importing HGMD Public TSV files...");
+        new HgmdPublicImporter(conn, args.getHgmdPublicPath()).run();
+      }
+      if (args.getDbReleaseInfos() != null && args.getDbReleaseInfos().size() > 0) {
+        System.err.println("Storing database release versions...");
+        new DbReleaseUpdater(conn, args.getDbReleaseInfos()).run();
+      }
     } catch (SQLException e) {
       System.err.println("Problem with database conection");
       e.printStackTrace();
