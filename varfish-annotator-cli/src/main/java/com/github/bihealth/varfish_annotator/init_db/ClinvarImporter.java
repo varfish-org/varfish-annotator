@@ -29,6 +29,7 @@ public class ClinvarImporter {
   /** The expected TSV header. */
   public static ImmutableList<String> EXPECTED_HEADER =
       ImmutableList.of(
+          "release",
           "chrom",
           "pos",
           "ref",
@@ -153,7 +154,7 @@ public class ClinvarImporter {
         "MERGE INTO "
             + TABLE_NAME
             + " (release, chrom, pos, pos_end, ref, alt)"
-            + " VALUES ('GRCh37', ?, ?, ?, ?, ?)";
+            + " VALUES (?, ?, ?, ?, ?, ?)";
 
     String line = null;
     String headerLine = null;
@@ -173,10 +174,11 @@ public class ClinvarImporter {
         } else {
           final PreparedStatement stmt = conn.prepareStatement(insertQuery);
           stmt.setString(1, arr.get(0));
-          stmt.setInt(2, Integer.parseInt(arr.get(4)));
+          stmt.setString(2, arr.get(1));
           stmt.setInt(3, Integer.parseInt(arr.get(5)));
-          stmt.setString(4, arr.get(2));
-          stmt.setString(5, arr.get(3));
+          stmt.setInt(4, Integer.parseInt(arr.get(6)));
+          stmt.setString(5, arr.get(2));
+          stmt.setString(6, arr.get(3));
           stmt.executeUpdate();
           stmt.close();
         }
