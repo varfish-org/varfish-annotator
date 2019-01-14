@@ -30,10 +30,10 @@ public class ClinvarImporter {
   public static ImmutableList<String> EXPECTED_HEADER =
       ImmutableList.of(
           "release",
-          "chrom",
-          "pos",
-          "ref",
-          "alt",
+          "chromosome",
+          "position",
+          "reference",
+          "alternative",
           "start",
           "stop",
           "strand",
@@ -66,7 +66,8 @@ public class ClinvarImporter {
           "disease_mechanism",
           "origin",
           "xrefs",
-          "dates_ordered");
+          "dates_ordered",
+          "multi");
 
   /** The JDBC connection. */
   private final Connection conn;
