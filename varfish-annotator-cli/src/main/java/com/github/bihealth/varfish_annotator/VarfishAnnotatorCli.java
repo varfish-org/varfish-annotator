@@ -4,6 +4,8 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
 import com.github.bihealth.varfish_annotator.annotate.AnnotateArgs;
 import com.github.bihealth.varfish_annotator.annotate.AnnotateVcf;
+import com.github.bihealth.varfish_annotator.annotate_svs.AnnotateSvsArgs;
+import com.github.bihealth.varfish_annotator.annotate_svs.AnnotateSvsVcf;
 import com.github.bihealth.varfish_annotator.init_db.InitDb;
 import com.github.bihealth.varfish_annotator.init_db.InitDbArgs;
 
@@ -12,11 +14,13 @@ public class VarfishAnnotatorCli {
   public static void main(String[] args) {
     final InitDbArgs initDb = new InitDbArgs();
     final AnnotateArgs annotate = new AnnotateArgs();
+    final AnnotateSvsArgs annotateSvs = new AnnotateSvsArgs();
 
     final JCommander jc =
         JCommander.newBuilder()
             .addCommand("init-db", initDb)
             .addCommand("annotate", annotate)
+            .addCommand("annotate-svs", annotateSvs)
             .build();
 
     if ((args == null || args.length == 0)) {
@@ -51,6 +55,14 @@ public class VarfishAnnotatorCli {
           jc.usage("annotate");
         } else {
           new AnnotateVcf(annotate).run();
+        }
+        break;
+      case "annotate-svs":
+        System.err.println("annotate-svs: " + annotateSvs);
+        if (annotate.isHelp()) {
+          jc.usage("annotate-svs");
+        } else {
+          new AnnotateSvsVcf(annotateSvs).run();
         }
         break;
       default:

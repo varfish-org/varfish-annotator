@@ -1,5 +1,6 @@
 package com.github.bihealth.varfish_annotator.annotate;
 
+import com.github.bihealth.varfish_annotator.DbInfo;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
 import com.github.bihealth.varfish_annotator.utils.VariantDescription;
@@ -7,7 +8,6 @@ import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Lists;
 import de.charite.compbio.jannovar.annotation.Annotation;
 import de.charite.compbio.jannovar.annotation.VariantAnnotations;
@@ -127,16 +127,17 @@ public final class AnnotateVcf {
   public void run() {
     System.err.println("Running annotate; args: " + args);
 
+    String dbPath = args.getDbPath();
+    if (dbPath.endsWith(".h2.db")) {
+      dbPath = dbPath.substring(0, dbPath.length() - ".h2.db".length());
+    }
+
     try (Connection conn =
             DriverManager.getConnection(
-                "jdbc:h2:" + args.getDbPath() + ";MV_STORE=FALSE;MVCC=FALSE;ACCESS_MODE_DATA=r",
-                "sa",
-                "");
+                "jdbc:h2:" + dbPath + ";MV_STORE=FALSE;MVCC=FALSE;ACCESS_MODE_DATA=r", "sa", "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
         FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
-        BufferedWriter gtBufWriter = new BufferedWriter(gtWriter);
         FileWriter varWriter = new FileWriter(new File(args.getOutputVars()));
-        BufferedWriter varBufWriter = new BufferedWriter(varWriter);
         FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
       System.err.println("Deserializing Jannovar file...");
@@ -191,7 +192,7 @@ public final class AnnotateVcf {
         dbInfoWriter.write(rs.getString(1) + "\t" + rs.getString(2) + "\n");
       }
     } catch (SQLException e) {
-      throw new VarfishAnnotatorException("Problem with querying ExAC", e);
+      throw new VarfishAnnotatorException("Problem with querying database", e);
     } catch (IOException e) {
       throw new VarfishAnnotatorException("Could nto write TSV info", e);
     }
@@ -645,7 +646,7 @@ public final class AnnotateVcf {
    * @param effects The effects to create expression for.
    * @return String with the variant effects.
    */
-  private String buildEffectsValue(ImmutableSortedSet<VariantEffect> effects) {
+  private String buildEffectsValue(ImmutableSet<VariantEffect> effects) {
     final List<String> effectStrings =
         effects
             .stream()
@@ -738,58 +739,6 @@ public final class AnnotateVcf {
       }
     } catch (SQLException e) {
       throw new VarfishAnnotatorException("Problem with querying ClinVar", e);
-    }
-  }
-
-  /** Information from variant from DB. */
-  private static class DbInfo {
-
-    /** Allele frequency in population with maximal frequency. */
-    private final Double afPopmax;
-
-    /** Number of total heterozygous state observation. */
-    private final Integer hetTotal;
-
-    /** Number of total homozygous state observation. */
-    private final Integer homTotal;
-
-    /** Number of total hemizygous state observation. */
-    private final Integer hemiTotal;
-
-    /** Construct with null values. */
-    public static DbInfo nullValue() {
-      return new DbInfo(null, null, null, null);
-    }
-
-    /** Constructor. */
-    public DbInfo(Double afPopmax, Integer hetTotal, Integer homTotal, Integer hemiTotal) {
-      this.afPopmax = afPopmax;
-      this.hetTotal = hetTotal;
-      this.homTotal = homTotal;
-      this.hemiTotal = hemiTotal;
-    }
-
-    /**
-     * @return String with allele frequency in population with maximal allele frequency or "." if
-     *     null.
-     */
-    public String getAfPopmaxStr() {
-      return afPopmax == null ? "0" : afPopmax.toString();
-    }
-
-    /** @return String with total number of heterozygous or "." if null. */
-    public String getHetTotalStr() {
-      return hetTotal == null ? "0" : hetTotal.toString();
-    }
-
-    /** @return String with total number of homozygous or "." if null. */
-    public String getHomTotalStr() {
-      return homTotal == null ? "0" : homTotal.toString();
-    }
-
-    /** @return String with total number of hemizygous or "." if null. */
-    public String getHemiTotalStr() {
-      return hemiTotal == null ? "0" : hemiTotal.toString();
     }
   }
 }

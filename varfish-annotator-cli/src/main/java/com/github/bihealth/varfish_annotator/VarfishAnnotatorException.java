@@ -9,4 +9,6 @@ public class VarfishAnnotatorException extends Exception {
   public VarfishAnnotatorException(String message, Throwable cause) {
     super(message, cause);
   }
+
+  private static final long serialVersionUID = 0;
 }
