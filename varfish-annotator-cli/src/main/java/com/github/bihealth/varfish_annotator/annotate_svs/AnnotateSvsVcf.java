@@ -379,6 +379,7 @@ public final class AnnotateSvsVcf {
         // TODO: improve type and sub type annotation!
         svGenomeVar.getType(),
         svGenomeVar.getType(),
+        "{}",
         buildGenotypeValue(ctx, alleleNo));
   }
 
@@ -408,7 +409,12 @@ public final class AnnotateSvsVcf {
       mappings.add(
           Joiner.on("")
               .join(
-                  tripleQuote(sample), ":{", tripleQuote("gt"), ":", tripleQuote(gts.get(sample))));
+                  tripleQuote(sample),
+                  ":{",
+                  tripleQuote("gt"),
+                  ":",
+                  tripleQuote(gts.get(sample)),
+                  "}"));
     }
 
     return "{" + Joiner.on(",").join(mappings) + "}";
