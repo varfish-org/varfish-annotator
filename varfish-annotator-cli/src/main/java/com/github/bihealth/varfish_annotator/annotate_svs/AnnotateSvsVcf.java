@@ -279,7 +279,7 @@ public final class AnnotateSvsVcf {
       // Write out record with the genotype.
       final List<Object> gtOutRec = buildGtRecord(variantId, svGenomeVar, ctx, i);
       try {
-        gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
+        gtWriter.append(Joiner.on("\t").useForNull(".").join(gtOutRec) + "\n");
       } catch (IOException e) {
         throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
       }
@@ -352,7 +352,8 @@ public final class AnnotateSvsVcf {
                 refseqAnnoByGene.get(geneId),
                 ensemblAnnoByGene.get(geneId));
         try {
-          featureEffectsWriter.append(Joiner.on("\t").join(featureEffectOutRec) + "\n");
+          featureEffectsWriter.append(
+              Joiner.on("\t").useForNull(".").join(featureEffectOutRec) + "\n");
         } catch (IOException e) {
           throw new VarfishAnnotatorException("Problem writing to feature effects file.", e);
         }
