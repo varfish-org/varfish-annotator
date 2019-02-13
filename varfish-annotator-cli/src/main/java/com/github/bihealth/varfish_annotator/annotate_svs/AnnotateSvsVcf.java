@@ -364,7 +364,7 @@ public final class AnnotateSvsVcf {
   /** Buidl string list with the information for the genotype call record. */
   private List<Object> buildGtRecord(
       UUID variantId, SVGenomeVariant svGenomeVar, VariantContext ctx, int alleleNo) {
-    final String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", "");
+    final String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", null);
     return ImmutableList.of(
         args.getRelease(),
         svGenomeVar.getChrName(),
@@ -429,22 +429,24 @@ public final class AnnotateSvsVcf {
       SVAnnotation ensemblAnno) {
     List<Object> result = Lists.newArrayList((Object) variantId.toString());
     if (refSeqAnno == null) {
-      result.addAll(Arrays.asList("", "", "{}"));
+      result.addAll(Arrays.asList(null, null, "FALSE", "{}"));
     } else {
       result.addAll(
           Arrays.asList(
               refSeqAnno.getTranscript().getGeneID(),
+              refSeqAnno.getTranscript().getAccession(),
               refSeqAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
               (refSeqAnno.getEffects() == null)
                   ? "{}"
                   : buildEffectsValue(refSeqAnno.getEffects())));
     }
     if (ensemblAnno == null) {
-      result.addAll(Arrays.asList("", "", "{}"));
+      result.addAll(Arrays.asList(null, null, "FALSE", "{}"));
     } else {
       result.addAll(
           Arrays.asList(
               ensemblAnno.getTranscript().getGeneID(),
+              ensemblAnno.getTranscript().getAccession(),
               ensemblAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
               (ensemblAnno.getEffects() == null)
                   ? "{}"
