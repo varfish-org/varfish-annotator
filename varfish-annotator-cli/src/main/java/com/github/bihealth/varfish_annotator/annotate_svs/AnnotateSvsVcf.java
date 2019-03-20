@@ -57,6 +57,8 @@ public final class AnnotateSvsVcf {
           "chromosome",
           "start",
           "end",
+          "bin",
+          "containing_bins",
           "start_ci_left",
           "start_ci_right",
           "end_ci_left",
@@ -369,7 +371,12 @@ public final class AnnotateSvsVcf {
         args.getRelease(),
         svGenomeVar.getChrName(),
         svGenomeVar.getPos() + 1,
-        svGenomeVar.getPos2() + 1,
+        svGenomeVar.getPos2(),
+        UcscBinning.getContainingBin(svGenomeVar.getPos(), svGenomeVar.getPos()),
+        "{"
+            + Joiner.on(",")
+                .join(UcscBinning.getOverlappingBins(svGenomeVar.getPos(), svGenomeVar.getPos2()))
+            + "}",
         svGenomeVar.getPosCILowerBound(),
         svGenomeVar.getPosCIUpperBound(),
         svGenomeVar.getPos2CILowerBound(),
@@ -380,8 +387,27 @@ public final class AnnotateSvsVcf {
         // TODO: improve type and sub type annotation!
         svGenomeVar.getType(),
         svGenomeVar.getType(),
-        "{}",
+        buildInfoValue(ctx),
         buildGenotypeValue(ctx, alleleNo));
+  }
+
+  private String buildInfoValue(VariantContext ctx) {
+    final List<String> mappings = new ArrayList<>();
+
+    mappings.add(
+        tripleQuote("backgroundCarriers")
+            + ":"
+            + ctx.getCommonInfo().getAttributeAsInt("BACKGROUND_CARRIERS", 0));
+    mappings.add(
+        tripleQuote("affectedCarriers")
+            + ":"
+            + ctx.getCommonInfo().getAttributeAsInt("AFFECTED_CARRIERS", 0));
+    mappings.add(
+        tripleQuote("unaffectedCarriers")
+            + ":"
+            + ctx.getCommonInfo().getAttributeAsInt("UNAFFECTED_CARRIERS", 0));
+
+    return "{" + Joiner.on(",").join(mappings) + "}";
   }
 
   private String buildGenotypeValue(VariantContext ctx, int alleleNo) {

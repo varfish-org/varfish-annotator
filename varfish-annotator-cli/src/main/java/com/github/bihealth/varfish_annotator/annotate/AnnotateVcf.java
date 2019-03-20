@@ -175,9 +175,9 @@ public final class AnnotateVcf {
   private void writeDbInfos(Connection conn, BufferedWriter dbInfoWriter)
       throws VarfishAnnotatorException {
     try {
-      dbInfoWriter.write("db_name\trelease\n");
+      dbInfoWriter.write("genomebuild\tdb_name\trelease\n");
     } catch (IOException e) {
-      throw new VarfishAnnotatorException("Could nto write out headers", e);
+      throw new VarfishAnnotatorException("Could not write out headers", e);
     }
 
     final String query =
@@ -189,7 +189,8 @@ public final class AnnotateVcf {
         if (!rs.next()) {
           return;
         }
-        dbInfoWriter.write(rs.getString(1) + "\t" + rs.getString(2) + "\n");
+        dbInfoWriter.write(
+            args.getRelease() + "\t" + rs.getString(1) + "\t" + rs.getString(2) + "\n");
       }
     } catch (SQLException e) {
       throw new VarfishAnnotatorException("Problem with querying database", e);
