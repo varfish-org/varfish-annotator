@@ -69,6 +69,11 @@ public final class AnnotateVcf {
           "var_type",
           "case_id",
           "genotype",
+          "num_hom_alt",
+          "num_hom_ref",
+          "num_het",
+          "num_hemi_alt",
+          "num_hemi_ref",
           "in_clinvar",
           "exac_frequency",
           "exac_homozygous",
@@ -387,6 +392,8 @@ public final class AnnotateVcf {
           varType = "indel";
         }
 
+        final GenotypeCounts gtCounts = buildGenotypeCounts(ctx, i);
+
         // Construct output record.
         final String gene_name = annotation.getTranscript().getAltGeneIDs().get("HGNC_SYMBOL");
         final List<String> gtOutRec =
@@ -399,6 +406,11 @@ public final class AnnotateVcf {
                 varType,
                 args.getCaseId(),
                 buildGenotypeValue(ctx, i),
+                String.valueOf(gtCounts.numHomAlt),
+                String.valueOf(gtCounts.numHomRef),
+                String.valueOf(gtCounts.numHet),
+                String.valueOf(gtCounts.numHemiAlt),
+                String.valueOf(gtCounts.numHemiRef),
                 // ClinVar
                 inClinvar ? "TRUE" : "FALSE",
                 // EXAC
@@ -585,6 +597,77 @@ public final class AnnotateVcf {
    */
   private static String tripleQuote(String s) {
     return "\"\"\"" + s.replaceAll("\"\"\"", "") + "\"\"\"";
+  }
+
+  /** Simple helper for counting the different genotype kinds. */
+  private static class GenotypeCounts {
+
+    /** Number of hom. alt. calls. */
+    int numHomAlt;
+    /** Number of hom. ref. calls. */
+    int numHomRef;
+    /** Number of het. calls. */
+    int numHet;
+    /** Number of hemi. alt. calls. */
+    int numHemiAlt;
+    /** Number of hemi. ref. calls. */
+    int numHemiRef;
+
+    GenotypeCounts() {
+      this.numHomAlt = 0;
+      this.numHomRef = 0;
+      this.numHet = 0;
+      this.numHemiAlt = 0;
+      this.numHemiRef = 0;
+    }
+  }
+
+  /**
+   * Count the different genotypes and return {@link GenotypeCounts}.
+   *
+   * @param ctx {@link VariantContext} from the input file.
+   * @param alleleNo The allele number (first alternative is 1)
+   * @return The genotype counts for all samples.
+   */
+  private GenotypeCounts buildGenotypeCounts(VariantContext ctx, int alleleNo) {
+    final GenotypeCounts result = new GenotypeCounts();
+
+    for (String sample : ctx.getSampleNames()) {
+      final Genotype genotype = ctx.getGenotype(sample);
+      final Map<String, String> gts = new TreeMap<>();
+      final List<String> gtList = new ArrayList<>();
+      for (Allele allele : genotype.getAlleles()) {
+        if (allele.isNoCall()) {
+          gtList.add(".");
+        } else if (ctx.getAlleleIndex(allele) == alleleNo) {
+          gtList.add("1");
+        } else {
+          gtList.add("0");
+        }
+      }
+
+      final String gt;
+      if (genotype.isPhased()) {
+        gt = Joiner.on("|").join(gtList);
+      } else {
+        gtList.sort(Comparator.naturalOrder());
+        gt = Joiner.on("/").join(gtList);
+      }
+
+      if (gt.equals("0/1") || gt.equals("1/0") || gt.equals("0|1") || gt.equals("1|0")) {
+        result.numHet += 1;
+      } else if (gt.equals("0/0") || gt.equals("0|0")) {
+        result.numHomRef += 1;
+      } else if (gt.equals("0/0") || gt.equals("0|0")) {
+        result.numHomAlt += 1;
+      } else if (gt.equals("0")) {
+        result.numHemiRef += 1;
+      } else if (gt.equals("1")) {
+        result.numHemiAlt += 1;
+      }
+    }
+
+    return result;
   }
 
   /**
