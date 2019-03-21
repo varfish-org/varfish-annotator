@@ -658,7 +658,7 @@ public final class AnnotateVcf {
         result.numHet += 1;
       } else if (gt.equals("0/0") || gt.equals("0|0")) {
         result.numHomRef += 1;
-      } else if (gt.equals("0/0") || gt.equals("0|0")) {
+      } else if (gt.equals("1/1") || gt.equals("1|1")) {
         result.numHomAlt += 1;
       } else if (gt.equals("0")) {
         result.numHemiRef += 1;
