@@ -1,6 +1,7 @@
 package com.github.bihealth.varfish_annotator.init_db;
 
 import java.sql.Connection;
+import java.util.List;
 
 /**
  * Implementation of gnomAD exomes import.
@@ -9,8 +10,9 @@ import java.sql.Connection;
  */
 public final class GnomadGenomesImporter extends GnomadImporter {
 
-  public GnomadGenomesImporter(Connection conn, String gnomadVcfPath, String refFastaPath) {
-    super(conn, gnomadVcfPath, refFastaPath);
+  public GnomadGenomesImporter(
+      Connection conn, List<String> gnomadVcfPaths, String refFastaPath, String genomicRegion) {
+    super(conn, gnomadVcfPaths, refFastaPath, genomicRegion);
   }
 
   /** The name of the table in the database. */

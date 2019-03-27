@@ -4,6 +4,7 @@ import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.utils.VariantDescription;
 import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.collect.ImmutableList;
+import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 import java.io.File;
@@ -35,16 +36,37 @@ public final class ThousandGenomesImporter {
   /** Helper to use for variant normalization. */
   private final String refFastaPath;
 
+  /** Chromosome of selected region. */
+  private final String chrom;
+
+  /** 1-based start position of selected region. */
+  private final int start;
+
+  /** 1-based end position of selected region. */
+  private final int end;
+
   /**
    * Construct the <tt>ThousandGenomesImporter</tt> object.
    *
    * @param conn Connection to database
    * @param vcfPaths Path to Thousand Genomes VCF path.
+   * @param genomicRegion Genomic region {@code CHR:START-END} to process.
    */
-  public ThousandGenomesImporter(Connection conn, List<String> vcfPaths, String refFastaPath) {
+  public ThousandGenomesImporter(
+      Connection conn, List<String> vcfPaths, String refFastaPath, String genomicRegion) {
     this.conn = conn;
     this.vcfPaths = ImmutableList.copyOf(vcfPaths);
     this.refFastaPath = refFastaPath;
+
+    if (genomicRegion == null) {
+      this.chrom = null;
+      this.start = -1;
+      this.end = -1;
+    } else {
+      this.chrom = genomicRegion.split(":", 2)[0];
+      this.start = Integer.parseInt(genomicRegion.split(":", 2)[1].split("-")[0].replace(",", ""));
+      this.end = Integer.parseInt(genomicRegion.split(":", 2)[1].split("-")[1].replace(",", ""));
+    }
   }
 
   /** Execute Thousand Genomes import. */
@@ -57,7 +79,15 @@ public final class ThousandGenomesImporter {
     String prevChr = null;
     for (String vcfPath : vcfPaths) {
       try (VCFFileReader reader = new VCFFileReader(new File(vcfPath), true)) {
-        for (VariantContext ctx : reader) {
+        final CloseableIterator<VariantContext> it;
+        if (this.chrom != null) {
+          it = reader.query(this.chrom, this.start, this.end);
+        } else {
+          it = reader.iterator();
+        }
+
+        while (it.hasNext()) {
+          final VariantContext ctx = it.next();
           if (!ctx.getContig().equals(prevChr)) {
             System.err.println("Now on chrom " + ctx.getContig());
           }

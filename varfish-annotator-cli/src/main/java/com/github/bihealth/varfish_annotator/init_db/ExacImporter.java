@@ -4,6 +4,7 @@ import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.utils.VariantDescription;
 import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.collect.ImmutableList;
+import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 import java.io.File;
@@ -36,16 +37,36 @@ public final class ExacImporter {
   /** Helper to use for variant normalization. */
   private final String refFastaPath;
 
+  /** Chromosome of selected region. */
+  private final String chrom;
+
+  /** 1-based start position of selected region. */
+  private final int start;
+
+  /** 1-based end position of selected region. */
+  private final int end;
+
   /**
    * Construct the <tt>ExacImporter</tt> object.
    *
    * @param conn Connection to database
    * @param vcfPath Path to ExAC VCF path.
+   * @param genomicRegion Genomic region {@code CHR:START-END} to process.
    */
-  public ExacImporter(Connection conn, String vcfPath, String refFastaPath) {
+  public ExacImporter(Connection conn, String vcfPath, String refFastaPath, String genomicRegion) {
     this.conn = conn;
     this.vcfPath = vcfPath;
     this.refFastaPath = refFastaPath;
+
+    if (genomicRegion == null) {
+      this.chrom = null;
+      this.start = -1;
+      this.end = -1;
+    } else {
+      this.chrom = genomicRegion.split(":", 2)[0];
+      this.start = Integer.parseInt(genomicRegion.split(":", 2)[1].split("-")[0].replace(",", ""));
+      this.end = Integer.parseInt(genomicRegion.split(":", 2)[1].split("-")[1].replace(",", ""));
+    }
   }
 
   /** Execute ExAC import. */
@@ -57,13 +78,28 @@ public final class ExacImporter {
     final VariantNormalizer normalizer = new VariantNormalizer(refFastaPath);
     String prevChr = null;
     try (VCFFileReader reader = new VCFFileReader(new File(vcfPath), true)) {
-      for (VariantContext ctx : reader) {
+      final CloseableIterator<VariantContext> it;
+      if (this.chrom != null) {
+        it = reader.query(this.chrom, this.start, this.end);
+      } else {
+        it = reader.iterator();
+      }
+
+      while (it.hasNext()) {
+        final VariantContext ctx = it.next();
         if (!ctx.getContig().equals(prevChr)) {
           System.err.println("Now on chrom " + ctx.getContig());
         }
-        importVariantContext(normalizer, ctx);
+        // System.err.println(ctx.toString());
+        try {
+          importVariantContext(normalizer, ctx);
+        } catch (SQLException e) {
+          it.close();
+          throw e;
+        }
         prevChr = ctx.getContig();
       }
+      it.close();
     } catch (SQLException e) {
       throw new VarfishAnnotatorException("Problem with inserting into exac_vars table", e);
     }

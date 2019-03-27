@@ -37,13 +37,13 @@ public final class InitDbArgs {
       names = "--gnomad-exomes-path",
       description =
           "Path to gnomAD exomes VCF file to use for import, see documentation for more information")
-  private String gnomadExomesPath;
+  private List<String> gnomadExomesPaths;
 
   @Parameter(
       names = "--gnomad-genomes-path",
       description =
           "Path to gnomAD genomes VCF file to use for import, see documentation for more information")
-  private String gnomadGenomesPath;
+  private List<String> gnomadGenomesPaths;
 
   @Parameter(
       names = "--thousand-genomes-path",
@@ -60,8 +60,11 @@ public final class InitDbArgs {
   @Parameter(
       names = "--hgmd-public",
       description =
-          "Path to HTMD Public tSV file to use for import, see documentation for more information")
+          "Path to HTMD Public TSV file to use for import, see documentation for more information")
   private String hgmdPublicPath;
+
+  @Parameter(names = "--region", description = "Genomic region CHR:START-END (1-based) to import")
+  private String genomicRegion;
 
   @Parameter(
       names = "--db-release-info",
@@ -84,12 +87,12 @@ public final class InitDbArgs {
     return exacPath;
   }
 
-  public String getGnomadExomesPath() {
-    return gnomadExomesPath;
+  public List<String> getGnomadExomesPaths() {
+    return gnomadExomesPaths;
   }
 
-  public String getGnomadGenomesPath() {
-    return gnomadGenomesPath;
+  public List<String> getGnomadGenomesPaths() {
+    return gnomadGenomesPaths;
   }
 
   public List<String> getThousandGenomesPaths() {
@@ -102,6 +105,10 @@ public final class InitDbArgs {
 
   public String getHgmdPublicPath() {
     return hgmdPublicPath;
+  }
+
+  public String getGenomicRegion() {
+    return genomicRegion;
   }
 
   public List<String> getDbReleaseInfos() {
@@ -122,11 +129,11 @@ public final class InitDbArgs {
         + ", exacPath='"
         + exacPath
         + '\''
-        + ", gnomadExomesPath='"
-        + gnomadExomesPath
+        + ", gnomadExomesPaths='"
+        + gnomadExomesPaths
         + '\''
-        + ", gnomadGenomesPath='"
-        + gnomadGenomesPath
+        + ", gnomadGenomesPaths='"
+        + gnomadGenomesPaths
         + '\''
         + ", thousandGenomesPaths="
         + thousandGenomesPaths
@@ -134,6 +141,9 @@ public final class InitDbArgs {
         + clinvarPaths
         + ", hgmdPublicPath='"
         + hgmdPublicPath
+        + '\''
+        + ", genomicRegion='"
+        + genomicRegion
         + '\''
         + ", dbReleaseInfos="
         + dbReleaseInfos

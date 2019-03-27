@@ -4,13 +4,13 @@ import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.utils.VariantDescription;
 import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.collect.ImmutableList;
+import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 /** Base class for gnomAD import. */
@@ -20,28 +20,46 @@ abstract class GnomadImporter {
 
   protected abstract String getFieldPrefix();
 
-  public static final ImmutableList<String> popNames =
-      ImmutableList.of("AFR", "AMR", "ASJ", "EAS", "FIN", "NFE", "OTH", "SAS");
-
   /** The JDBC connection. */
   protected final Connection conn;
 
   /** Path to gnomAD VCF path. */
-  protected final String gnomadVcfPath;
+  protected final List<String> gnomadVcfPaths;
 
   /** Helper to use for variant normalization. */
   protected final String refFastaPath;
+
+  /** Chromosome of selected region. */
+  private final String chrom;
+
+  /** 1-based start position of selected region. */
+  private final int start;
+
+  /** 1-based end position of selected region. */
+  private final int end;
 
   /**
    * Construct the <tt>GnomadImporter</tt> object.
    *
    * @param conn Connection to database
-   * @param gnomadVcfPath Path to gnomAD VCF path.
+   * @param gnomadVcfPaths Path to gnomAD VCF path.
+   * @param genomicRegion Genomic regiin {@code CHR:START-END} to process.
    */
-  GnomadImporter(Connection conn, String gnomadVcfPath, String refFastaPath) {
+  GnomadImporter(
+      Connection conn, List<String> gnomadVcfPaths, String refFastaPath, String genomicRegion) {
     this.conn = conn;
-    this.gnomadVcfPath = gnomadVcfPath;
+    this.gnomadVcfPaths = gnomadVcfPaths;
     this.refFastaPath = refFastaPath;
+
+    if (genomicRegion == null) {
+      this.chrom = null;
+      this.start = -1;
+      this.end = -1;
+    } else {
+      this.chrom = genomicRegion.split(":", 2)[0];
+      this.start = Integer.parseInt(genomicRegion.split(":", 2)[1].split("-")[0].replace(",", ""));
+      this.end = Integer.parseInt(genomicRegion.split(":", 2)[1].split("-")[1].replace(",", ""));
+    }
   }
 
   /** Execute gnomAD import. */
@@ -52,17 +70,27 @@ abstract class GnomadImporter {
     System.err.println("Importing gnomAD...");
     final VariantNormalizer normalizer = new VariantNormalizer(refFastaPath);
     String prevChr = null;
-    try (VCFFileReader reader = new VCFFileReader(new File(gnomadVcfPath), true)) {
-      for (VariantContext ctx : reader) {
-        if (!ctx.getContig().equals(prevChr)) {
-          System.err.println("Now on chrom " + ctx.getContig());
+    for (String gnomadVcfPath : gnomadVcfPaths) {
+      try (VCFFileReader reader = new VCFFileReader(new File(gnomadVcfPath), true)) {
+        final CloseableIterator<VariantContext> it;
+        if (this.chrom != null) {
+          it = reader.query(this.chrom, this.start, this.end);
+        } else {
+          it = reader.iterator();
         }
-        importVariantContext(normalizer, ctx);
-        prevChr = ctx.getContig();
+
+        while (it.hasNext()) {
+          final VariantContext ctx = it.next();
+          if (!ctx.getContig().equals(prevChr)) {
+            System.err.println("Now on chrom " + ctx.getContig());
+          }
+          importVariantContext(normalizer, ctx);
+          prevChr = ctx.getContig();
+        }
+      } catch (SQLException e) {
+        throw new VarfishAnnotatorException(
+            "Problem with inserting into " + getTableName() + " table", e);
       }
-    } catch (SQLException e) {
-      throw new VarfishAnnotatorException(
-          "Problem with inserting into " + getTableName() + " table", e);
     }
 
     System.err.println("Done with importing gnomAD...");
@@ -157,99 +185,26 @@ abstract class GnomadImporter {
       stmt.setString(4, finalVariant.getRef());
       stmt.setString(5, finalVariant.getAlt());
 
-      int countHet = 0;
-      List<Integer> hets;
-      if (numAlleles == 2) {
-        try {
-          hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Het", 0));
-        } catch (NumberFormatException e) {
-          hets = ImmutableList.of(0);
-        }
+      // Compute het., hom. alt, hemi. alt. counts.
+      final int countHemi;
+      final int countHomAlt;
+      if (ctx.getCommonInfo().hasAttribute("nonpar")) {
+        // Male is hemizygous.
+        countHemi = ctx.getCommonInfo().getAttributeAsInt("AC_male", 0);
+        countHomAlt = ctx.getCommonInfo().getAttributeAsInt("nhomalt", 0);
       } else {
-        hets = new ArrayList<>();
-        for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("Het", ImmutableList.<String>of())) {
-          try {
-            hets.add(Integer.parseInt(s));
-          } catch (NumberFormatException e) {
-            hets.add(0);
-          }
-        }
+        // Male is homozygous.
+        countHemi = 0;
+        countHomAlt = ctx.getCommonInfo().getAttributeAsInt("nhomalt", 0);
       }
-      if (hets.size() >= i) {
-        countHet = hets.get(i - 1);
-      }
-      stmt.setInt(6, countHet);
-
-      int countHom = 0;
-      List<Integer> homs;
-      if (numAlleles == 2) {
-        try {
-          homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hom", 0));
-        } catch (NumberFormatException e) {
-          homs = ImmutableList.of(0);
-        }
-      } else {
-        homs = new ArrayList<>();
-        for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("Hom", ImmutableList.<String>of())) {
-          try {
-            homs.add(Integer.parseInt(s));
-          } catch (NumberFormatException e) {
-            homs.add(0);
-          }
-        }
-      }
-      if (homs.size() >= i) {
-        countHom = homs.get(i - 1);
-      }
-      stmt.setInt(7, countHom);
-
-      int countHemi = 0;
-      List<Integer> hemis;
-      if (numAlleles == 2) {
-        try {
-          hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("Hemi", 0));
-        } catch (NumberFormatException e) {
-          hemis = ImmutableList.of(0);
-        }
-      } else {
-        hemis = new ArrayList<>();
-        for (String s :
-            (List<String>) ctx.getCommonInfo().getAttribute("Hemi", ImmutableList.<String>of())) {
-          try {
-            hemis.add(Integer.parseInt(s));
-          } catch (NumberFormatException e) {
-            hemis.add(0);
-          }
-        }
-      }
-      if (hemis.size() >= i) {
-        countHemi = homs.get(i - 1);
-      }
+      stmt.setInt(7, countHomAlt);
       stmt.setInt(8, countHemi);
 
-      double alleleFreqPopMax = 0.0;
-      for (String pop : popNames) {
-        final List<Integer> acs;
-        if (numAlleles == 2) {
-          acs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_" + pop, 0));
-        } else {
-          acs = new ArrayList<>();
-          for (String s :
-              (List<String>)
-                  ctx.getCommonInfo().getAttribute("AC_" + pop, ImmutableList.<String>of())) {
-            acs.add(Integer.parseInt(s));
-          }
-        }
-        final int an = ctx.getCommonInfo().getAttributeAsInt("AN_" + pop, 0);
-        if (an > 0 && acs.size() >= i) {
-          alleleFreqPopMax = Math.max(alleleFreqPopMax, ((double) acs.get(i - 1)) / ((double) an));
-        } else if (an > 0) {
-          System.err.println("Warning, could not update AF_POPMAX (" + pop + ") for " + ctx);
-        }
-      }
-      stmt.setDouble(9, alleleFreqPopMax);
+      final int countHet =
+          ctx.getCommonInfo().getAttributeAsInt("AC", 0) - countHemi - 2 * countHomAlt;
+      stmt.setInt(6, countHet);
+
+      stmt.setDouble(9, ctx.getCommonInfo().getAttributeAsDouble("AF_popmax", 0.0));
 
       stmt.executeUpdate();
       stmt.close();

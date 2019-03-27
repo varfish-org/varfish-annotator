@@ -24,22 +24,31 @@ public final class InitDb {
 
     try (Connection conn =
         DriverManager.getConnection(
-            "jdbc:h2:" + args.getDbPath() + ";MV_STORE=FALSE;MVCC=FALSE", "sa", "")) {
-      if (args.getGnomadExomesPath() != null) {
+            "jdbc:h2:" + args.getDbPath() + ";TRACE_LEVEL_FILE=0;MV_STORE=FALSE;MVCC=FALSE",
+            "sa",
+            "")) {
+      if (args.getGnomadExomesPaths() != null && args.getGnomadExomesPaths().size() > 0) {
         System.err.println("Importing gnomAD VCF files...");
-        new GnomadExomesImporter(conn, args.getGnomadExomesPath(), args.getRefPath()).run();
+        new GnomadExomesImporter(
+                conn, args.getGnomadExomesPaths(), args.getRefPath(), args.getGenomicRegion())
+            .run();
       }
-      if (args.getGnomadGenomesPath() != null) {
+      if (args.getGnomadGenomesPaths() != null && args.getGnomadGenomesPaths().size() > 0) {
         System.err.println("Importing gnomAD VCF files...");
-        new GnomadGenomesImporter(conn, args.getGnomadGenomesPath(), args.getRefPath()).run();
+        new GnomadGenomesImporter(
+                conn, args.getGnomadGenomesPaths(), args.getRefPath(), args.getGenomicRegion())
+            .run();
       }
       if (args.getThousandGenomesPaths() != null && args.getThousandGenomesPaths().size() > 0) {
         System.err.println("Importing 1000 Genomes VCF files...");
-        new ThousandGenomesImporter(conn, args.getThousandGenomesPaths(), args.getRefPath()).run();
+        new ThousandGenomesImporter(
+                conn, args.getThousandGenomesPaths(), args.getRefPath(), args.getGenomicRegion())
+            .run();
       }
       if (args.getExacPath() != null) {
         System.err.println("Importing ExAC VCF files...");
-        new ExacImporter(conn, args.getExacPath(), args.getRefPath()).run();
+        new ExacImporter(conn, args.getExacPath(), args.getRefPath(), args.getGenomicRegion())
+            .run();
       }
       if (args.getClinvarPaths() != null && args.getClinvarPaths().size() > 0) {
         System.err.println("Importing Clinvar TSV files...");
