@@ -28,13 +28,13 @@ public final class InitDb {
             "sa",
             "")) {
       if (args.getGnomadExomesPaths() != null && args.getGnomadExomesPaths().size() > 0) {
-        System.err.println("Importing gnomAD VCF files...");
+        System.err.println("Importing gnomAD exomes VCF files...");
         new GnomadExomesImporter(
                 conn, args.getGnomadExomesPaths(), args.getRefPath(), args.getGenomicRegion())
             .run();
       }
       if (args.getGnomadGenomesPaths() != null && args.getGnomadGenomesPaths().size() > 0) {
-        System.err.println("Importing gnomAD VCF files...");
+        System.err.println("Importing gnomAD genomes VCF files...");
         new GnomadGenomesImporter(
                 conn, args.getGnomadGenomesPaths(), args.getRefPath(), args.getGenomicRegion())
             .run();
