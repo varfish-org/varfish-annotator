@@ -19,7 +19,7 @@ public class DbReleaseUpdater {
   private final List<String> dbReleaseInfos;
 
   /**
-   * Construct the <tt>HgmdPublicImporter</tt> object.
+   * Construct the <tt>DbReleaseUpdater</tt> object.
    *
    * @param conn Connection to database
    * @param dbReleaseInfos Database release information.

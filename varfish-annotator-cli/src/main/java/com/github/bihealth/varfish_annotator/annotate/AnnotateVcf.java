@@ -195,16 +195,18 @@ public final class AnnotateVcf {
       final PreparedStatement stmt = conn.prepareStatement(query);
 
       try (ResultSet rs = stmt.executeQuery()) {
-        if (!rs.next()) {
-          return;
+        while (true) {
+          if (!rs.next()) {
+            return;
+          }
+          dbInfoWriter.write(
+              args.getRelease() + "\t" + rs.getString(1) + "\t" + rs.getString(2) + "\n");
         }
-        dbInfoWriter.write(
-            args.getRelease() + "\t" + rs.getString(1) + "\t" + rs.getString(2) + "\n");
       }
     } catch (SQLException e) {
       throw new VarfishAnnotatorException("Problem with querying database", e);
     } catch (IOException e) {
-      throw new VarfishAnnotatorException("Could nto write TSV info", e);
+      throw new VarfishAnnotatorException("Could not write TSV info", e);
     }
   }
 
@@ -782,7 +784,7 @@ public final class AnnotateVcf {
         }
         final DbInfo result = new DbInfo(rs.getDouble(1), rs.getInt(2), rs.getInt(3), rs.getInt(4));
         if (rs.next()) {
-          throw new VarfishAnnotatorException("ExAC returned more than one result");
+          throw new VarfishAnnotatorException(prefix + " returned more than one result");
         }
         return result;
       }
