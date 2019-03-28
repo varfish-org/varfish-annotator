@@ -1,6 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>varfish-annotator-cli</artifactId>
@@ -13,7 +11,7 @@
   <parent>
     <groupId>com.github.bihealth</groupId>
     <artifactId>VarfishAnnotator</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1</version>
   </parent>
 
   <properties>
@@ -91,38 +89,6 @@
         </executions>
       </plugin>
 
-      <!-- Specify the resources which need to be made accessible to the user -->
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>2.6</version>
-        <executions>
-          <execution>
-            <id>copy-resources</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/resources</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>src/main/resources</directory>
-                  <!--Use filtering so that maven will replace placeholders with values
-                    from the pom e.g. ${project.version} -->
-                  <filtering>true</filtering>
-                  <includes>
-                    <include>application.properties</include>
-                    <include>example.settings</include>
-                    <include>test.settings</include>
-                    <include>log4j2.xml</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
       <!-- Make an executable jar and specify the main class and classpath -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -157,8 +123,7 @@
             </goals>
             <configuration>
               <transformers>
-                <transformer
-                  implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <mainClass>com.github.bihealth.varfish_annotator.VarfishAnnotatorCli</mainClass>
                 </transformer>
               </transformers>
