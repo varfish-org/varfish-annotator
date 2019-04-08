@@ -340,8 +340,12 @@ public final class AnnotateVcf {
         if (geneId == null) {
           geneId = annotation.getTranscript().getGeneID();
         }
-        if (!annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))
-            && !refseqAnnoByGene.containsKey(geneId)) {
+        if (annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
+          // Put into map under pseudo-identifier "__intergenic__". This ways, intergenic variants
+          // are written out only once for RefSeq/ENSEMBL and not twice if different genes are
+          // closest.
+          refseqAnnoByGene.put("__intergenic__", annotation);
+        } else if (!refseqAnnoByGene.containsKey(geneId)) {
           refseqAnnoByGene.put(geneId, annotation);
         }
       }
@@ -352,8 +356,12 @@ public final class AnnotateVcf {
           continue; // skip, no transcript
         }
         final String geneId = annotation.getTranscript().getGeneID();
-        if (!annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))
-            && !ensemblAnnoByGene.containsKey(geneId)) {
+        if (annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
+          // Put into map under pseudo-identifier "__intergenic__". This ways, intergenic variants
+          // are written out only once for RefSeq/ENSEMBL and not twice if different genes are
+          // closest.
+          ensemblAnnoByGene.put("__intergenic__", annotation);
+        } else if (!ensemblAnnoByGene.containsKey(geneId)) {
           ensemblAnnoByGene.put(geneId, annotation);
         }
       }
@@ -387,7 +395,6 @@ public final class AnnotateVcf {
       for (String geneId : geneIds) {
         Annotation refseqAnno = refseqAnnoByGene.get(geneId);
         Annotation ensemblAnno = ensemblAnnoByGene.get(geneId);
-        Annotation annotation = refseqAnno != null ? refseqAnno : ensemblAnno;
 
         final String varType;
         if ((normalizedVar.getRef().length() == 1) && (normalizedVar.getAlt().length() == 1)) {
@@ -401,7 +408,6 @@ public final class AnnotateVcf {
         final GenotypeCounts gtCounts = buildGenotypeCounts(ctx, i);
 
         // Construct output record.
-        final String gene_name = annotation.getTranscript().getAltGeneIDs().get("HGNC_SYMBOL");
         final List<String> gtOutRec =
             Lists.newArrayList(
                 args.getRelease(),

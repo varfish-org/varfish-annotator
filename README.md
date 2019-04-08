@@ -19,7 +19,7 @@ The following will create `varfish-annotator-db-1903.h2.db` and fill it.
 # DOWNLOAD=path/to/varfish-db-downloader
 # java -jar varfish-annotator-cli-0.1-SNAPSHOT.jar \
       init-db \
-      --db-release-info "varfish-annotator:v0.1" \
+      --db-release-info "varfish-annotator:v0.2" \
       --db-release-info "varfish-annotator-db:r1903" \
       \
       --ref-path /fast/projects/cubit/18.12/static_data/reference/GRCh37/hs37d5/hs37d5.fa \
