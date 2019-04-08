@@ -199,8 +199,14 @@ public final class AnnotateVcf {
           if (!rs.next()) {
             return;
           }
+          final String versionString;
+          if (rs.getString(1).equals("varfish-annotator")) {
+            versionString = AnnotateVcf.class.getPackage().getSpecificationVersion();
+          } else {
+            versionString = rs.getString(2);
+          }
           dbInfoWriter.write(
-              args.getRelease() + "\t" + rs.getString(1) + "\t" + rs.getString(2) + "\n");
+              args.getRelease() + "\t" + rs.getString(1) + "\t" + versionString + "\n");
         }
       }
     } catch (SQLException e) {
