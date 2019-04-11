@@ -143,7 +143,7 @@ public final class AnnotateSvsVcf {
   private void writeDbInfos(Connection conn, BufferedWriter dbInfoWriter)
       throws VarfishAnnotatorException {
     try {
-      dbInfoWriter.write("db_name\trelease\n");
+      dbInfoWriter.write("genomebuild\tdb_name\trelease\n");
     } catch (IOException e) {
       throw new VarfishAnnotatorException("Could not write out headers", e);
     }
@@ -154,15 +154,24 @@ public final class AnnotateSvsVcf {
       final PreparedStatement stmt = conn.prepareStatement(query);
 
       try (ResultSet rs = stmt.executeQuery()) {
-        if (!rs.next()) {
-          return;
+        while (true) {
+          if (!rs.next()) {
+            return;
+          }
+          final String versionString;
+          if (rs.getString(1).equals("varfish-annotator")) {
+            versionString = AnnotateSvsVcf.class.getPackage().getSpecificationVersion();
+          } else {
+            versionString = rs.getString(2);
+          }
+          dbInfoWriter.write(
+              args.getRelease() + "\t" + rs.getString(1) + "\t" + versionString + "\n");
         }
-        dbInfoWriter.write(rs.getString(1) + "\t" + rs.getString(2) + "\n");
       }
     } catch (SQLException e) {
       throw new VarfishAnnotatorException("Problem with querying database", e);
     } catch (IOException e) {
-      throw new VarfishAnnotatorException("Could nto write TSV info", e);
+      throw new VarfishAnnotatorException("Could not write TSV info", e);
     }
   }
 
@@ -228,7 +237,7 @@ public final class AnnotateSvsVcf {
         System.err.println("Now on contig " + ctx.getContig());
       }
       annotateVariantContext(
-          conn, refseqAnnotator, ensemblAnnotator, ctx, gtWriter, featureEffectsWriter);
+          refseqAnnotator, ensemblAnnotator, ctx, gtWriter, featureEffectsWriter);
       prevChr = ctx.getContig();
     }
   }
@@ -237,7 +246,6 @@ public final class AnnotateSvsVcf {
    * Annotate <tt>ctx</tt>, write out annotated variant call to <tt>gtWriter</tt> and annotated
    * variant to <tt>varWriter</tt>.
    *
-   * @param conn Database connection.
    * @param refseqAnnotator Helper class to use for annotation of variants with Refseq
    * @param ensemblAnnotator Helper class to use for annotation of variants with ENSEMBL
    * @param ctx The variant to annotate.
@@ -246,7 +254,6 @@ public final class AnnotateSvsVcf {
    * @throws VarfishAnnotatorException in case of problems
    */
   private void annotateVariantContext(
-      Connection conn,
       VariantContextAnnotator refseqAnnotator,
       VariantContextAnnotator ensemblAnnotator,
       VariantContext ctx,
@@ -411,6 +418,9 @@ public final class AnnotateSvsVcf {
   }
 
   private String buildGenotypeValue(VariantContext ctx, int alleleNo) {
+    final ArrayList<String> attrs = new ArrayList<>();
+
+    // Add "GT" field.
     final List<String> mappings = new ArrayList<>();
     for (String sample : ctx.getSampleNames()) {
       final Genotype genotype = ctx.getGenotype(sample);
@@ -431,17 +441,47 @@ public final class AnnotateSvsVcf {
         gtList.sort(Comparator.naturalOrder());
         gts.put(sample, Joiner.on("/").join(gtList));
       }
+      attrs.add(Joiner.on("").join(tripleQuote("gt"), ":", tripleQuote(gts.get(sample))));
 
-      final int[] ad = ctx.getGenotype(sample).getAD();
-      mappings.add(
-          Joiner.on("")
-              .join(
-                  tripleQuote(sample),
-                  ":{",
-                  tripleQuote("gt"),
-                  ":",
-                  tripleQuote(gts.get(sample)),
-                  "}"));
+      // FT -- genotype filters
+      if (genotype.hasExtendedAttribute("FT")
+          && genotype.getFilters() != null
+          && !genotype.getFilters().equals("")) {
+        final List<String> fts =
+            Arrays.stream(genotype.getFilters().split(","))
+                .map(s -> tripleQuote(s))
+                .collect(Collectors.toList());
+        attrs.add(Joiner.on("").join(tripleQuote("ft"), ":{", Joiner.on(",").join(fts), "}"));
+      }
+
+      // GQ -- genotype quality
+      if (genotype.hasGQ()) {
+        attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", genotype.getGQ()));
+      }
+
+      // Additional integer attributes, currently Delly only.
+      //
+      // * DR -- reference pairs
+      // * DV -- variant pairs
+      // * RR -- reference junction
+      // * RV -- variant junction
+      final int dr = Integer.parseInt(genotype.getExtendedAttribute("DR", "0").toString());
+      final int dv = Integer.parseInt(genotype.getExtendedAttribute("DV", "0").toString());
+      final int rr = Integer.parseInt(genotype.getExtendedAttribute("RR", "0").toString());
+      final int rv = Integer.parseInt(genotype.getExtendedAttribute("RV", "0").toString());
+
+      // Attributes to write out.
+      //
+      // * pec - paired end coverage
+      // * pev - paired end variant support
+      // * src - split read coverage
+      // * srv - split read end variant support
+      attrs.add(Joiner.on("").join(tripleQuote("pec"), ":", String.valueOf(rv + dv)));
+      attrs.add(Joiner.on("").join(tripleQuote("pev"), ":", String.valueOf(dv)));
+      attrs.add(Joiner.on("").join(tripleQuote("src"), ":", String.valueOf(rr + rv)));
+      attrs.add(Joiner.on("").join(tripleQuote("srv"), ":", String.valueOf(rv)));
+
+      mappings.add(Joiner.on("").join(tripleQuote(sample), ":{", Joiner.on(",").join(attrs), "}"));
     }
 
     return "{" + Joiner.on(",").join(mappings) + "}";
