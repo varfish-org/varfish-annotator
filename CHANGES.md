@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3
+
+- Improved annotation of Delly2 output.
+
 ## v0.2
 
 - Fixing bug that prevented intergenic variants from being written out.
