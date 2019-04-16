@@ -1,5 +1,9 @@
 # Changelog
 
+## HEAD (unrelaeased)
+
+- Fixing bug that gave wrong paired read reference counts.
+
 ## v0.3
 
 - Improved annotation of Delly2 output.

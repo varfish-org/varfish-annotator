@@ -476,7 +476,7 @@ public final class AnnotateSvsVcf {
       // * pev - paired end variant support
       // * src - split read coverage
       // * srv - split read end variant support
-      attrs.add(Joiner.on("").join(tripleQuote("pec"), ":", String.valueOf(rv + dv)));
+      attrs.add(Joiner.on("").join(tripleQuote("pec"), ":", String.valueOf(dr + dv)));
       attrs.add(Joiner.on("").join(tripleQuote("pev"), ":", String.valueOf(dv)));
       attrs.add(Joiner.on("").join(tripleQuote("src"), ":", String.valueOf(rr + rv)));
       attrs.add(Joiner.on("").join(tripleQuote("srv"), ":", String.valueOf(rv)));
