@@ -1,8 +1,9 @@
 # Changelog
 
-## HEAD (unrelaeased)
+## HEAD (unreleased)
 
 - Fixing bug that gave wrong paired read reference counts.
+- BNDs are not annotated as linear variants any more, instead: `start == end`.
 
 ## v0.3
 

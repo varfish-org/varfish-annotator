@@ -20,6 +20,7 @@ import de.charite.compbio.jannovar.htsjdk.MissingSVTypeInfoField;
 import de.charite.compbio.jannovar.htsjdk.MultipleSVAlleles;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator.Options;
+import de.charite.compbio.jannovar.reference.SVDescription.Type;
 import de.charite.compbio.jannovar.reference.SVGenomeVariant;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
@@ -374,11 +375,13 @@ public final class AnnotateSvsVcf {
   private List<Object> buildGtRecord(
       UUID variantId, SVGenomeVariant svGenomeVar, VariantContext ctx, int alleleNo) {
     final String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", null);
+    final boolean isBnd = (svGenomeVar.getType() == Type.BND);
+
     return ImmutableList.of(
         args.getRelease(),
         svGenomeVar.getChrName(),
         svGenomeVar.getPos() + 1,
-        svGenomeVar.getPos2(),
+        isBnd ? svGenomeVar.getPos() + 1 : svGenomeVar.getPos2(),
         UcscBinning.getContainingBin(svGenomeVar.getPos(), svGenomeVar.getPos()),
         "{"
             + Joiner.on(",")
@@ -394,12 +397,17 @@ public final class AnnotateSvsVcf {
         // TODO: improve type and sub type annotation!
         svGenomeVar.getType(),
         svGenomeVar.getType(),
-        buildInfoValue(ctx),
+        buildInfoValue(ctx, svGenomeVar),
         buildGenotypeValue(ctx, alleleNo));
   }
 
-  private String buildInfoValue(VariantContext ctx) {
+  private String buildInfoValue(VariantContext ctx, SVGenomeVariant svGenomeVar) {
     final List<String> mappings = new ArrayList<>();
+
+    if (svGenomeVar.getType() == Type.BND) {
+      mappings.add(tripleQuote("chr2") + ":" + svGenomeVar.getChr2Name());
+      mappings.add(tripleQuote("pos2") + ":" + svGenomeVar.getPos2());
+    }
 
     mappings.add(
         tripleQuote("backgroundCarriers")
