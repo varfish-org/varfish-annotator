@@ -405,7 +405,7 @@ public final class AnnotateSvsVcf {
     final List<String> mappings = new ArrayList<>();
 
     if (svGenomeVar.getType() == Type.BND) {
-      mappings.add(tripleQuote("chr2") + ":" + svGenomeVar.getChr2Name());
+      mappings.add(tripleQuote("chr2") + ":" + tripleQuote(svGenomeVar.getChr2Name()));
       mappings.add(tripleQuote("pos2") + ":" + svGenomeVar.getPos2());
     }
 
