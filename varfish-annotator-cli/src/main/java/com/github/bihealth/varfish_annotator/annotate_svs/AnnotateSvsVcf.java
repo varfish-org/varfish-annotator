@@ -467,27 +467,88 @@ public final class AnnotateSvsVcf {
         attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", genotype.getGQ()));
       }
 
-      // Additional integer attributes, currently Delly only.
-      //
-      // * DR -- reference pairs
-      // * DV -- variant pairs
-      // * RR -- reference junction
-      // * RV -- variant junction
-      final int dr = Integer.parseInt(genotype.getExtendedAttribute("DR", "0").toString());
-      final int dv = Integer.parseInt(genotype.getExtendedAttribute("DV", "0").toString());
-      final int rr = Integer.parseInt(genotype.getExtendedAttribute("RR", "0").toString());
-      final int rv = Integer.parseInt(genotype.getExtendedAttribute("RV", "0").toString());
+      // Additional integer attributes, currently Delly and SV2 only.
+      boolean looksLikeDelly = ctx.getAttributeAsString("SVMETHOD", "").contains("DELLY");
+      boolean looksLikeSV2 = ctx.getAttributeAsString("SVMETHOD", "").contains("SV2");
+      if (looksLikeDelly) {
+        // * DR -- reference pairs
+        // * DV -- variant pairs
+        // * RR -- reference junction
+        // * RV -- variant junction
+        final int dr = Integer.parseInt(genotype.getExtendedAttribute("DR", "0").toString());
+        final int dv = Integer.parseInt(genotype.getExtendedAttribute("DV", "0").toString());
+        final int rr = Integer.parseInt(genotype.getExtendedAttribute("RR", "0").toString());
+        final int rv = Integer.parseInt(genotype.getExtendedAttribute("RV", "0").toString());
 
-      // Attributes to write out.
-      //
-      // * pec - paired end coverage
-      // * pev - paired end variant support
-      // * src - split read coverage
-      // * srv - split read end variant support
-      attrs.add(Joiner.on("").join(tripleQuote("pec"), ":", String.valueOf(dr + dv)));
-      attrs.add(Joiner.on("").join(tripleQuote("pev"), ":", String.valueOf(dv)));
-      attrs.add(Joiner.on("").join(tripleQuote("src"), ":", String.valueOf(rr + rv)));
-      attrs.add(Joiner.on("").join(tripleQuote("srv"), ":", String.valueOf(rv)));
+        // Attributes to write out.
+        //
+        // * pec - paired end coverage
+        // * pev - paired end variant support
+        // * src - split read coverage
+        // * srv - split read end variant support
+        attrs.add(Joiner.on("").join(tripleQuote("pec"), ":", String.valueOf(dr + dv)));
+        attrs.add(Joiner.on("").join(tripleQuote("pev"), ":", String.valueOf(dv)));
+        attrs.add(Joiner.on("").join(tripleQuote("src"), ":", String.valueOf(rr + rv)));
+        attrs.add(Joiner.on("").join(tripleQuote("srv"), ":", String.valueOf(rv)));
+      } else if (looksLikeSV2) {
+        // * CN -- copy number estimate
+        // * PE -- normalized discordant paired-end count
+        // * SR -- normalized split read count
+        // * NS -- number of SNPs in the locus
+        // * HA -- heterozygous allele ratio
+        // * SQ -- phred-scaled genotype likelihood
+        final float cn;
+        final float pe;
+        final float sr;
+        final int ns;
+        final float ha;
+        final float sq;
+        if ("nan".equals(genotype.getExtendedAttribute("CN", "0.0"))) {
+          cn = 0;
+        } else {
+          cn = Float.parseFloat(genotype.getExtendedAttribute("CN", "0.0").toString());
+        }
+        if ("nan".equals(genotype.getExtendedAttribute("PE", "0.0"))) {
+          pe = 0;
+        } else {
+          pe = Float.parseFloat(genotype.getExtendedAttribute("PE", "0.0").toString());
+        }
+        if ("nan".equals(genotype.getExtendedAttribute("SR", "0.0"))) {
+          sr = 0;
+        } else {
+          sr = Float.parseFloat(genotype.getExtendedAttribute("SR", "0.0").toString());
+        }
+        if ("nan".equals(genotype.getExtendedAttribute("NS", "0.0"))) {
+          ns = 0;
+        } else {
+          ns = Integer.parseInt(genotype.getExtendedAttribute("NS", "0").toString());
+        }
+        if ("nan".equals(genotype.getExtendedAttribute("HA", "0.0"))) {
+          ha = 0;
+        } else {
+          ha = Float.parseFloat(genotype.getExtendedAttribute("HA", "0.0").toString());
+        }
+        if ("nan".equals(genotype.getExtendedAttribute("SQ", "0.0"))) {
+          sq = 0;
+        } else {
+          sq = Float.parseFloat(genotype.getExtendedAttribute("SQ", "0.0").toString());
+        }
+
+        // Attributes to write out.
+        //
+        // * cn  - copy number estimate
+        // * npe - normalized discordant paired-read count
+        // * sre - normalized split read count
+        // * ns  - number of NSPs in the locus
+        // * har - heterozygous allele ratio
+        // * gq  - phred-scaled allele rtio
+        attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
+        attrs.add(Joiner.on("").join(tripleQuote("npe"), ":", String.valueOf(pe)));
+        attrs.add(Joiner.on("").join(tripleQuote("sre"), ":", String.valueOf(sr)));
+        attrs.add(Joiner.on("").join(tripleQuote("ns"), ":", String.valueOf(ns)));
+        attrs.add(Joiner.on("").join(tripleQuote("har"), ":", String.valueOf(ha)));
+        attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", String.valueOf(Math.round(sq))));
+      }
 
       mappings.add(Joiner.on("").join(tripleQuote(sample), ":{", Joiner.on(",").join(attrs), "}"));
     }

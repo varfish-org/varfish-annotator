@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5
+
+- Bumping Jannovar dependency (properly load SV type from SV2 output).
+- Reading out `FORMAT` fields from SV2 output.
+
 ## v0.4
 
 - Fixing bug that gave wrong paired read reference counts.
