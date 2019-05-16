@@ -6,6 +6,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import de.charite.compbio.jannovar.annotation.SVAnnotation;
 import de.charite.compbio.jannovar.annotation.SVAnnotations;
 import de.charite.compbio.jannovar.annotation.VariantEffect;
@@ -470,6 +471,7 @@ public final class AnnotateSvsVcf {
       // Additional integer attributes, currently Delly and SV2 only.
       boolean looksLikeDelly = ctx.getAttributeAsString("SVMETHOD", "").contains("DELLY");
       boolean looksLikeSV2 = ctx.getAttributeAsString("SVMETHOD", "").contains("SV2");
+      boolean looksLikeXHMM = ctx.getAttributeAsString("SVMETHOD", "").contains("XHMM");
       if (looksLikeDelly) {
         // * DR -- reference pairs
         // * DV -- variant pairs
@@ -548,6 +550,27 @@ public final class AnnotateSvsVcf {
         attrs.add(Joiner.on("").join(tripleQuote("ns"), ":", String.valueOf(ns)));
         attrs.add(Joiner.on("").join(tripleQuote("har"), ":", String.valueOf(ha)));
         attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", String.valueOf(Math.round(sq))));
+      } else if (looksLikeXHMM) {
+        // * DQ  -- diploid quality
+        // * NDQ -- non-diploid quality
+        // * RD  -- mean normalized read depth over region
+        // * PL  -- genotype likelihoods, for [diploid, deletion, duplication]
+        final float dq = Float.parseFloat(genotype.getExtendedAttribute("DQ", "0.0").toString());
+        final float ndq = Float.parseFloat(genotype.getExtendedAttribute("NDQ", "0.0").toString());
+        final float rd = Float.parseFloat(genotype.getExtendedAttribute("RD", "0.0").toString());
+        final int pl[] = genotype.getPL();
+
+        // Attributes to write out.
+        //
+        // * dq  -- diploid quality
+        // * ndq -- non-diploid quality
+        // * rd  -- mean normalized read depth over region
+        // * pl  -- genotype likelihoods, for [diploid, deletion, duplication]
+        attrs.add(Joiner.on("").join(tripleQuote("dq"), ":", String.valueOf(dq)));
+        attrs.add(Joiner.on("").join(tripleQuote("ndq"), ":", String.valueOf(ndq)));
+        attrs.add(Joiner.on("").join(tripleQuote("rd"), ":", String.valueOf(rd)));
+        attrs.add(
+            Joiner.on("").join(tripleQuote("pl"), ":[", Joiner.on(',').join(Ints.asList(pl)), "]"));
       }
 
       mappings.add(Joiner.on("").join(tripleQuote(sample), ":{", Joiner.on(",").join(attrs), "}"));

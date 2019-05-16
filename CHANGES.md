@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6
+
+- Adding support for XHMM `GT` attributes.
+
 ## v0.5
 
 - Bumping Jannovar dependency (properly load SV type from SV2 output).
