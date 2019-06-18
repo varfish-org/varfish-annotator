@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.7 (unreleased)
+
+- Bumping Jannovar dependency to v0.32.
+
 ## v0.6
 
 - Adding support for XHMM `GT` attributes.
