@@ -119,8 +119,8 @@ public class ClinvarImporter {
             + "("
             + "release VARCHAR(10) NOT NULL, "
             + "chrom VARCHAR(20) NOT NULL, "
-            + "pos INTEGER NOT NULL, "
-            + "pos_end INTEGER NOT NULL, "
+            + "start INTEGER NOT NULL, "
+            + "end INTEGER NOT NULL, "
             + "ref VARCHAR("
             + InitDb.VARCHAR_LEN
             + ") NOT NULL, "
@@ -136,8 +136,8 @@ public class ClinvarImporter {
 
     final ImmutableList<String> indexQueries =
         ImmutableList.of(
-            "CREATE PRIMARY KEY ON " + TABLE_NAME + " (release, chrom, pos, ref, alt)",
-            "CREATE INDEX ON " + TABLE_NAME + " (release, chrom, pos, pos_end)");
+            "CREATE PRIMARY KEY ON " + TABLE_NAME + " (release, chrom, start, ref, alt)",
+            "CREATE INDEX ON " + TABLE_NAME + " (release, chrom, start, end)");
     for (String query : indexQueries) {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
@@ -154,7 +154,7 @@ public class ClinvarImporter {
     final String insertQuery =
         "MERGE INTO "
             + TABLE_NAME
-            + " (release, chrom, pos, pos_end, ref, alt)"
+            + " (release, chrom, start, end, ref, alt)"
             + " VALUES (?, ?, ?, ?, ?, ?)";
 
     String line = null;

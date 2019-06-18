@@ -679,7 +679,7 @@ public final class AnnotateVcf {
     final String query =
         "SELECT "
             + prefix
-            + "_af_popmax, "
+            + "_af, "
             + prefix
             + "_het, "
             + prefix
@@ -687,7 +687,7 @@ public final class AnnotateVcf {
             + prefix
             + "_hemi FROM "
             + prefix
-            + "_var WHERE (release = ?) AND (chrom = ?) AND (pos = ?) AND (ref = ?) AND (alt = ?)";
+            + "_var WHERE (release = ?) AND (chrom = ?) AND (start = ?) AND (ref = ?) AND (alt = ?)";
     try {
       final PreparedStatement stmt = conn.prepareStatement(query);
       stmt.setString(1, release);
@@ -724,7 +724,7 @@ public final class AnnotateVcf {
       throws VarfishAnnotatorException {
     final String query =
         "SELECT COUNT(*) FROM clinvar_var "
-            + "WHERE (release = ?) AND (chrom = ?) AND (pos = ?) AND (ref = ?) AND (alt = ?)";
+            + "WHERE (release = ?) AND (chrom = ?) AND (start = ?) AND (ref = ?) AND (alt = ?)";
     try {
       final PreparedStatement stmt = conn.prepareStatement(query);
       stmt.setString(1, release);

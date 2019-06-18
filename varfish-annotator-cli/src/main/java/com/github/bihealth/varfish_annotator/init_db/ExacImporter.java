@@ -126,8 +126,8 @@ public final class ExacImporter {
             + "("
             + "release VARCHAR(10) NOT NULL, "
             + "chrom VARCHAR(20) NOT NULL, "
-            + "pos INTEGER NOT NULL, "
-            + "pos_end INTEGER NOT NULL, "
+            + "start INTEGER NOT NULL, "
+            + "end INTEGER NOT NULL, "
             + "ref VARCHAR("
             + InitDb.VARCHAR_LEN
             + ") NOT NULL, "
@@ -137,7 +137,7 @@ public final class ExacImporter {
             + "exac_het INTEGER NOT NULL, "
             + "exac_hom INTEGER NOT NULL, "
             + "exac_hemi INTEGER NOT NULL, "
-            + "exac_af_popmax DOUBLE NOT NULL, "
+            + "exac_af DOUBLE NOT NULL, "
             + ")";
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();
@@ -147,8 +147,8 @@ public final class ExacImporter {
 
     final ImmutableList<String> indexQueries =
         ImmutableList.of(
-            "CREATE PRIMARY KEY ON " + TABLE_NAME + " (release, chrom, pos, ref, alt)",
-            "CREATE INDEX ON " + TABLE_NAME + " (release, chrom, pos, pos_end)");
+            "CREATE PRIMARY KEY ON " + TABLE_NAME + " (release, chrom, start, ref, alt)",
+            "CREATE INDEX ON " + TABLE_NAME + " (release, chrom, start, end)");
     for (String query : indexQueries) {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
@@ -165,7 +165,7 @@ public final class ExacImporter {
     final String insertQuery =
         "MERGE INTO "
             + TABLE_NAME
-            + " (release, chrom, pos, pos_end, ref, alt, exac_het, exac_hom, exac_hemi, exac_af_popmax)"
+            + " (release, chrom, start, end, ref, alt, exac_het, exac_hom, exac_hemi, exac_af)"
             + " VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
@@ -234,27 +234,21 @@ public final class ExacImporter {
       }
       stmt.setInt(8, hemi);
 
-      double alleleFreqPopMax = 0.0;
-      for (String pop : popNames) {
-        final List<Integer> acs;
-        if (numAlleles == 2) {
-          acs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_" + pop, 0));
-        } else {
-          acs = new ArrayList<>();
-          for (String s :
-              (List<String>)
-                  ctx.getCommonInfo().getAttribute("AC_" + pop, ImmutableList.<String>of())) {
-            acs.add(Integer.parseInt(s));
-          }
-        }
-        final int an = ctx.getCommonInfo().getAttributeAsInt("AN_" + pop, 0);
-        if (an > 0 && acs.size() >= i) {
-          alleleFreqPopMax = Math.max(alleleFreqPopMax, ((double) acs.get(i - 1)) / ((double) an));
-        } else if (an > 0) {
-          System.err.println("Warning, could not update AF_POPMAX (" + pop + ") for " + ctx);
+      double af = 0.0;
+      final List<Double> afs;
+      if (numAlleles == 2) {
+        afs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsDouble("AF", 0.0));
+      } else {
+        afs = new ArrayList<>();
+        for (String s :
+            (List<String>) ctx.getCommonInfo().getAttribute("AF", ImmutableList.<String>of())) {
+          afs.add(Double.parseDouble(s));
         }
       }
-      stmt.setDouble(9, alleleFreqPopMax);
+      if (afs.size() >= i) {
+        af = afs.get(i - 1);
+      }
+      stmt.setDouble(9, af);
 
       stmt.executeUpdate();
       stmt.close();

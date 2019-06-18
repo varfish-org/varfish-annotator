@@ -5,6 +5,9 @@
 - Bumping Jannovar dependency to v0.32.
 - Refactoring columns of small and structural variant call file.
 - Not writing out variant effects for small variants any more.
+- Writing out overall allele frequency and not `AF_POPMAX` any more.
+  **This requires rebuilding the VarFish annotator database.**
+- Replacing `pos` and `pos_end` in database by `start` and `end` to make it consistent with created files.
 
 ## v0.6
 

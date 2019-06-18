@@ -64,7 +64,7 @@ public final class VariantNormalizer {
   }
 
   private VariantDescription shiftLeft(VariantDescription desc) {
-    int pos = desc.getPos();
+    int start = desc.getPos();
     String ref = desc.getRef();
     String alt = desc.getAlt();
 
@@ -82,19 +82,19 @@ public final class VariantNormalizer {
       }
       // Extend alleles to the left if there is an empty allele
       if (ref.length() == 0 || alt.length() == 0) {
-        char extension = (char) fai.getSubsequenceAt(desc.getChrom(), pos, pos).getBases()[0];
+        char extension = (char) fai.getSubsequenceAt(desc.getChrom(), start, start).getBases()[0];
         ref = extension + ref;
         alt = extension + alt;
-        pos -= 1;
+        start -= 1;
         anyChange = true;
       }
     }
 
-    return new VariantDescription(desc.getChrom(), pos, ref, alt);
+    return new VariantDescription(desc.getChrom(), start, ref, alt);
   }
 
   private VariantDescription trimBasesLeft(VariantDescription desc, int minSize) {
-    int pos = desc.getPos();
+    int start = desc.getPos();
     String ref = desc.getRef();
     String alt = desc.getAlt();
 
@@ -108,6 +108,6 @@ public final class VariantNormalizer {
       }
     }
 
-    return new VariantDescription(desc.getChrom(), pos, ref, alt);
+    return new VariantDescription(desc.getChrom(), start, ref, alt);
   }
 }

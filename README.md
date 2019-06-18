@@ -13,14 +13,14 @@ Annotation of VCF file for import into VarFish (through Web UI).
 
 ## Example
 
-The following will create `varfish-annotator-db-1903.h2.db` and fill it.
+The following will create `varfish-annotator-db-1906.h2.db` and fill it.
 
 ```
 # DOWNLOAD=path/to/varfish-db-downloader
-# java -jar varfish-annotator-cli-0.1-SNAPSHOT.jar \
+# java -jar varfish-annotator-cli/target/varfish-annotator-cli-0.7-SNAPSHOT.jar \
       init-db \
-      --db-release-info "varfish-annotator:v0.2" \
-      --db-release-info "varfish-annotator-db:r1903" \
+      --db-release-info "varfish-annotator:v0.7" \
+      --db-release-info "varfish-annotator-db:r1906" \
       \
       --ref-path /fast/projects/cubit/18.12/static_data/reference/GRCh37/hs37d5/hs37d5.fa \
       \
@@ -34,12 +34,12 @@ The following will create `varfish-annotator-db-1903.h2.db` and fill it.
       --exac-path $DOWNLOAD/GRCh37/ExAC/r1/download/ExAC.r1.sites.vep.vcf.gz \
       \
       --db-release-info "gnomad_exomes:r2.1" \
-      $(for path in $DOWNLOAD/GRCh37/gnomAD_exomes/r2.1/download/gnomad.exomes.r2.1.sites.chr*.vcf.bgz; do
+      $(for path in $DOWNLOAD/GRCh37/gnomAD_exomes/r2.1/download/gnomad.exomes.r2.1.sites.chr*.normalized.vcf.bgz; do
           echo --gnomad-exomes-path $path
       done) \
       \
       --db-release-info "gnomad_genomes:r2.1" \
-      $(for path in $DOWNLOAD/GRCh37/gnomAD_genomes/r2.1/download/gnomad.genomes.r2.1.sites.chr*.vcf.bgz; do
+      $(for path in $DOWNLOAD/GRCh37/gnomAD_genomes/r2.1/download/gnomad.genomes.r2.1.sites.chr*.normalized.vcf.bgz; do
           echo --gnomad-genomes-path $path
       done) \
       \

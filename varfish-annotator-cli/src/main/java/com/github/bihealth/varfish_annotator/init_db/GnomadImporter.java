@@ -115,8 +115,8 @@ abstract class GnomadImporter {
             + "("
             + "release VARCHAR(10) NOT NULL, "
             + "chrom VARCHAR(20) NOT NULL, "
-            + "pos INTEGER NOT NULL, "
-            + "pos_end INTEGER NOT NULL, "
+            + "start INTEGER NOT NULL, "
+            + "end INTEGER NOT NULL, "
             + "ref VARCHAR("
             + InitDb.VARCHAR_LEN
             + ") NOT NULL, "
@@ -130,7 +130,7 @@ abstract class GnomadImporter {
             + getFieldPrefix()
             + "_hemi INTEGER NOT NULL, "
             + getFieldPrefix()
-            + "_af_popmax DOUBLE NOT NULL, "
+            + "_af DOUBLE NOT NULL, "
             + ")";
     try (PreparedStatement stmt = conn.prepareStatement(createQuery)) {
       stmt.executeUpdate();
@@ -140,8 +140,8 @@ abstract class GnomadImporter {
 
     final ImmutableList<String> indexQueries =
         ImmutableList.of(
-            "CREATE PRIMARY KEY ON " + getTableName() + " (release, chrom, pos, ref, alt)",
-            "CREATE INDEX ON " + getTableName() + " (release, chrom, pos, pos_end)");
+            "CREATE PRIMARY KEY ON " + getTableName() + " (release, chrom, start, ref, alt)",
+            "CREATE INDEX ON " + getTableName() + " (release, chrom, start, end)");
     for (String query : indexQueries) {
       try (PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.executeUpdate();
@@ -158,7 +158,7 @@ abstract class GnomadImporter {
     final String insertQuery =
         "MERGE INTO "
             + getTableName()
-            + " (release, chrom, pos, pos_end, ref, alt, "
+            + " (release, chrom, start, end, ref, alt, "
             + getFieldPrefix()
             + "_het, "
             + getFieldPrefix()
@@ -166,7 +166,7 @@ abstract class GnomadImporter {
             + getFieldPrefix()
             + "_hemi, "
             + getFieldPrefix()
-            + "_af_popmax) VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + "_af) VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
@@ -204,7 +204,7 @@ abstract class GnomadImporter {
           ctx.getCommonInfo().getAttributeAsInt("AC", 0) - countHemi - 2 * countHomAlt;
       stmt.setInt(6, countHet);
 
-      stmt.setDouble(9, ctx.getCommonInfo().getAttributeAsDouble("AF_popmax", 0.0));
+      stmt.setDouble(9, ctx.getCommonInfo().getAttributeAsDouble("AF", 0.0));
 
       stmt.executeUpdate();
       stmt.close();

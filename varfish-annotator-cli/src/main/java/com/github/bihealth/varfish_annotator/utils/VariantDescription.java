@@ -10,16 +10,16 @@ public final class VariantDescription {
   /** Name of the chromosome */
   private final String chrom;
   /** 0-based position of the first base in ref */
-  private final int pos;
+  private final int start;
   /** String with reference sequence */
   private final String ref;
   /** String with alternative sequence */
   private final String alt;
 
-  public VariantDescription(String chrom, int pos, String ref, String alt) {
+  public VariantDescription(String chrom, int start, String ref, String alt) {
     super();
     this.chrom = chrom;
-    this.pos = pos;
+    this.start = start;
     this.ref = ref;
     this.alt = alt;
   }
@@ -29,13 +29,13 @@ public final class VariantDescription {
   }
 
   public int getPos() {
-    return pos;
+    return start;
   }
 
   /** @return 0-based end position of the variant in the reference */
   public int getEnd() {
-    if (ref.length() == 0) return pos + 1;
-    else return pos + ref.length();
+    if (ref.length() == 0) return start + 1;
+    else return start + ref.length();
   }
 
   public String getRef() {
@@ -50,8 +50,8 @@ public final class VariantDescription {
   public String toString() {
     return "VariantDescription [chrom="
         + chrom
-        + ", pos="
-        + pos
+        + ", start="
+        + start
         + ", ref="
         + ref
         + ", alt="
@@ -65,7 +65,7 @@ public final class VariantDescription {
     int result = 1;
     result = prime * result + ((alt == null) ? 0 : alt.hashCode());
     result = prime * result + ((chrom == null) ? 0 : chrom.hashCode());
-    result = prime * result + pos;
+    result = prime * result + start;
     result = prime * result + ((ref == null) ? 0 : ref.hashCode());
     return result;
   }
@@ -82,7 +82,7 @@ public final class VariantDescription {
     if (chrom == null) {
       if (other.chrom != null) return false;
     } else if (!chrom.equals(other.chrom)) return false;
-    if (pos != other.pos) return false;
+    if (start != other.start) return false;
     if (ref == null) {
       if (other.ref != null) return false;
     } else if (!ref.equals(other.ref)) return false;
