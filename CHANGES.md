@@ -3,6 +3,8 @@
 ## v0.7 (unreleased)
 
 - Bumping Jannovar dependency to v0.32.
+- Refactoring columns of small and structural variant call file.
+- Not writing out variant effects for small variants any more.
 
 ## v0.6
 

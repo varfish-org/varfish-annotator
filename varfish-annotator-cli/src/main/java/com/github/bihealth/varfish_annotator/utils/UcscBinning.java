@@ -1,4 +1,4 @@
-package com.github.bihealth.varfish_annotator.annotate_svs;
+package com.github.bihealth.varfish_annotator.utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.List;
  *
  * @author <a href="mailto:manuel.holtgrewe@bihealth.de">Manuel Holtgrewe</a>
  */
-final class UcscBinning {
+public final class UcscBinning {
 
   /** The bin offsets array. */
   private static final int binOffsets[] = {512 + 64 + 8 + 1, 64 + 8 + 1, 8 + 1, 1, 0};

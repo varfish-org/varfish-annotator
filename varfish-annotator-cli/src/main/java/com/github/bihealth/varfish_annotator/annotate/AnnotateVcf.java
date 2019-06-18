@@ -3,6 +3,7 @@ package com.github.bihealth.varfish_annotator.annotate;
 import com.github.bihealth.varfish_annotator.DbInfo;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
+import com.github.bihealth.varfish_annotator.utils.UcscBinning;
 import com.github.bihealth.varfish_annotator.utils.VariantDescription;
 import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
 import com.google.common.base.Joiner;
@@ -63,11 +64,13 @@ public final class AnnotateVcf {
       ImmutableList.of(
           "release",
           "chromosome",
-          "position",
+          "start",
+          "end",
+          "bin",
           "reference",
           "alternative",
           "var_type",
-          "case_id",
+          "set_id",
           "genotype",
           "num_hom_alt",
           "num_hom_ref",
@@ -104,22 +107,6 @@ public final class AnnotateVcf {
           "ensembl_hgvs_p",
           "ensembl_effect");
 
-  /** Header fields for the variant file. */
-  public static final ImmutableList<String> HEADERS_VAR =
-      ImmutableList.of(
-          "release",
-          "chromosome",
-          "position",
-          "reference",
-          "alternative",
-          "database",
-          "effect",
-          "gene_id",
-          "transcript_id",
-          "transcript_coding",
-          "hgvs_c",
-          "hgvs_p");
-
   /** Configuration for the command. */
   private final AnnotateArgs args;
 
@@ -146,14 +133,13 @@ public final class AnnotateVcf {
                 "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
         FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
-        FileWriter varWriter = new FileWriter(new File(args.getOutputVars()));
         FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
       final VariantNormalizer normalizer = new VariantNormalizer(args.getRefPath());
-      annotateVcf(conn, reader, refseqJvData, ensemblJvData, normalizer, gtWriter, varWriter);
+      annotateVcf(conn, reader, refseqJvData, ensemblJvData, normalizer, gtWriter);
       writeDbInfos(conn, dbInfoBufWriter);
     } catch (SQLException e) {
       System.err.println("Problem with database connection");
@@ -225,7 +211,6 @@ public final class AnnotateVcf {
    * @param ensemblJv Deserialized ENSEMBL transcript database for Jannovar.
    * @param normalizer Helper for normalizing variants.
    * @param gtWriter Writer for variant call ("genotype") TSV file.
-   * @param varWriter Writer for variant annotation ("annotation") TSV file.
    * @throws VarfishAnnotatorException in case of problems
    */
   private void annotateVcf(
@@ -234,14 +219,12 @@ public final class AnnotateVcf {
       JannovarData refseqJv,
       JannovarData ensemblJv,
       VariantNormalizer normalizer,
-      FileWriter gtWriter,
-      FileWriter varWriter)
+      FileWriter gtWriter)
       throws VarfishAnnotatorException {
 
     // Write out header.
     try {
       gtWriter.append(Joiner.on("\t").join(HEADERS_GT) + "\n");
-      varWriter.append(Joiner.on("\t").join(HEADERS_VAR) + "\n");
     } catch (IOException e) {
       throw new VarfishAnnotatorException("Could not write out headers", e);
     }
@@ -274,15 +257,13 @@ public final class AnnotateVcf {
       if (!ctx.getContig().equals(prevChr)) {
         System.err.println("Now on contig " + ctx.getContig());
       }
-      annotateVariantContext(
-          conn, refseqAnnotator, ensemblAnnotator, normalizer, ctx, gtWriter, varWriter);
+      annotateVariantContext(conn, refseqAnnotator, ensemblAnnotator, normalizer, ctx, gtWriter);
       prevChr = ctx.getContig();
     }
   }
 
   /**
-   * Annotate <tt>ctx</tt>, write out annotated variant call to <tt>gtWriter</tt> and annotated
-   * variant to <tt>varWriter</tt>.
+   * Annotate <tt>ctx</tt>, write out annotated variant call to <tt>gtWriter</tt>.
    *
    * @param conn Database connection.
    * @param refseqAnnotator Helper class to use for annotation of variants with Refseq
@@ -290,7 +271,6 @@ public final class AnnotateVcf {
    * @param normalizer Helper for normalizing variants.
    * @param ctx The variant to annotate.
    * @param gtWriter Writer for annotated genotypes.
-   * @param varWriter Writer for variants.
    * @throws VarfishAnnotatorException in case of problems
    */
   private void annotateVariantContext(
@@ -299,8 +279,7 @@ public final class AnnotateVcf {
       VariantContextAnnotator ensemblAnnotator,
       VariantNormalizer normalizer,
       VariantContext ctx,
-      FileWriter gtWriter,
-      FileWriter varWriter)
+      FileWriter gtWriter)
       throws VarfishAnnotatorException {
     ImmutableList<VariantAnnotations> refseqAnnotationsList =
         silentBuildAnnotations(ctx, refseqAnnotator);
@@ -322,23 +301,15 @@ public final class AnnotateVcf {
       final List<Annotation> sortedRefseqAnnos = sortAnnos(refseqAnnotationsList, i);
       final List<Annotation> sortedEnsemblAnnos = sortAnnos(ensemblAnnotationsList, i);
 
-      // Write out unannotated record to output file in case of problems with annotation.
-      //
-      // TODO: report errors?
-      if (sortedRefseqAnnos.isEmpty() && sortedEnsemblAnnos.isEmpty()) {
-        writeEmptyAnnoLine(normalizedVar, varWriter, i);
-        continue; // short-circuit
-      }
-
-      // Write out variant annotation, collecting RefSeq and ENSEMBL annotations per gene.  We
-      // collect the variants by gene for RefSeq in the simplest way possible (mapping to
-      // ENSEMBL gene by using HGNC annotation from Jannovar).  However, we ignore intergenic
-      // annotations here as these are mostly on different genes anyway (because ENSEMBL has
-      // so many more genes/transcripts).  Further, if either only yields one gene we force it
-      // to be the same as the (lexicographically first) gene of the other.
+      // Collect RefSeq and ENSEMBL annotations per gene.  We collect the variants by gene for
+      // RefSeq in the simplest way possible (mapping to ENSEMBL gene by using HGNC annotation from
+      // Jannovar).  However, we ignore intergenic annotations here as these are mostly on different
+      // genes anyway (because ENSEMBL has so many more genes/transcripts).  Further, if either only
+      // yields one gene we force it to be the same as the (lexicographically first) gene of the
+      // other.
+      // TODO: join genes by new gene id feature of Jannovar
       final HashMap<String, Annotation> refseqAnnoByGene = new HashMap<>();
       for (Annotation annotation : sortedRefseqAnnos) {
-        writeVariantAnnotation(varWriter, annotation, normalizedVar, "refseq");
         if (annotation.getTranscript() == null) {
           continue; // skip, no transcript
         }
@@ -357,7 +328,6 @@ public final class AnnotateVcf {
       }
       final HashMap<String, Annotation> ensemblAnnoByGene = new HashMap<>();
       for (Annotation annotation : sortedEnsemblAnnos) {
-        writeVariantAnnotation(varWriter, annotation, normalizedVar, "ensembl");
         if (annotation.getTranscript() == null) {
           continue; // skip, no transcript
         }
@@ -414,15 +384,19 @@ public final class AnnotateVcf {
         final GenotypeCounts gtCounts = buildGenotypeCounts(ctx, i);
 
         // Construct output record.
-        final List<String> gtOutRec =
+        final List<Object> gtOutRec =
             Lists.newArrayList(
                 args.getRelease(),
                 normalizedVar.getChrom(),
                 String.valueOf(normalizedVar.getPos() + 1),
+                String.valueOf(normalizedVar.getPos() + normalizedVar.getRef().length()),
+                UcscBinning.getContainingBin(
+                    normalizedVar.getPos(),
+                    normalizedVar.getPos() + normalizedVar.getRef().length()),
                 normalizedVar.getRef(),
                 normalizedVar.getAlt(),
                 varType,
-                args.getCaseId(),
+                args.getSetId(),
                 buildGenotypeValue(ctx, i),
                 String.valueOf(gtCounts.numHomAlt),
                 String.valueOf(gtCounts.numHomRef),
@@ -503,80 +477,12 @@ public final class AnnotateVcf {
     }
   }
 
-  private void writeVariantAnnotation(
-      FileWriter varWriter, Annotation annotation, VariantDescription normalizedVar, String dbName)
-      throws VarfishAnnotatorException {
-    if (annotation.getTranscript() == null) {
-      return; // no transcript, no annotation
-    }
-    final String geneId = annotation.getTranscript().getGeneID();
-
-    // Write to variant annotation file.
-    //
-    // Construct output record.
-    final List<String> varOutRecord =
-        Lists.newArrayList(
-            args.getRelease(),
-            normalizedVar.getChrom(),
-            String.valueOf(normalizedVar.getPos() + 1),
-            normalizedVar.getRef(),
-            normalizedVar.getAlt(),
-            dbName,
-            (annotation == null) ? "." : buildEffectsValue(annotation.getEffects()),
-            geneId,
-            annotation.getTranscript().getAccession(),
-            annotation.getTranscript().isCoding() ? "TRUE" : "FALSE",
-            annotation.getCDSNTChange() == null
-                ? "."
-                : (annotation.getTranscript().isCoding() ? "c." : "n.")
-                    + annotation.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
-            annotation.getProteinChange() == null
-                ? "."
-                : "p."
-                    + annotation
-                        .getProteinChange()
-                        .withOnlyPredicted(false)
-                        .toHGVSString(AminoAcidCode.ONE_LETTER));
-
-    // Write record to output stream.
-    try {
-      varWriter.append(Joiner.on("\t").join(varOutRecord) + "\n");
-    } catch (IOException e) {
-      throw new VarfishAnnotatorException("Problem writing to variant annotation file.", e);
-    }
-  }
-
   private ImmutableList<VariantAnnotations> silentBuildAnnotations(
       VariantContext ctx, VariantContextAnnotator annotator) {
     try {
       return annotator.buildAnnotations(ctx);
     } catch (InvalidCoordinatesException e) {
       return null;
-    }
-  }
-
-  private void writeEmptyAnnoLine(VariantDescription normalizedVar, FileWriter varWriter, int i)
-      throws VarfishAnnotatorException {
-    try {
-      // TODO: normalize variant
-      varWriter.append(
-          Joiner.on("\t")
-                  .join(
-                      args.getRelease(),
-                      normalizedVar.getChrom(),
-                      normalizedVar.getPos() + 1,
-                      normalizedVar.getRef(),
-                      normalizedVar.getAlt(),
-                      ".",
-                      ".",
-                      ".",
-                      ".",
-                      ".",
-                      ".",
-                      ".")
-              + "\n");
-    } catch (IOException e) {
-      throw new VarfishAnnotatorException("Problem writing to variant annotation file.", e);
     }
   }
 

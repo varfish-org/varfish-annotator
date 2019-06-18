@@ -41,8 +41,8 @@ public final class AnnotateArgs {
   @Parameter(names = "--release", description = "The genome release used", required = true)
   private String release;
 
-  @Parameter(names = "--case-id", description = "The value to use for case ID", required = true)
-  private String caseId;
+  @Parameter(names = "--set-id", description = "The value to use for set ID", required = true)
+  private String setId;
 
   @Parameter(
       names = "--input-vcf",
@@ -55,12 +55,6 @@ public final class AnnotateArgs {
       description = "Path to output TSV file with annotated genotypes",
       required = true)
   private String outputGts;
-
-  @Parameter(
-      names = "--output-vars",
-      description = "Path to output TSV file with annotated variants",
-      required = true)
-  private String outputVars;
 
   @Parameter(
       names = "--output-db-info",
@@ -97,8 +91,8 @@ public final class AnnotateArgs {
     return release;
   }
 
-  public String getCaseId() {
-    return caseId;
+  public String getSetId() {
+    return setId;
   }
 
   public String getInputVcf() {
@@ -107,10 +101,6 @@ public final class AnnotateArgs {
 
   public String getOutputGts() {
     return outputGts;
-  }
-
-  public String getOutputVars() {
-    return outputVars;
   }
 
   public String getContigRegex() {
@@ -141,17 +131,14 @@ public final class AnnotateArgs {
         + ", release='"
         + release
         + '\''
-        + ", caseId='"
-        + caseId
+        + ", setId='"
+        + setId
         + '\''
         + ", inputVcf='"
         + inputVcf
         + '\''
         + ", outputGts='"
         + outputGts
-        + '\''
-        + ", outputVars='"
-        + outputVars
         + '\''
         + ", outputDbInfos='"
         + outputDbInfos

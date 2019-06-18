@@ -2,6 +2,7 @@ package com.github.bihealth.varfish_annotator.annotate_svs;
 
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
+import com.github.bihealth.varfish_annotator.utils.UcscBinning;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -60,12 +61,11 @@ public final class AnnotateSvsVcf {
           "start",
           "end",
           "bin",
-          "containing_bins",
           "start_ci_left",
           "start_ci_right",
           "end_ci_left",
           "end_ci_right",
-          "case_id",
+          "set_id",
           "sv_uuid",
           "caller",
           "sv_type",
@@ -377,22 +377,19 @@ public final class AnnotateSvsVcf {
       UUID variantId, SVGenomeVariant svGenomeVar, VariantContext ctx, int alleleNo) {
     final String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", null);
     final boolean isBnd = (svGenomeVar.getType() == Type.BND);
+    final int pos2 = isBnd ? svGenomeVar.getPos() + 1 : svGenomeVar.getPos2();
 
     return ImmutableList.of(
         args.getRelease(),
         svGenomeVar.getChrName(),
         svGenomeVar.getPos() + 1,
-        isBnd ? svGenomeVar.getPos() + 1 : svGenomeVar.getPos2(),
-        UcscBinning.getContainingBin(svGenomeVar.getPos(), svGenomeVar.getPos()),
-        "{"
-            + Joiner.on(",")
-                .join(UcscBinning.getOverlappingBins(svGenomeVar.getPos(), svGenomeVar.getPos2()))
-            + "}",
+        pos2,
+        UcscBinning.getContainingBin(svGenomeVar.getPos(), pos2),
         svGenomeVar.getPosCILowerBound(),
         svGenomeVar.getPosCIUpperBound(),
         svGenomeVar.getPos2CILowerBound(),
         svGenomeVar.getPos2CIUpperBound(),
-        args.getCaseId(),
+        args.getSetId(),
         variantId.toString(),
         svMethod,
         // TODO: improve type and sub type annotation!
@@ -543,7 +540,7 @@ public final class AnnotateSvsVcf {
         // * sre - normalized split read count
         // * ns  - number of NSPs in the locus
         // * har - heterozygous allele ratio
-        // * gq  - phred-scaled allele rtio
+        // * gq  - phred-scaled genotype quality
         attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
         attrs.add(Joiner.on("").join(tripleQuote("npe"), ":", String.valueOf(pe)));
         attrs.add(Joiner.on("").join(tripleQuote("sre"), ":", String.valueOf(sr)));
