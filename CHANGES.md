@@ -8,6 +8,7 @@
 - Writing out overall allele frequency and not `AF_POPMAX` any more.
   **This requires rebuilding the VarFish annotator database.**
 - Replacing `pos` and `pos_end` in database by `start` and `end` to make it consistent with created files.
+- Properly matching variants by gene without duplicates (#6).
 
 ## v0.6
 

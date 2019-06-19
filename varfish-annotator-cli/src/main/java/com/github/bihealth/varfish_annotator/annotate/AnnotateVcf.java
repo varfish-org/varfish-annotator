@@ -302,60 +302,64 @@ public final class AnnotateVcf {
       final List<Annotation> sortedRefseqAnnos = sortAnnos(refseqAnnotationsList, i);
       final List<Annotation> sortedEnsemblAnnos = sortAnnos(ensemblAnnotationsList, i);
 
-      // Collect RefSeq and ENSEMBL annotations per gene.  We collect the variants by gene for
-      // RefSeq in the simplest way possible (mapping to ENSEMBL gene by using HGNC annotation from
-      // Jannovar).  However, we ignore intergenic annotations here as these are mostly on different
-      // genes anyway (because ENSEMBL has so many more genes/transcripts).  Further, if either only
-      // yields one gene we force it to be the same as the (lexicographically first) gene of the
-      // other.
-      // TODO: join genes by new gene id feature of Jannovar
-      final HashMap<String, Annotation> refseqAnnoByGene = new HashMap<>();
+      // Collect RefSeq and ENSEMBL annotations per gene.  Jannovar provides gene ID mappings
+      // *to* both RefSeq and ENSEMBL *from* both RefSeq and ENSEMBL.  We use an (arbitrarily)
+      // fixed lookup order as any should give sensible results except for genes whose annotation
+      // is not stable (and would thus be less interpretable in a rare disease setting anyway).
+      //
+      // The only exception are variants that only have intergenic variants.  Here, we match
+      // one arbitrary annotation for each transcript set.  The reason is that ENSEMBL contains
+      // so many more transcripts/genes such that we would expect them to never match.
+
+      // RefSeq first
+
+      final HashMap<String, Annotation> refSeqAnnoByRefSeqGene = new HashMap<>();
+      final HashMap<String, Annotation> refSeqAnnoByEnsemblGene = new HashMap<>();
+
       for (Annotation annotation : sortedRefseqAnnos) {
-        if (annotation.getTranscript() == null) {
-          continue; // skip, no transcript
-        }
-        String geneId = annotation.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID");
-        if (geneId == null) {
-          geneId = annotation.getTranscript().getGeneID();
-        }
-        if (annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
+        if (annotation.getEffects().isEmpty()
+            || annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
           // Put into map under pseudo-identifier "__intergenic__". This ways, intergenic variants
           // are written out only once for RefSeq/ENSEMBL and not twice if different genes are
           // closest.
-          refseqAnnoByGene.put("__intergenic__", annotation);
-        } else if (!refseqAnnoByGene.containsKey(geneId)) {
-          refseqAnnoByGene.put(geneId, annotation);
+          refSeqAnnoByRefSeqGene.put("__intergenic__", annotation);
+          refSeqAnnoByEnsemblGene.put("__intergenic__", annotation);
+        } else {
+          final String refseqGeneId = annotation.getTranscript().getGeneID();
+          final String ensemblGeneId =
+              annotation.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID");
+          if (refseqGeneId != null && !refSeqAnnoByRefSeqGene.containsKey(refseqGeneId)) {
+            refSeqAnnoByRefSeqGene.put(refseqGeneId, annotation);
+          }
+          if (ensemblGeneId != null && !refSeqAnnoByEnsemblGene.containsKey(ensemblGeneId)) {
+            refSeqAnnoByEnsemblGene.put(ensemblGeneId, annotation);
+          }
         }
       }
-      final HashMap<String, Annotation> ensemblAnnoByGene = new HashMap<>();
+
+      // Then ENSEMBL
+
+      final HashMap<String, Annotation> ensemblAnnoByRefSeqGene = new HashMap<>();
+      final HashMap<String, Annotation> ensemblAnnoByEnsemblGene = new HashMap<>();
+
       for (Annotation annotation : sortedEnsemblAnnos) {
-        if (annotation.getTranscript() == null) {
-          continue; // skip, no transcript
-        }
-        final String geneId = annotation.getTranscript().getGeneID();
-        if (annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
+        if (annotation.getEffects().isEmpty()
+            || annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
           // Put into map under pseudo-identifier "__intergenic__". This ways, intergenic variants
           // are written out only once for RefSeq/ENSEMBL and not twice if different genes are
           // closest.
-          ensemblAnnoByGene.put("__intergenic__", annotation);
-        } else if (!ensemblAnnoByGene.containsKey(geneId)) {
-          ensemblAnnoByGene.put(geneId, annotation);
+          ensemblAnnoByRefSeqGene.put("__intergenic__", annotation);
+          ensemblAnnoByEnsemblGene.put("__intergenic__", annotation);
+        } else {
+          final String refseqGeneId = annotation.getTranscript().getAltGeneIDs().get("ENTREZ_ID");
+          final String ensemblGeneId = annotation.getTranscript().getGeneID();
+          if (refseqGeneId != null && !ensemblAnnoByRefSeqGene.containsKey(refseqGeneId)) {
+            ensemblAnnoByRefSeqGene.put(refseqGeneId, annotation);
+          }
+          if (ensemblGeneId != null && !ensemblAnnoByEnsemblGene.containsKey(ensemblGeneId)) {
+            ensemblAnnoByEnsemblGene.put(ensemblGeneId, annotation);
+          }
         }
-      }
-      final TreeSet<String> geneIds = new TreeSet<>();
-      if (refseqAnnoByGene.size() == 1 && ensemblAnnoByGene.size() > 0) {
-        geneIds.addAll(ensemblAnnoByGene.keySet());
-        final String keyEnsembl = ensemblAnnoByGene.keySet().iterator().next();
-        final String keyRefseq = refseqAnnoByGene.keySet().iterator().next();
-        refseqAnnoByGene.put(keyEnsembl, refseqAnnoByGene.get(keyRefseq));
-      } else if (refseqAnnoByGene.size() > 0 && ensemblAnnoByGene.size() == 1) {
-        geneIds.addAll(refseqAnnoByGene.keySet());
-        final String keyEnsembl = ensemblAnnoByGene.keySet().iterator().next();
-        final String keyRefseq = refseqAnnoByGene.keySet().iterator().next();
-        ensemblAnnoByGene.put(keyRefseq, ensemblAnnoByGene.get(keyEnsembl));
-      } else {
-        geneIds.addAll(ensemblAnnoByGene.keySet());
-        geneIds.addAll(refseqAnnoByGene.keySet());
       }
 
       // Query information in databases.
@@ -368,10 +372,53 @@ public final class AnnotateVcf {
           getDbInfo(conn, args.getRelease(), normalizedVar, THOUSAND_GENOMES_PREFIX);
       final boolean inClinvar = getClinVarInfo(conn, args.getRelease(), normalizedVar);
 
+      // Build a list of all gene IDs that we will iterate over later.
+      final TreeSet<String> geneIds = new TreeSet<>();
+      geneIds.addAll(refSeqAnnoByRefSeqGene.keySet());
+      geneIds.addAll(refSeqAnnoByEnsemblGene.keySet());
+      geneIds.addAll(ensemblAnnoByRefSeqGene.keySet());
+      geneIds.addAll(ensemblAnnoByEnsemblGene.keySet());
+
+      // List of gene IDs that have been processed now.
+      final TreeSet<String> doneGeneIds = new TreeSet<>();
+
       // Write one entry for each gene into the annotated genotype call file.
       for (String geneId : geneIds) {
-        Annotation refseqAnno = refseqAnnoByGene.get(geneId);
-        Annotation ensemblAnno = ensemblAnnoByGene.get(geneId);
+        if (doneGeneIds.contains(geneId)) {
+          continue; // Do not process twice.
+        }
+
+        // Select both RefSeq and ENSEMBL annotation for the given (RefSeq or ENSEMBL gene ID).
+        final Annotation refseqAnno;
+        if (refSeqAnnoByRefSeqGene.containsKey(geneId)) {
+          refseqAnno = refSeqAnnoByRefSeqGene.get(geneId);
+        } else if (refSeqAnnoByEnsemblGene.containsKey(geneId)) {
+          refseqAnno = refSeqAnnoByEnsemblGene.get(geneId);
+        } else {
+          refseqAnno = null;
+        }
+        final Annotation ensemblAnno;
+        if (ensemblAnnoByEnsemblGene.containsKey(geneId)) {
+          ensemblAnno = ensemblAnnoByEnsemblGene.get(geneId);
+        } else if (ensemblAnnoByRefSeqGene.containsKey(geneId)) {
+          ensemblAnno = ensemblAnnoByRefSeqGene.get(geneId);
+        } else {
+          ensemblAnno = null;
+        }
+
+        // Mark all gene IDs as done.
+        if (ensemblAnno != null && ensemblAnno.getTranscript() != null) {
+          doneGeneIds.add(ensemblAnno.getTranscript().getGeneID());
+          if (ensemblAnno.getTranscript().getAltGeneIDs().containsKey("ENTREZ_ID")) {
+            doneGeneIds.add(ensemblAnno.getTranscript().getAltGeneIDs().get("ENTREZ_ID"));
+          }
+        }
+        if (refseqAnno != null && refseqAnno.getTranscript() != null) {
+          doneGeneIds.add(refseqAnno.getTranscript().getGeneID());
+          if (refseqAnno.getTranscript().getAltGeneIDs().containsKey("ENSEMBL_GENE_ID")) {
+            doneGeneIds.add(refseqAnno.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID"));
+          }
+        }
 
         final String varType;
         if ((normalizedVar.getRef().length() == 1) && (normalizedVar.getAlt().length() == 1)) {
@@ -427,10 +474,16 @@ public final class AnnotateVcf {
                 gnomadGenomesInfo.getHetTotalStr(),
                 gnomadGenomesInfo.getHemiTotalStr(),
                 // RefSeq
-                refseqAnno == null ? "." : refseqAnno.getTranscript().getGeneID(),
-                refseqAnno == null ? "." : refseqAnno.getTranscript().getAccession(),
-                refseqAnno == null ? "." : refseqAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
-                refseqAnno == null
+                (refseqAnno == null || refseqAnno.getTranscript() == null)
+                    ? "."
+                    : refseqAnno.getTranscript().getGeneID(),
+                (refseqAnno == null || refseqAnno.getTranscript() == null)
+                    ? "."
+                    : refseqAnno.getTranscript().getAccession(),
+                (refseqAnno == null || refseqAnno.getTranscript() == null)
+                    ? "."
+                    : refseqAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
+                (refseqAnno == null || refseqAnno.getTranscript() == null)
                     ? "."
                     : refseqAnno.getCDSNTChange() == null
                         ? "."
@@ -445,20 +498,26 @@ public final class AnnotateVcf {
                                 .getProteinChange()
                                 .withOnlyPredicted(false)
                                 .toHGVSString(AminoAcidCode.ONE_LETTER),
-                (refseqAnno == null) ? "{}" : buildEffectsValue(refseqAnno.getEffects()),
+                (refseqAnno == null || refseqAnno.getTranscript() == null)
+                    ? "{}"
+                    : buildEffectsValue(refseqAnno.getEffects()),
                 // ENSEMBL
-                ensemblAnno == null ? "." : ensemblAnno.getTranscript().getGeneID(),
-                ensemblAnno == null ? "." : ensemblAnno.getTranscript().getAccession(),
-                ensemblAnno == null
+                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+                    ? "."
+                    : ensemblAnno.getTranscript().getGeneID(),
+                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+                    ? "."
+                    : ensemblAnno.getTranscript().getAccession(),
+                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
                     ? "."
                     : ensemblAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
-                ensemblAnno == null
+                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
                     ? "."
                     : ensemblAnno.getCDSNTChange() == null
                         ? "."
                         : (ensemblAnno.getTranscript().isCoding() ? "c." : "n.")
                             + ensemblAnno.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
-                ensemblAnno == null
+                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
                     ? "."
                     : ensemblAnno.getProteinChange() == null
                         ? "."
@@ -467,7 +526,9 @@ public final class AnnotateVcf {
                                 .getProteinChange()
                                 .withOnlyPredicted(false)
                                 .toHGVSString(AminoAcidCode.ONE_LETTER),
-                (ensemblAnno == null) ? "{}" : buildEffectsValue(ensemblAnno.getEffects()));
+                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+                    ? "{}"
+                    : buildEffectsValue(ensemblAnno.getEffects()));
         // Write record to output stream.
         try {
           gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
