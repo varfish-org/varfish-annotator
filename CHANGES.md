@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.7 (unreleased)
+## v0.7
 
 - Bumping Jannovar dependency to v0.32.
 - Refactoring columns of small and structural variant call file.
