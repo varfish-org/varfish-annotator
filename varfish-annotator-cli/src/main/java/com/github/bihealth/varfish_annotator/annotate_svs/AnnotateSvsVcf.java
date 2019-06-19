@@ -105,7 +105,12 @@ public final class AnnotateSvsVcf {
 
     try (Connection conn =
             DriverManager.getConnection(
-                "jdbc:h2:" + dbPath + ";MV_STORE=FALSE;MVCC=FALSE;ACCESS_MODE_DATA=r", "sa", "");
+                "jdbc:h2:"
+                    + dbPath
+                    + ";MV_STORE=FALSE;MVCC=FALSE;ACCESS_MODE_DATA=r;"
+                    + "DB_CLOSE_ON_EXIT=FALSE",
+                "sa",
+                "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
         FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
         FileWriter featureEffectsWriter = new FileWriter(new File(args.getOutputFeatureEffects()));

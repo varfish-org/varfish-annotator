@@ -24,7 +24,10 @@ public final class InitDb {
 
     try (Connection conn =
         DriverManager.getConnection(
-            "jdbc:h2:" + args.getDbPath() + ";TRACE_LEVEL_FILE=0;MV_STORE=FALSE;MVCC=FALSE",
+            "jdbc:h2:"
+                + args.getDbPath()
+                + ";TRACE_LEVEL_FILE=0;MV_STORE=FALSE;MVCC=FALSE"
+                + ";DB_CLOSE_ON_EXIT=FALSE",
             "sa",
             "")) {
       if (args.getGnomadExomesPaths() != null && args.getGnomadExomesPaths().size() > 0) {

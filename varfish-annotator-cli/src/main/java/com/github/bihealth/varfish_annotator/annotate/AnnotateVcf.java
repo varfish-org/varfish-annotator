@@ -128,7 +128,8 @@ public final class AnnotateVcf {
             DriverManager.getConnection(
                 "jdbc:h2:"
                     + dbPath
-                    + ";TRACE_LEVEL_FILE=0;MV_STORE=FALSE;MVCC=FALSE;ACCESS_MODE_DATA=r",
+                    + ";TRACE_LEVEL_FILE=0;MV_STORE=FALSE;MVCC=FALSE;ACCESS_MODE_DATA=r"
+                    + ";DB_CLOSE_ON_EXIT=FALSE",
                 "sa",
                 "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
