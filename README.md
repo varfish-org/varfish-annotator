@@ -17,7 +17,7 @@ The following will create `varfish-annotator-db-1906.h2.db` and fill it.
 
 ```
 # DOWNLOAD=path/to/varfish-db-downloader
-# ANNOTATOR_VERSION=0.7
+# ANNOTATOR_VERSION=0.8
 # ANNOTATOR_DATA_RELEASE=1906
 # java -jar varfish-annotator-cli-$ANNOTATOR_VERSION-SNAPSHOT.jar \
       init-db \

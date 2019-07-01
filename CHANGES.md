@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8
+
+- Adding `chromosome_no` output column.
+
 ## v0.7
 
 - Bumping Jannovar dependency to v0.32.

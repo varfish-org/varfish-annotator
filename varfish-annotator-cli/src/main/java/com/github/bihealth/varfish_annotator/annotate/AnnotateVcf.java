@@ -15,6 +15,7 @@ import de.charite.compbio.jannovar.annotation.VariantAnnotations;
 import de.charite.compbio.jannovar.annotation.VariantEffect;
 import de.charite.compbio.jannovar.data.JannovarData;
 import de.charite.compbio.jannovar.data.JannovarDataSerializer;
+import de.charite.compbio.jannovar.data.ReferenceDictionary;
 import de.charite.compbio.jannovar.data.SerializationException;
 import de.charite.compbio.jannovar.hgvs.AminoAcidCode;
 import de.charite.compbio.jannovar.htsjdk.InvalidCoordinatesException;
@@ -64,6 +65,7 @@ public final class AnnotateVcf {
       ImmutableList.of(
           "release",
           "chromosome",
+          "chromosome_no",
           "start",
           "end",
           "bin",
@@ -258,7 +260,14 @@ public final class AnnotateVcf {
       if (!ctx.getContig().equals(prevChr)) {
         System.err.println("Now on contig " + ctx.getContig());
       }
-      annotateVariantContext(conn, refseqAnnotator, ensemblAnnotator, normalizer, ctx, gtWriter);
+      annotateVariantContext(
+          conn,
+          refseqJv.getRefDict(),
+          refseqAnnotator,
+          ensemblAnnotator,
+          normalizer,
+          ctx,
+          gtWriter);
       prevChr = ctx.getContig();
     }
   }
@@ -267,6 +276,7 @@ public final class AnnotateVcf {
    * Annotate <tt>ctx</tt>, write out annotated variant call to <tt>gtWriter</tt>.
    *
    * @param conn Database connection.
+   * @param refDict {@code ReferenceDictionary} to use for chromosome mapping
    * @param refseqAnnotator Helper class to use for annotation of variants with Refseq
    * @param ensemblAnnotator Helper class to use for annotation of variants with ENSEMBL
    * @param normalizer Helper for normalizing variants.
@@ -276,6 +286,7 @@ public final class AnnotateVcf {
    */
   private void annotateVariantContext(
       Connection conn,
+      ReferenceDictionary refDict,
       VariantContextAnnotator refseqAnnotator,
       VariantContextAnnotator ensemblAnnotator,
       VariantNormalizer normalizer,
@@ -436,6 +447,7 @@ public final class AnnotateVcf {
             Lists.newArrayList(
                 args.getRelease(),
                 normalizedVar.getChrom(),
+                refDict.getContigNameToID().get(normalizedVar.getChrom()),
                 String.valueOf(normalizedVar.getPos() + 1),
                 String.valueOf(normalizedVar.getPos() + normalizedVar.getRef().length()),
                 UcscBinning.getContainingBin(

@@ -58,6 +58,7 @@ public final class AnnotateSvsVcf {
       ImmutableList.of(
           "release",
           "chromosome",
+          "chromosome_no",
           "start",
           "end",
           "bin",
@@ -387,6 +388,7 @@ public final class AnnotateSvsVcf {
     return ImmutableList.of(
         args.getRelease(),
         svGenomeVar.getChrName(),
+        svGenomeVar.getChr(),
         svGenomeVar.getPos() + 1,
         pos2,
         UcscBinning.getContainingBin(svGenomeVar.getPos(), pos2),
