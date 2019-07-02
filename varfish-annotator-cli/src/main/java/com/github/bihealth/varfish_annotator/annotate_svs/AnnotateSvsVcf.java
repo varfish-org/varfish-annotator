@@ -66,6 +66,7 @@ public final class AnnotateSvsVcf {
           "start_ci_right",
           "end_ci_left",
           "end_ci_right",
+          "case_id",
           "set_id",
           "sv_uuid",
           "caller",
@@ -77,6 +78,8 @@ public final class AnnotateSvsVcf {
   /** Header fields for the gene-wise feature effects file. */
   public static final ImmutableList<String> HEADERS_FEATURE_EFFECTS =
       ImmutableList.of(
+          "case_id",
+          "set_id",
           "sv_uuid",
           "refseq_gene_id",
           "refseq_transcript_id",
@@ -396,6 +399,7 @@ public final class AnnotateSvsVcf {
         svGenomeVar.getPosCIUpperBound(),
         svGenomeVar.getPos2CILowerBound(),
         svGenomeVar.getPos2CIUpperBound(),
+        args.getCaseId(),
         args.getSetId(),
         variantId.toString(),
         svMethod,
@@ -589,7 +593,8 @@ public final class AnnotateSvsVcf {
       UUID variantId,
       SVAnnotation refSeqAnno,
       SVAnnotation ensemblAnno) {
-    List<Object> result = Lists.newArrayList((Object) variantId.toString());
+    List<Object> result =
+        Lists.newArrayList(args.getCaseId(), args.getSetId(), variantId.toString());
     if (refSeqAnno == null) {
       result.addAll(Arrays.asList(null, null, "FALSE", "{}"));
     } else {
