@@ -4,6 +4,7 @@
 
 - Writing out case and set ID into all output tables.
 - Fixing clinvar import into database.
+- Initializing case and set ID parameters to `"."`.
 
 ## v0.8
 

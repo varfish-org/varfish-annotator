@@ -41,11 +41,11 @@ public final class AnnotateArgs {
   @Parameter(names = "--release", description = "The genome release used", required = true)
   private String release;
 
-  @Parameter(names = "--case-id", description = "The value to use for case ID", required = true)
-  private String caseId;
+  @Parameter(names = "--case-id", description = "The value to use for case ID")
+  private String caseId = ".";
 
-  @Parameter(names = "--set-id", description = "The value to use for set ID", required = true)
-  private String setId;
+  @Parameter(names = "--set-id", description = "The value to use for set ID")
+  private String setId = ".";
 
   @Parameter(
       names = "--input-vcf",
