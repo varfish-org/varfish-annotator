@@ -3,6 +3,7 @@
 ## v0.9 (unreleased)
 
 - Writing out case and set ID into all output tables.
+- Fixing clinvar import into database.
 
 ## v0.8
 

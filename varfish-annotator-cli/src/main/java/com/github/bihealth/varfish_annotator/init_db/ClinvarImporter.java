@@ -176,10 +176,10 @@ public class ClinvarImporter {
           final PreparedStatement stmt = conn.prepareStatement(insertQuery);
           stmt.setString(1, arr.get(0));
           stmt.setString(2, arr.get(1));
-          stmt.setInt(3, Integer.parseInt(arr.get(5)));
-          stmt.setInt(4, Integer.parseInt(arr.get(6)));
-          stmt.setString(5, arr.get(2));
-          stmt.setString(6, arr.get(3));
+          stmt.setInt(3, Integer.parseInt(arr.get(2)));
+          stmt.setInt(4, Integer.parseInt(arr.get(2)) + arr.get(3).length() - 1);
+          stmt.setString(5, arr.get(3));
+          stmt.setString(6, arr.get(4));
           stmt.executeUpdate();
           stmt.close();
         }
