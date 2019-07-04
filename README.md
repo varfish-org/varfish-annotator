@@ -17,12 +17,12 @@ The following will create `varfish-annotator-db-1906.h2.db` and fill it.
 
 ```
 # DOWNLOAD=path/to/varfish-db-downloader
-# ANNOTATOR_VERSION=0.8
-# ANNOTATOR_DATA_RELEASE=1906
+# ANNOTATOR_VERSION=0.9
+# ANNOTATOR_DATA_RELEASE=1907
 # java -jar varfish-annotator-cli-$ANNOTATOR_VERSION-SNAPSHOT.jar \
       init-db \
       --db-release-info "varfish-annotator:v$ANNOTATOR_VERSION" \
-      --db-release-info "varfish-annotator-db:r1906" \
+      --db-release-info "varfish-annotator-db:r$ANNOTATOR_DATA_RELEASE" \
       \
       --ref-path /fast/projects/cubit/18.12/static_data/reference/GRCh37/hs37d5/hs37d5.fa \
       \

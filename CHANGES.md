@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.9 (unreleased)
+## v0.9
 
 - Writing out case and set ID into all output tables.
 - Fixing clinvar import into database.
