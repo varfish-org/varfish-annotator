@@ -21,6 +21,9 @@ import de.charite.compbio.jannovar.hgvs.AminoAcidCode;
 import de.charite.compbio.jannovar.htsjdk.InvalidCoordinatesException;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator.Options;
+import de.charite.compbio.jannovar.reference.GenomeInterval;
+import de.charite.compbio.jannovar.reference.Strand;
+import de.charite.compbio.jannovar.reference.TranscriptModel;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
@@ -74,6 +77,7 @@ public final class AnnotateVcf {
           "var_type",
           "case_id",
           "set_id",
+          "info",
           "genotype",
           "num_hom_alt",
           "num_hom_ref",
@@ -103,12 +107,14 @@ public final class AnnotateVcf {
           "refseq_hgvs_c",
           "refseq_hgvs_p",
           "refseq_effect",
+          "refseq_exon_dist",
           "ensembl_gene_id",
           "ensembl_transcript_id",
           "ensembl_transcript_coding",
           "ensembl_hgvs_c",
           "ensembl_hgvs_p",
-          "ensembl_effect");
+          "ensembl_effect",
+          "ensembl_exon_dist");
 
   /** Configuration for the command. */
   private final AnnotateArgs args;
@@ -441,6 +447,13 @@ public final class AnnotateVcf {
           varType = "indel";
         }
 
+        // Additional information.
+        final String infoStr = "{}";
+
+        // Distance to next base of exon.
+        final int refSeqExonDist = getDistance(normalizedVar, refseqAnno == null ? null : refseqAnno.getTranscript());
+        final int ensemblExonDist = getDistance(normalizedVar, ensemblAnno == null ? null : ensemblAnno.getTranscript());
+
         final GenotypeCounts gtCounts = buildGenotypeCounts(ctx, i);
 
         // Construct output record.
@@ -459,6 +472,7 @@ public final class AnnotateVcf {
                 varType,
                 args.getCaseId(),
                 args.getSetId(),
+                infoStr,
                 buildGenotypeValue(ctx, i),
                 String.valueOf(gtCounts.numHomAlt),
                 String.valueOf(gtCounts.numHomRef),
@@ -515,6 +529,7 @@ public final class AnnotateVcf {
                 (refseqAnno == null || refseqAnno.getTranscript() == null)
                     ? "{}"
                     : buildEffectsValue(refseqAnno.getEffects()),
+                (refSeqExonDist >= 0) ? Integer.toString(refSeqExonDist) : ".",
                 // ENSEMBL
                 (ensemblAnno == null || ensemblAnno.getTranscript() == null)
                     ? "."
@@ -542,7 +557,8 @@ public final class AnnotateVcf {
                                 .toHGVSString(AminoAcidCode.ONE_LETTER),
                 (ensemblAnno == null || ensemblAnno.getTranscript() == null)
                     ? "{}"
-                    : buildEffectsValue(ensemblAnno.getEffects()));
+                    : buildEffectsValue(ensemblAnno.getEffects()),
+                (ensemblExonDist >= 0) ? Integer.toString(ensemblExonDist) : ".");
         // Write record to output stream.
         try {
           gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
@@ -550,6 +566,59 @@ public final class AnnotateVcf {
           throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
         }
       }
+    }
+  }
+
+  /**
+   * Return distance from {@code normalizedVar} to exons of {@code transcript}.
+   *
+   * @param normalizedVar The normalized variant.
+   * @param transcript The transcript to compute distance to.
+   * @return Distance to base of exon, {@code -1} if {@code transcript} is {@code null}.
+   */
+  private int getDistance(VariantDescription normalizedVar, TranscriptModel transcript) {
+    if (transcript == null) {
+      return -1;
+    } else {
+      final ReferenceDictionary refDict = transcript.getTXRegion().getRefDict();
+      final String txChrom = refDict.getContigIDToName().get(transcript.getChr());
+
+      if (!normalizedVar.getChrom().equals(txChrom)) {
+        return -1;
+      }
+
+      final GenomeInterval varInterval =
+          new GenomeInterval(
+              refDict,
+              Strand.FWD,
+              transcript.getChr(),
+              normalizedVar.getPos(),
+              normalizedVar.getEnd());
+
+      int result = -1;
+      for (GenomeInterval exon : transcript.getExonRegions()) {
+        exon = exon.withStrand(Strand.FWD); // normalize strand
+        if (exon.overlapsWith(varInterval)) { // variant overlaps with exon
+          result = 0;
+          break;
+        } else {
+          // Get distance between {@code exon} and {@code varInterval}.
+          final int distance;
+          if (varInterval.getEndPos() <= exon.getBeginPos()) { // variant left of exon
+            distance = (exon.getBeginPos() - varInterval.getEndPos()) + 1;
+          } else { // variant right of exon
+            if (!(varInterval.getBeginPos() >= exon.getEndPos())) {
+              throw new RuntimeException("Invariant violated!");
+            }
+            distance = (varInterval.getBeginPos() - exon.getEndPos()) + 1;
+          }
+          // Update {@code result} if necessary.
+          if (result == -1 || result > distance) {
+            result = distance;
+          }
+        }
+      }
+      return result;
     }
   }
 

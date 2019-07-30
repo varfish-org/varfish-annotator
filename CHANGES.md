@@ -3,6 +3,8 @@
 ## HEAD (unpublished)
 
 - Bumping Jannovar dependency (adds annotation of chrMT).
+- Writing out distance to refseq/ensembl exon and adding placeholder for `info` field.
+
 ## v0.9
 
 - Writing out case and set ID into all output tables.
