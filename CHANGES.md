@@ -1,5 +1,8 @@
 # Changelog
 
+## HEAD (unpublished)
+
+- Bumping Jannovar dependency (adds annotation of chrMT).
 ## v0.9
 
 - Writing out case and set ID into all output tables.
