@@ -1,6 +1,6 @@
 # Changelog
 
-## HEAD (unreleased)
+## v0.10
 
 - Bumping Jannovar dependency (adds annotation of chrMT).
 - Writing out distance to refseq/ensembl exon and adding placeholder for `info` field.
