@@ -451,8 +451,10 @@ public final class AnnotateVcf {
         final String infoStr = "{}";
 
         // Distance to next base of exon.
-        final int refSeqExonDist = getDistance(normalizedVar, refseqAnno == null ? null : refseqAnno.getTranscript());
-        final int ensemblExonDist = getDistance(normalizedVar, ensemblAnno == null ? null : ensemblAnno.getTranscript());
+        final int refSeqExonDist =
+            getDistance(normalizedVar, refseqAnno == null ? null : refseqAnno.getTranscript());
+        final int ensemblExonDist =
+            getDistance(normalizedVar, ensemblAnno == null ? null : ensemblAnno.getTranscript());
 
         final GenotypeCounts gtCounts = buildGenotypeCounts(ctx, i);
 

@@ -26,7 +26,7 @@ public class HgmdPublicImporter {
 
   /** The expected TSV header. */
   public static ImmutableList<String> EXPECTED_HEADER =
-      ImmutableList.of("release", "chromosome", "start", "end", "variation_name");
+      ImmutableList.of("release", "chromosome", "start", "end", "bin", "variation_name");
 
   /** The JDBC connection. */
   private final Connection conn;
@@ -132,7 +132,7 @@ public class HgmdPublicImporter {
           stmt.setString(2, arr.get(1));
           stmt.setInt(3, Integer.parseInt(arr.get(2)));
           stmt.setInt(4, Integer.parseInt(arr.get(3)));
-          stmt.setString(5, arr.get(4));
+          stmt.setString(5, arr.get(5));
           stmt.executeUpdate();
           stmt.close();
         }

@@ -31,11 +31,11 @@ public class ClinvarImporter {
       ImmutableList.of(
           "release",
           "chromosome",
-          "position",
+          "start",
+          "end",
+          "bin",
           "reference",
           "alternative",
-          "start",
-          "stop",
           "strand",
           "variation_type",
           "variation_id",
@@ -177,9 +177,9 @@ public class ClinvarImporter {
           stmt.setString(1, arr.get(0));
           stmt.setString(2, arr.get(1));
           stmt.setInt(3, Integer.parseInt(arr.get(2)));
-          stmt.setInt(4, Integer.parseInt(arr.get(2)) + arr.get(3).length() - 1);
-          stmt.setString(5, arr.get(3));
-          stmt.setString(6, arr.get(4));
+          stmt.setInt(4, Integer.parseInt(arr.get(3)));
+          stmt.setString(5, arr.get(5));
+          stmt.setString(6, arr.get(6));
           stmt.executeUpdate();
           stmt.close();
         }

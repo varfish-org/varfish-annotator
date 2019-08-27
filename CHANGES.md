@@ -1,9 +1,10 @@
 # Changelog
 
-## HEAD (unpublished)
+## HEAD (unreleased)
 
 - Bumping Jannovar dependency (adds annotation of chrMT).
 - Writing out distance to refseq/ensembl exon and adding placeholder for `info` field.
+- Reading of updated clinvar and HGMD Public TSV.
 
 ## v0.9
 
