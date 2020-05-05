@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.11
+
+- Adding support for gCNV output.
+- Adding support for CNVetti::homdel output.
+
 ## v0.10
 
 - Bumping Jannovar dependency (adds annotation of chrMT).

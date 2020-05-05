@@ -480,6 +480,9 @@ public final class AnnotateSvsVcf {
       boolean looksLikeDelly = ctx.getAttributeAsString("SVMETHOD", "").contains("DELLY");
       boolean looksLikeSV2 = ctx.getAttributeAsString("SVMETHOD", "").contains("SV2");
       boolean looksLikeXHMM = ctx.getAttributeAsString("SVMETHOD", "").contains("XHMM");
+      boolean looksLikeGcnv = ctx.getAttributeAsString("SVMETHOD", "").contains("gcnvkernel");
+      boolean looksLikeCnvettiHomDel =
+          ctx.getAttributeAsString("SVMETHOD", "").contains("cnvetti-homdel");
       if (looksLikeDelly) {
         // * DR -- reference pairs
         // * DV -- variant pairs
@@ -579,6 +582,50 @@ public final class AnnotateSvsVcf {
         attrs.add(Joiner.on("").join(tripleQuote("rd"), ":", String.valueOf(rd)));
         attrs.add(
             Joiner.on("").join(tripleQuote("pl"), ":[", Joiner.on(',').join(Ints.asList(pl)), "]"));
+      } else if (looksLikeGcnv) {
+        // * CN  -- copy number
+        // * RCV -- raw coverage
+        // * LCV -- length-normalized coverage
+        final float cn = Float.parseFloat(genotype.getExtendedAttribute("CN", "0.0").toString());
+        final float rcv = Float.parseFloat(genotype.getExtendedAttribute("RCV", "0.0").toString());
+        final float lcv = Float.parseFloat(genotype.getExtendedAttribute("LCV", "0.0").toString());
+
+        // Attributes to write out.
+        //
+        // * cn  -- copy number
+        // * rcv -- raw coverage
+        // * lcv -- length-normalized coverae
+        attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
+        attrs.add(Joiner.on("").join(tripleQuote("rcv"), ":", String.valueOf(rcv)));
+        attrs.add(Joiner.on("").join(tripleQuote("lcv"), ":", String.valueOf(lcv)));
+      } else if (looksLikeCnvettiHomDel) {
+        // * CN  -- copy number
+        // * NP  -- number of points in segment
+        // * QA  -- phred-scaled quality of all points agreeing
+        // * QS  -- phred-scaled quality of at least one point agreeing
+        // * QSS -- phred-scaled quality of start breakpoint
+        // * QSE -- phred-scaled quality of end breakpoint
+        final int cn = Integer.parseInt(genotype.getExtendedAttribute("CN", "0").toString());
+        final int np = Integer.parseInt(genotype.getExtendedAttribute("NP", "0").toString());
+        final int qa = Integer.parseInt(genotype.getExtendedAttribute("QA", "0").toString());
+        final int qs = Integer.parseInt(genotype.getExtendedAttribute("QS", "0").toString());
+        final int qss = Integer.parseInt(genotype.getExtendedAttribute("QSS", "0").toString());
+        final int qse = Integer.parseInt(genotype.getExtendedAttribute("QSE", "0").toString());
+
+        // Attributes to write out.
+        //
+        // * cn  -- copy number
+        // * np  -- number of points in segment
+        // * qa  -- phred-scaled quality of all points agreeing
+        // * qs  -- phred-scaled quality of at least one point agreeing
+        // * qss -- phred-scaled quality of start breakpoint
+        // * qse -- phred-scaled quality of end breakpoint
+        attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
+        attrs.add(Joiner.on("").join(tripleQuote("np"), ":", String.valueOf(np)));
+        attrs.add(Joiner.on("").join(tripleQuote("qa"), ":", String.valueOf(qa)));
+        attrs.add(Joiner.on("").join(tripleQuote("qs"), ":", String.valueOf(qs)));
+        attrs.add(Joiner.on("").join(tripleQuote("qss"), ":", String.valueOf(qss)));
+        attrs.add(Joiner.on("").join(tripleQuote("qse"), ":", String.valueOf(qse)));
       }
 
       mappings.add(Joiner.on("").join(tripleQuote(sample), ":{", Joiner.on(",").join(attrs), "}"));
