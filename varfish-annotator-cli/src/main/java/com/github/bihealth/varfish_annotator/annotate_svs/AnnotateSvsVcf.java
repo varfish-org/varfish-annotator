@@ -584,22 +584,6 @@ public final class AnnotateSvsVcf {
             Joiner.on("").join(tripleQuote("pl"), ":[", Joiner.on(',').join(Ints.asList(pl)), "]"));
       } else if (looksLikeGcnv) {
         // * CN  -- copy number
-        // * RCV -- raw coverage
-        // * LCV -- length-normalized coverage
-        final float cn = Float.parseFloat(genotype.getExtendedAttribute("CN", "0.0").toString());
-        final float rcv = Float.parseFloat(genotype.getExtendedAttribute("RCV", "0.0").toString());
-        final float lcv = Float.parseFloat(genotype.getExtendedAttribute("LCV", "0.0").toString());
-
-        // Attributes to write out.
-        //
-        // * cn  -- copy number
-        // * rcv -- raw coverage
-        // * lcv -- length-normalized coverae
-        attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
-        attrs.add(Joiner.on("").join(tripleQuote("rcv"), ":", String.valueOf(rcv)));
-        attrs.add(Joiner.on("").join(tripleQuote("lcv"), ":", String.valueOf(lcv)));
-      } else if (looksLikeCnvettiHomDel) {
-        // * CN  -- copy number
         // * NP  -- number of points in segment
         // * QA  -- phred-scaled quality of all points agreeing
         // * QS  -- phred-scaled quality of at least one point agreeing

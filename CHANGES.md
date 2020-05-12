@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.12
+
+- Removing CNVetti::homdel support as it was a dead end.
+- Fixing gCNV support.
+
 ## v0.11
 
 - Adding support for gCNV output.
