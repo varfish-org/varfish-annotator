@@ -1,6 +1,6 @@
 # Changelog
 
-## HEAD (unreleased)
+## v0.13
 
 - Bumping HTSJDK dependency.
 - Fixing issue with empty "AD" fields.
