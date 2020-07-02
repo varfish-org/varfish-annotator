@@ -1,5 +1,8 @@
 # Changelog
 
+## HEAD (unreleased)
+
+- Bumping HTSJDK dependency.
 ## v0.12
 
 - Removing CNVetti::homdel support as it was a dead end.
