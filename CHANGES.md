@@ -3,6 +3,8 @@
 ## HEAD (unreleased)
 
 - Bumping HTSJDK dependency.
+- Fixing issue with empty "AD" fields.
+
 ## v0.12
 
 - Removing CNVetti::homdel support as it was a dead end.

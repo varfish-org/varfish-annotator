@@ -781,7 +781,7 @@ public final class AnnotateVcf {
                   ",",
                   tripleQuote("ad"),
                   ":",
-                  String.valueOf(ad == null ? 0 : ad[alleleNo]),
+                  String.valueOf(ad == null ? -1 : (alleleNo >= ad.length ? -1 : ad[alleleNo])),
                   ",",
                   tripleQuote("dp"),
                   ":",
