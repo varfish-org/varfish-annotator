@@ -26,7 +26,7 @@ public class ClinvarImporter {
   /** The name of the table in the database. */
   public static final String TABLE_NAME = "clinvar_var";
 
-  /** The expected TSV header. */
+  /** The expected TSV header, require first 7 fields to be the same. */
   public static ImmutableList<String> EXPECTED_HEADER =
       ImmutableList.of(
           "release",
@@ -36,38 +36,15 @@ public class ClinvarImporter {
           "bin",
           "reference",
           "alternative",
-          "strand",
           "variation_type",
-          "variation_id",
-          "rcv",
-          "scv",
-          "allele_id",
-          "symbol",
-          "hgvs_c",
-          "hgvs_p",
-          "molecular_consequence",
-          "clinical_significance",
-          "clinical_significance_ordered",
-          "pathogenic",
-          "likely_pathogenic",
-          "uncertain_significance",
-          "likely_benign",
-          "benign",
+          "symbols",
+          "hgnc_ids",
+          "vcv",
+          "point_rating",
+          "pathogenicity",
           "review_status",
-          "review_status_ordered",
-          "last_evaluated",
-          "all_submitters",
-          "submitters_ordered",
-          "all_traits",
-          "all_pmids",
-          "inheritance_modes",
-          "age_of_onset",
-          "prevalence",
-          "disease_mechanism",
-          "origin",
-          "xrefs",
-          "dates_ordered",
-          "multi");
+          "pathogenicity_summary",
+          "details");
 
   /** The JDBC connection. */
   private final Connection conn;
@@ -159,6 +136,7 @@ public class ClinvarImporter {
 
     String line = null;
     String headerLine = null;
+    int skipped = 0;
     try (InputStream fileStream = new FileInputStream(pathTsvFile);
         InputStream gzipStream =
             pathTsvFile.endsWith(".gz") ? new GZIPInputStream(fileStream) : fileStream;
@@ -166,11 +144,21 @@ public class ClinvarImporter {
         BufferedReader buffered = new BufferedReader(decoder)) {
       while ((line = buffered.readLine()) != null) {
         final ImmutableList<String> arr = ImmutableList.copyOf(line.split("\t"));
+
+        if (arr.get(5).length() >= InitDb.VARCHAR_LEN
+            || arr.get(6).length() >= InitDb.VARCHAR_LEN) {
+          skipped += 1;
+          continue;
+        }
+
         if (headerLine == null) {
           headerLine = line;
-          if (!arr.equals(EXPECTED_HEADER)) {
+          if (!arr.subList(0, 7).equals(EXPECTED_HEADER.subList(0, 7))) {
             throw new VarfishAnnotatorException(
-                "Unexpected header records: " + arr + ", expected: " + EXPECTED_HEADER);
+                "Unexpected header records: "
+                    + arr
+                    + ", expected to start with: "
+                    + EXPECTED_HEADER.subList(0, 7));
           }
         } else {
           final PreparedStatement stmt = conn.prepareStatement(insertQuery);
@@ -189,5 +177,12 @@ public class ClinvarImporter {
     } catch (SQLException e) {
       throw new VarfishAnnotatorException("Problem updating database", e);
     }
+
+    System.err.println(
+        "Skipping "
+            + skipped
+            + " variants  because of too long REF/ALT (>="
+            + +InitDb.VARCHAR_LEN
+            + ")");
   }
 }

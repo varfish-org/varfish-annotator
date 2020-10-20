@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.14
+
+- Bumping junit and guava dependency.
+- Make compatible with new clinvar TSV file.
+
 ## v0.13
 
 - Bumping HTSJDK dependency.
