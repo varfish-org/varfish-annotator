@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.15 (work in progress)
+## v0.15
 
 - Properly removing ``"chr"`` prefix for data aligned to `hg19`.
 - Checking whether the supported release GRCh37/hg19 was used.
