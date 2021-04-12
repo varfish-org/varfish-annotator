@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.15 (work in progress)
+
+- Properly removing ``"chr"`` prefix for data aligned to `hg19`.
+- Checking whether the supported release GRCh37/hg19 was used.
+  Will only allow processing of such genomes and block variants from GRCh38/hg38 which would lead to incorrect results.
+
 ## v0.14
 
 - Bumping junit and guava dependency.

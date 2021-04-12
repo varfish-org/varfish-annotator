@@ -1,6 +1,9 @@
 package com.github.bihealth.varfish_annotator.annotate_svs;
 
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
+import com.github.bihealth.varfish_annotator.annotate.GenomeVersion;
+import com.github.bihealth.varfish_annotator.annotate.IncompatibleVcfException;
+import com.github.bihealth.varfish_annotator.annotate.VcfCompatibilityChecker;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
 import com.github.bihealth.varfish_annotator.utils.UcscBinning;
 import com.google.common.base.Joiner;
@@ -120,10 +123,15 @@ public final class AnnotateSvsVcf {
         FileWriter featureEffectsWriter = new FileWriter(new File(args.getOutputFeatureEffects()));
         FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
+      // Guess genome version.
+      GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
+
+      new VcfCompatibilityChecker(reader).check();
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
-      annotateSvVcf(conn, reader, refseqJvData, ensemblJvData, gtWriter, featureEffectsWriter);
+      annotateSvVcf(
+          conn, genomeVersion, reader, refseqJvData, ensemblJvData, gtWriter, featureEffectsWriter);
       writeDbInfos(conn, dbInfoBufWriter);
     } catch (SQLException e) {
       System.err.println("Problem with database connection");
@@ -139,6 +147,10 @@ public final class AnnotateSvsVcf {
       System.exit(1);
     } catch (IOException e) {
       System.err.println("Problem opening output files database");
+      e.printStackTrace();
+      System.exit(1);
+    } catch (IncompatibleVcfException e) {
+      System.err.println("Problem with VCF compatibility: " + e.getMessage());
       e.printStackTrace();
       System.exit(1);
     }
@@ -199,6 +211,7 @@ public final class AnnotateSvsVcf {
    */
   private void annotateSvVcf(
       Connection conn,
+      GenomeVersion genomeVersion,
       VCFFileReader reader,
       JannovarData refseqJv,
       JannovarData ensemblJv,
@@ -248,7 +261,7 @@ public final class AnnotateSvsVcf {
         System.err.println("Now on contig " + ctx.getContig());
       }
       annotateVariantContext(
-          refseqAnnotator, ensemblAnnotator, ctx, gtWriter, featureEffectsWriter);
+          refseqAnnotator, ensemblAnnotator, ctx, genomeVersion, gtWriter, featureEffectsWriter);
       prevChr = ctx.getContig();
     }
   }
@@ -260,6 +273,7 @@ public final class AnnotateSvsVcf {
    * @param refseqAnnotator Helper class to use for annotation of variants with Refseq
    * @param ensemblAnnotator Helper class to use for annotation of variants with ENSEMBL
    * @param ctx The variant to annotate.
+   * @param genomeVersion The genome version that {@code ctx} uses.
    * @param gtWriter Writer for annotated genotypes.
    * @param featureEffectsWriter Writer for gene-wise feature effects.
    * @throws VarfishAnnotatorException in case of problems
@@ -268,6 +282,7 @@ public final class AnnotateSvsVcf {
       VariantContextAnnotator refseqAnnotator,
       VariantContextAnnotator ensemblAnnotator,
       VariantContext ctx,
+      GenomeVersion genomeVersion,
       FileWriter gtWriter,
       FileWriter featureEffectsWriter)
       throws VarfishAnnotatorException {
@@ -297,7 +312,7 @@ public final class AnnotateSvsVcf {
       }
 
       // Write out record with the genotype.
-      final List<Object> gtOutRec = buildGtRecord(variantId, svGenomeVar, ctx, i);
+      final List<Object> gtOutRec = buildGtRecord(variantId, svGenomeVar, ctx, genomeVersion, i);
       try {
         gtWriter.append(Joiner.on("\t").useForNull(".").join(gtOutRec) + "\n");
       } catch (IOException e) {
@@ -383,14 +398,23 @@ public final class AnnotateSvsVcf {
 
   /** Buidl string list with the information for the genotype call record. */
   private List<Object> buildGtRecord(
-      UUID variantId, SVGenomeVariant svGenomeVar, VariantContext ctx, int alleleNo) {
+      UUID variantId,
+      SVGenomeVariant svGenomeVar,
+      VariantContext ctx,
+      GenomeVersion genomeVersion,
+      int alleleNo) {
     final String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", null);
     final boolean isBnd = (svGenomeVar.getType() == Type.BND);
     final int pos2 = isBnd ? svGenomeVar.getPos() + 1 : svGenomeVar.getPos2();
 
+    final String contigName =
+        (genomeVersion == GenomeVersion.HG19)
+            ? svGenomeVar.getChrName().replaceFirst("chr", "")
+            : svGenomeVar.getChrName();
+
     return ImmutableList.of(
         args.getRelease(),
-        svGenomeVar.getChrName(),
+        contigName,
         svGenomeVar.getChr(),
         svGenomeVar.getPos() + 1,
         pos2,
@@ -406,15 +430,21 @@ public final class AnnotateSvsVcf {
         // TODO: improve type and sub type annotation!
         svGenomeVar.getType(),
         svGenomeVar.getType(),
-        buildInfoValue(ctx, svGenomeVar),
+        buildInfoValue(ctx, genomeVersion, svGenomeVar),
         buildGenotypeValue(ctx, alleleNo));
   }
 
-  private String buildInfoValue(VariantContext ctx, SVGenomeVariant svGenomeVar) {
+  private String buildInfoValue(
+      VariantContext ctx, GenomeVersion genomeVersion, SVGenomeVariant svGenomeVar) {
     final List<String> mappings = new ArrayList<>();
 
     if (svGenomeVar.getType() == Type.BND) {
-      mappings.add(tripleQuote("chr2") + ":" + tripleQuote(svGenomeVar.getChr2Name()));
+      final String contigName2 =
+          (genomeVersion == GenomeVersion.HG19)
+              ? svGenomeVar.getChr2Name().replaceFirst("chr", "")
+              : svGenomeVar.getChr2Name();
+
+      mappings.add(tripleQuote("chr2") + ":" + tripleQuote(contigName2));
       mappings.add(tripleQuote("pos2") + ":" + svGenomeVar.getPos2());
     }
 

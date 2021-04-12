@@ -145,6 +145,7 @@ public final class AnnotateVcf {
         FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
         FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
+      new VcfCompatibilityChecker(reader).check();
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
@@ -165,6 +166,10 @@ public final class AnnotateVcf {
       System.exit(1);
     } catch (IOException e) {
       System.err.println("Problem opening output files database");
+      e.printStackTrace();
+      System.exit(1);
+    } catch (IncompatibleVcfException e) {
+      System.err.println("Problem with VCF compatibility: " + e.getMessage());
       e.printStackTrace();
       System.exit(1);
     }
@@ -232,6 +237,9 @@ public final class AnnotateVcf {
       FileWriter gtWriter)
       throws VarfishAnnotatorException {
 
+    // Guess genome version.
+    GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
+
     // Write out header.
     try {
       gtWriter.append(Joiner.on("\t").join(HEADERS_GT) + "\n");
@@ -269,6 +277,7 @@ public final class AnnotateVcf {
       }
       annotateVariantContext(
           conn,
+          genomeVersion,
           refseqJv.getRefDict(),
           refseqAnnotator,
           ensemblAnnotator,
@@ -283,6 +292,7 @@ public final class AnnotateVcf {
    * Annotate <tt>ctx</tt>, write out annotated variant call to <tt>gtWriter</tt>.
    *
    * @param conn Database connection.
+   * @param genomeVersion The genome version of the VCF file.
    * @param refDict {@code ReferenceDictionary} to use for chromosome mapping
    * @param refseqAnnotator Helper class to use for annotation of variants with Refseq
    * @param ensemblAnnotator Helper class to use for annotation of variants with ENSEMBL
@@ -293,6 +303,7 @@ public final class AnnotateVcf {
    */
   private void annotateVariantContext(
       Connection conn,
+      GenomeVersion genomeVersion,
       ReferenceDictionary refDict,
       VariantContextAnnotator refseqAnnotator,
       VariantContextAnnotator ensemblAnnotator,
@@ -305,13 +316,18 @@ public final class AnnotateVcf {
     ImmutableList<VariantAnnotations> ensemblAnnotationsList =
         silentBuildAnnotations(ctx, ensemblAnnotator);
 
+    final String contigName =
+        (genomeVersion == GenomeVersion.HG19)
+            ? ctx.getContig().replaceFirst("chr", "")
+            : ctx.getContig();
+
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
       // Normalize the from the VCF (will probably pad variant to the left).
       final VariantDescription normalizedVar =
           normalizer.normalizeInsertion(
               new VariantDescription(
-                  ctx.getContig(),
+                  contigName,
                   ctx.getStart() - 1,
                   ctx.getReference().getBaseString(),
                   ctx.getAlternateAllele(i - 1).getBaseString()));
