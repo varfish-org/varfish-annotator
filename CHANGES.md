@@ -1,5 +1,9 @@
 # Changelog
 
+## HEAD (unreleased)
+
+- Prevent import of REF and ALT alleles with sizes above 1000bp (field lengths in database).
+
 ## v0.15
 
 - Properly removing ``"chr"`` prefix for data aligned to `hg19`.

@@ -178,6 +178,28 @@ public final class ExacImporter {
               ctx.getAlleles().get(i).getBaseString());
       final VariantDescription finalVariant = normalizer.normalizeInsertion(rawVariant);
 
+      // Skip if too long REF or ALT allele.
+      if (finalVariant.getRef().length() > InitDb.VARCHAR_LEN) {
+        System.err.println(
+            "Skipping variant at "
+                + ctx.getContig()
+                + ":"
+                + ctx.getStart()
+                + " length = "
+                + finalVariant.getRef().length());
+        continue;
+      }
+      if (finalVariant.getAlt().length() > InitDb.VARCHAR_LEN) {
+        System.err.println(
+            "Skipping variant at "
+                + ctx.getContig()
+                + ":"
+                + ctx.getStart()
+                + " length = "
+                + finalVariant.getAlt().length());
+        continue;
+      }
+
       final PreparedStatement stmt = conn.prepareStatement(insertQuery);
       stmt.setString(1, finalVariant.getChrom());
       stmt.setInt(2, finalVariant.getPos() + 1);

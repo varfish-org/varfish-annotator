@@ -161,6 +161,27 @@ public class ClinvarImporter {
                     + EXPECTED_HEADER.subList(0, 7));
           }
         } else {
+          if (arr.get(5).length() > InitDb.VARCHAR_LEN) {
+            System.err.println(
+                "Skipping variant at "
+                    + arr.get(1)
+                    + ":"
+                    + arr.get(2)
+                    + " length = "
+                    + arr.get(5).length());
+            continue;
+          }
+          if (arr.get(6).length() > InitDb.VARCHAR_LEN) {
+            System.err.println(
+                "Skipping variant at "
+                    + arr.get(1)
+                    + ":"
+                    + arr.get(2)
+                    + " length = "
+                    + arr.get(6).length());
+            continue;
+          }
+
           final PreparedStatement stmt = conn.prepareStatement(insertQuery);
           stmt.setString(1, arr.get(0));
           stmt.setString(2, arr.get(1));

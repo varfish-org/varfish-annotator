@@ -175,6 +175,7 @@ public final class ThousandGenomesImporter {
               ctx.getAlleles().get(i).getBaseString());
       final VariantDescription finalVariant = normalizer.normalizeInsertion(rawVariant);
 
+      // Skip if too long REF or ALT allele.
       if (finalVariant.getRef().length() > InitDb.VARCHAR_LEN) {
         System.err.println(
             "Skipping variant at "
@@ -183,6 +184,16 @@ public final class ThousandGenomesImporter {
                 + ctx.getStart()
                 + " length = "
                 + finalVariant.getRef().length());
+        continue;
+      }
+      if (finalVariant.getAlt().length() > InitDb.VARCHAR_LEN) {
+        System.err.println(
+            "Skipping variant at "
+                + ctx.getContig()
+                + ":"
+                + ctx.getStart()
+                + " length = "
+                + finalVariant.getAlt().length());
         continue;
       }
 
