@@ -208,9 +208,16 @@ public final class ExacImporter {
       stmt.setString(5, finalVariant.getAlt());
 
       int het = 0;
-      final List<Integer> hets;
+      List<Integer> hets;
       if (numAlleles == 2) {
-        hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Het", 0));
+        try {
+          hets = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Het", 0));
+        } catch (java.lang.ClassCastException e) {
+          hets =
+              ImmutableList.of(
+                  Integer.valueOf(
+                      ctx.getCommonInfo().getAttributeAsList("AC_Het").get(1).toString()));
+        }
       } else {
         hets = new ArrayList<>();
         for (String s :
@@ -224,9 +231,16 @@ public final class ExacImporter {
       stmt.setInt(6, het);
 
       int hom = 0;
-      final List<Integer> homs;
+      List<Integer> homs;
       if (numAlleles == 2) {
-        homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hom", 0));
+        try {
+          homs = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hom", 0));
+        } catch (java.lang.ClassCastException e) {
+          homs =
+              ImmutableList.of(
+                  Integer.valueOf(
+                      ctx.getCommonInfo().getAttributeAsList("AC_Hom").get(1).toString()));
+        }
       } else {
         homs = new ArrayList<>();
         for (String s :
@@ -240,9 +254,16 @@ public final class ExacImporter {
       stmt.setInt(7, hom);
 
       int hemi = 0;
-      final List<Integer> hemis;
+      List<Integer> hemis;
       if (numAlleles == 2) {
-        hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hemi", 0));
+        try {
+          hemis = ImmutableList.of(ctx.getCommonInfo().getAttributeAsInt("AC_Hemi", 0));
+        } catch (java.lang.ClassCastException e) {
+          hemis =
+              ImmutableList.of(
+                  Integer.valueOf(
+                      ctx.getCommonInfo().getAttributeAsList("AC_Hemi").get(1).toString()));
+        }
       } else {
         hemis = new ArrayList<>();
         for (String s :

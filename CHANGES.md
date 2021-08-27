@@ -2,6 +2,7 @@
 
 ## HEAD (unreleased)
 
+- Fixing import of ExAC r1 VCF.
 - Prevent import of REF and ALT alleles with sizes above 1000bp (field lengths in database).
 
 ## v0.15
