@@ -104,6 +104,10 @@ public final class AnnotateSvsVcf {
   /** Execute the command. */
   public void run() {
     System.err.println("Running annotate-svs; args: " + args);
+    if (!ImmutableList.of("GRCh37", "GRCh38").contains(args.getRelease())) {
+      System.err.println("Invalid release: " + args.getRelease() + ", not one of GRCh37, GRCh38");
+      System.exit(1);
+    }
 
     String dbPath = args.getDbPath();
     if (dbPath.endsWith(".h2.db")) {
@@ -126,7 +130,7 @@ public final class AnnotateSvsVcf {
       // Guess genome version.
       GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
 
-      new VcfCompatibilityChecker(reader).check();
+      new VcfCompatibilityChecker(reader).check(args.getRelease());
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();

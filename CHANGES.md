@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.17
+
+- Adding support for GRCh38 release.
+
 ## v0.16
 
 - Fixing import of ExAC r1 VCF.

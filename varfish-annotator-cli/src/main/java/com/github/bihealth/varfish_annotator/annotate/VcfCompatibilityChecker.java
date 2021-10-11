@@ -36,17 +36,26 @@ public class VcfCompatibilityChecker {
    * <p>Throws an exception in case of problems and otherwise just returns. Will print a warning to
    * stderr if no reliable decision could be made.
    *
+   * @param requiredRElease The required release.
    * @throws IncompatibleVcfException If the VCF file looks to be incompatible.
    */
-  public void check() throws IncompatibleVcfException {
+  public void check(String requiredRelease) throws IncompatibleVcfException {
     // Check whether this looks like GRCh37/h19.
     GenomeVersion genomeVersion = this.guessGenomeVersion();
     if (genomeVersion == GenomeVersion.GRCH37 || genomeVersion == GenomeVersion.HG19) {
       System.err.println(
           "INFO: Genome looks like GRCh" + 37 + " (sequence only; regardless of 'chr' prefix).");
+      if (!"GRCh37".equals(requiredRelease)) {
+        throw new IncompatibleVcfException(
+            "VCF file looks like hg37 by chr1 length you required " + requiredRelease);
+      }
     } else if (genomeVersion == GenomeVersion.GRCH38 || genomeVersion == GenomeVersion.HG38) {
-      throw new IncompatibleVcfException(
-          "VCF file looks like hg38 by chr1 length but we only support hg19/GRCh37");
+      System.err.println(
+          "INFO: Genome looks like GRCh" + 38 + " (sequence only; regardless of 'chr' prefix).");
+      if (!"GRCh38".equals(requiredRelease)) {
+        throw new IncompatibleVcfException(
+            "VCF file looks like hg38 by chr1 length you required " + requiredRelease);
+      }
     } else {
       System.err.println("WARNING: VCF file did not contain contig line for '1' or 'chr1'");
       System.err.println("WARNING: Will proceed as if it is hg19/GRCh37.");

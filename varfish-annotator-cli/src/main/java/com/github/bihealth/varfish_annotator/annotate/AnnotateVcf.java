@@ -127,6 +127,10 @@ public final class AnnotateVcf {
   /** Execute the command. */
   public void run() {
     System.err.println("Running annotate; args: " + args);
+    if (!ImmutableList.of("GRCh37", "GRCh38").contains(args.getRelease())) {
+      System.err.println("Invalid release: " + args.getRelease() + ", not one of GRCh37, GRCh38");
+      System.exit(1);
+    }
 
     String dbPath = args.getDbPath();
     if (dbPath.endsWith(".h2.db")) {
@@ -145,7 +149,7 @@ public final class AnnotateVcf {
         FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
         FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
-      new VcfCompatibilityChecker(reader).check();
+      new VcfCompatibilityChecker(reader).check(args.getRelease());
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
@@ -839,6 +843,13 @@ public final class AnnotateVcf {
   private DbInfo getDbInfo(
       Connection conn, String release, VariantDescription normalizedVar, String prefix)
       throws VarfishAnnotatorException {
+    // Return "not found" if looking for ExAC or Thousand Genomes but not using GRCh37.
+    // These are only available for GRCh37.
+    if (!"GRCh37".equals(release)
+        && ImmutableList.of(EXAC_PREFIX, THOUSAND_GENOMES_PREFIX).contains(prefix)) {
+      return DbInfo.nullValue();
+    }
+
     final String query =
         "SELECT "
             + prefix
