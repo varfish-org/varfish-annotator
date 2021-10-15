@@ -23,6 +23,9 @@ abstract class GnomadImporter {
   /** The JDBC connection. */
   protected final Connection conn;
 
+  /** The genome release. */
+  private final String genomeRelease;
+
   /** Path to gnomAD VCF path. */
   protected final List<String> gnomadVcfPaths;
 
@@ -42,12 +45,18 @@ abstract class GnomadImporter {
    * Construct the <tt>GnomadImporter</tt> object.
    *
    * @param conn Connection to database
+   * @param genomeRelease
    * @param gnomadVcfPaths Path to gnomAD VCF path.
    * @param genomicRegion Genomic regiin {@code CHR:START-END} to process.
    */
   GnomadImporter(
-      Connection conn, List<String> gnomadVcfPaths, String refFastaPath, String genomicRegion) {
+      Connection conn,
+      String genomeRelease,
+      List<String> gnomadVcfPaths,
+      String refFastaPath,
+      String genomicRegion) {
     this.conn = conn;
+    this.genomeRelease = genomeRelease;
     this.gnomadVcfPaths = gnomadVcfPaths;
     this.refFastaPath = refFastaPath;
 
@@ -166,7 +175,7 @@ abstract class GnomadImporter {
             + getFieldPrefix()
             + "_hemi, "
             + getFieldPrefix()
-            + "_af) VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + "_af) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
@@ -201,32 +210,35 @@ abstract class GnomadImporter {
       }
 
       final PreparedStatement stmt = conn.prepareStatement(insertQuery);
-      stmt.setString(1, finalVariant.getChrom());
-      stmt.setInt(2, finalVariant.getPos() + 1);
-      stmt.setInt(3, finalVariant.getPos() + finalVariant.getRef().length());
-      stmt.setString(4, finalVariant.getRef());
-      stmt.setString(5, finalVariant.getAlt());
+      stmt.setString(1, genomeRelease);
+      stmt.setString(2, finalVariant.getChrom());
+      stmt.setInt(3, finalVariant.getPos() + 1);
+      stmt.setInt(4, finalVariant.getPos() + finalVariant.getRef().length());
+      stmt.setString(5, finalVariant.getRef());
+      stmt.setString(6, finalVariant.getAlt());
 
       // Compute het., hom. alt, hemi. alt. counts.
       final int countHemi;
       final int countHomAlt;
       if (ctx.getCommonInfo().hasAttribute("nonpar")) {
         // Male is hemizygous.
-        countHemi = ctx.getCommonInfo().getAttributeAsInt("AC_male", 0);
+        countHemi =
+            ctx.getCommonInfo()
+                .getAttributeAsInt("AC_male", ctx.getCommonInfo().getAttributeAsInt("AC_XY", 0));
         countHomAlt = ctx.getCommonInfo().getAttributeAsInt("nhomalt", 0);
       } else {
         // Male is homozygous.
         countHemi = 0;
         countHomAlt = ctx.getCommonInfo().getAttributeAsInt("nhomalt", 0);
       }
-      stmt.setInt(7, countHomAlt);
-      stmt.setInt(8, countHemi);
+      stmt.setInt(8, countHomAlt);
+      stmt.setInt(9, countHemi);
 
       final int countHet =
           ctx.getCommonInfo().getAttributeAsInt("AC", 0) - countHemi - 2 * countHomAlt;
-      stmt.setInt(6, countHet);
+      stmt.setInt(7, countHet);
 
-      stmt.setDouble(9, ctx.getCommonInfo().getAttributeAsDouble("AF", 0.0));
+      stmt.setDouble(10, ctx.getCommonInfo().getAttributeAsDouble("AF", 0.0));
 
       stmt.executeUpdate();
       stmt.close();

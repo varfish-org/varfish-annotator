@@ -33,24 +33,41 @@ public final class InitDb {
       if (args.getGnomadExomesPaths() != null && args.getGnomadExomesPaths().size() > 0) {
         System.err.println("Importing gnomAD exomes VCF files...");
         new GnomadExomesImporter(
-                conn, args.getGnomadExomesPaths(), args.getRefPath(), args.getGenomicRegion())
+                conn,
+                args.getRelease(),
+                args.getGnomadExomesPaths(),
+                args.getRefPath(),
+                args.getGenomicRegion())
             .run();
       }
       if (args.getGnomadGenomesPaths() != null && args.getGnomadGenomesPaths().size() > 0) {
         System.err.println("Importing gnomAD genomes VCF files...");
         new GnomadGenomesImporter(
-                conn, args.getGnomadGenomesPaths(), args.getRefPath(), args.getGenomicRegion())
+                conn,
+                args.getRelease(),
+                args.getGnomadGenomesPaths(),
+                args.getRefPath(),
+                args.getGenomicRegion())
             .run();
       }
       if (args.getThousandGenomesPaths() != null && args.getThousandGenomesPaths().size() > 0) {
         System.err.println("Importing 1000 Genomes VCF files...");
         new ThousandGenomesImporter(
-                conn, args.getThousandGenomesPaths(), args.getRefPath(), args.getGenomicRegion())
+                conn,
+                args.getRelease(),
+                args.getThousandGenomesPaths(),
+                args.getRefPath(),
+                args.getGenomicRegion())
             .run();
       }
       if (args.getExacPath() != null) {
         System.err.println("Importing ExAC VCF files...");
-        new ExacImporter(conn, args.getExacPath(), args.getRefPath(), args.getGenomicRegion())
+        new ExacImporter(
+                conn,
+                args.getRelease(),
+                args.getExacPath(),
+                args.getRefPath(),
+                args.getGenomicRegion())
             .run();
       }
       if (args.getClinvarPaths() != null && args.getClinvarPaths().size() > 0) {

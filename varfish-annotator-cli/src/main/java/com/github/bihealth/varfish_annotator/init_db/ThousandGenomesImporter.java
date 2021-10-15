@@ -30,6 +30,9 @@ public final class ThousandGenomesImporter {
   /** The JDBC connection. */
   private final Connection conn;
 
+  /** The genome release. */
+  private final String genomeRelease;
+
   /** Path to Thousand Genomes VCF path. */
   private final List<String> vcfPaths;
 
@@ -49,12 +52,18 @@ public final class ThousandGenomesImporter {
    * Construct the <tt>ThousandGenomesImporter</tt> object.
    *
    * @param conn Connection to database
+   * @param genomeRelease
    * @param vcfPaths Path to Thousand Genomes VCF path.
    * @param genomicRegion Genomic region {@code CHR:START-END} to process.
    */
   public ThousandGenomesImporter(
-      Connection conn, List<String> vcfPaths, String refFastaPath, String genomicRegion) {
+      Connection conn,
+      String genomeRelease,
+      List<String> vcfPaths,
+      String refFastaPath,
+      String genomicRegion) {
     this.conn = conn;
+    this.genomeRelease = genomeRelease;
     this.vcfPaths = ImmutableList.copyOf(vcfPaths);
     this.refFastaPath = refFastaPath;
 
@@ -163,7 +172,7 @@ public final class ThousandGenomesImporter {
             + TABLE_NAME
             + " (release, chrom, start, end, ref, alt, thousand_genomes_het, "
             + "thousand_genomes_hom, thousand_genomes_hemi, thousand_genomes_af)"
-            + " VALUES ('GRCh37', ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
@@ -198,11 +207,12 @@ public final class ThousandGenomesImporter {
       }
 
       final PreparedStatement stmt = conn.prepareStatement(insertQuery);
-      stmt.setString(1, finalVariant.getChrom());
-      stmt.setInt(2, finalVariant.getPos() + 1);
-      stmt.setInt(3, finalVariant.getPos() + finalVariant.getRef().length());
-      stmt.setString(4, finalVariant.getRef());
-      stmt.setString(5, finalVariant.getAlt());
+      stmt.setString(1, genomeRelease);
+      stmt.setString(2, finalVariant.getChrom());
+      stmt.setInt(3, finalVariant.getPos() + 1);
+      stmt.setInt(4, finalVariant.getPos() + finalVariant.getRef().length());
+      stmt.setString(5, finalVariant.getRef());
+      stmt.setString(6, finalVariant.getAlt());
 
       int het = 0;
       final List<Integer> hets;
@@ -218,7 +228,7 @@ public final class ThousandGenomesImporter {
       if (hets.size() >= i) {
         het = hets.get(i - 1);
       }
-      stmt.setInt(6, het);
+      stmt.setInt(7, het);
 
       int hom = 0;
       final List<Integer> homs;
@@ -234,7 +244,7 @@ public final class ThousandGenomesImporter {
       if (homs.size() >= i) {
         hom = homs.get(i - 1);
       }
-      stmt.setInt(7, hom);
+      stmt.setInt(8, hom);
 
       int hemi = 0;
       final List<Integer> hemis;
@@ -250,7 +260,7 @@ public final class ThousandGenomesImporter {
       if (hemis.size() >= i) {
         hemi = hemis.get(i - 1);
       }
-      stmt.setInt(8, hemi);
+      stmt.setInt(9, hemi);
 
       double af = 0.0;
       final List<Double> afs;
@@ -266,7 +276,7 @@ public final class ThousandGenomesImporter {
       if (afs.size() >= i) {
         af = afs.get(i - 1);
       }
-      stmt.setDouble(9, af);
+      stmt.setDouble(10, af);
 
       stmt.executeUpdate();
       stmt.close();

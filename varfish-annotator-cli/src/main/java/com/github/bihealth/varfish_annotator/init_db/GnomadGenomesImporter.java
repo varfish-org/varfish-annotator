@@ -11,8 +11,12 @@ import java.util.List;
 public final class GnomadGenomesImporter extends GnomadImporter {
 
   public GnomadGenomesImporter(
-      Connection conn, List<String> gnomadVcfPaths, String refFastaPath, String genomicRegion) {
-    super(conn, gnomadVcfPaths, refFastaPath, genomicRegion);
+      Connection conn,
+      String genomeRelease,
+      List<String> gnomadVcfPaths,
+      String refFastaPath,
+      String genomicRegion) {
+    super(conn, genomeRelease, gnomadVcfPaths, refFastaPath, genomicRegion);
   }
 
   /** The name of the table in the database. */

@@ -1,5 +1,9 @@
 # Changelog
 
+## HEAD (unreleased)
+
+- Fixing problems with querying in GRCh38.
+
 ## v0.17
 
 - Adding support for GRCh38 release.

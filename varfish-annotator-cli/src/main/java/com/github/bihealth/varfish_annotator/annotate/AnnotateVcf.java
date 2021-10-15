@@ -401,13 +401,14 @@ public final class AnnotateVcf {
       }
 
       // Query information in databases.
-      final DbInfo exacInfo = getDbInfo(conn, args.getRelease(), normalizedVar, EXAC_PREFIX);
+      final String gnomadChrPrefix = "GRCh38".equals(args.getRelease()) ? "chr" : "";
+      final DbInfo exacInfo = getDbInfo(conn, args.getRelease(), normalizedVar, EXAC_PREFIX, "");
       final DbInfo gnomadExomesInfo =
-          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_EXOMES_PREFIX);
+          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_EXOMES_PREFIX, gnomadChrPrefix);
       final DbInfo gnomadGenomesInfo =
-          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_GENOMES_PREFIX);
+          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_GENOMES_PREFIX, gnomadChrPrefix);
       final DbInfo thousandGenomesInfo =
-          getDbInfo(conn, args.getRelease(), normalizedVar, THOUSAND_GENOMES_PREFIX);
+          getDbInfo(conn, args.getRelease(), normalizedVar, THOUSAND_GENOMES_PREFIX, "");
       final boolean inClinvar = getClinVarInfo(conn, args.getRelease(), normalizedVar);
 
       // Build a list of all gene IDs that we will iterate over later.
@@ -837,11 +838,16 @@ public final class AnnotateVcf {
    * @param release Genome release.
    * @param normalizedVar Normalized variant.
    * @param prefix Prefix for fields and table.
+   * @param chrPrefix Prefix for chromosome values.
    * @return {@link DbInfo} with information from ExAC.
    * @throw VarfishAnnotatorException in case of problems with obtaining information
    */
   private DbInfo getDbInfo(
-      Connection conn, String release, VariantDescription normalizedVar, String prefix)
+      Connection conn,
+      String release,
+      VariantDescription normalizedVar,
+      String prefix,
+      String chrPrefix)
       throws VarfishAnnotatorException {
     // Return "not found" if looking for ExAC or Thousand Genomes but not using GRCh37.
     // These are only available for GRCh37.
@@ -865,7 +871,15 @@ public final class AnnotateVcf {
     try {
       final PreparedStatement stmt = conn.prepareStatement(query);
       stmt.setString(1, release);
-      stmt.setString(2, normalizedVar.getChrom());
+      final String chrom;
+      if (chrPrefix.isEmpty() && normalizedVar.getChrom().startsWith("chr")) {
+        chrom = normalizedVar.getChrom().substring(3);
+      } else if (!chrPrefix.isEmpty() && !normalizedVar.getChrom().startsWith("chr")) {
+        chrom = "chr" + normalizedVar.getChrom();
+      } else {
+        chrom = normalizedVar.getChrom();
+      }
+      stmt.setString(2, chrom);
       stmt.setInt(3, normalizedVar.getPos() + 1);
       stmt.setString(4, normalizedVar.getRef());
       stmt.setString(5, normalizedVar.getAlt());

@@ -71,6 +71,9 @@ public final class InitDbArgs {
       description = "Provide database release information as \"$db:$release\" for storage in DB")
   private List<String> dbReleaseInfos;
 
+  @Parameter(names = "--release", description = "The genome release used", required = true)
+  private String release;
+
   public boolean isHelp() {
     return help;
   }
@@ -148,5 +151,13 @@ public final class InitDbArgs {
         + ", dbReleaseInfos="
         + dbReleaseInfos
         + '}';
+  }
+
+  public String getRelease() {
+    return release;
+  }
+
+  public void setRelease(String release) {
+    this.release = release;
   }
 }
