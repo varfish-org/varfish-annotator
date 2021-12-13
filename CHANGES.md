@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.19
+
+- Bumping `jannovar-core` dependencies against log4shell vulnerability.
+
 ## v0.18
 
 - Fixing problems with querying in GRCh38.
