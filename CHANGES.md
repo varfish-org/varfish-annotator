@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.20 (WIP)
+## v0.20
 
 - Further bumping of `jannovar-core` against log4shell.
 - Fixing problem with missing `SVMETHOD` annotation of SV VCFs.
