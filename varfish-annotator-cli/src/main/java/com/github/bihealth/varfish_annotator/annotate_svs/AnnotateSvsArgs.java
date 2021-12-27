@@ -70,6 +70,11 @@ public final class AnnotateSvsArgs {
       description = "Regular expression to use for selection of contigs")
   private String contigRegex = "^(chr)?(\\d+|X|Y|M|MT)$";
 
+  @Parameter(
+      names = "--default-sv-method",
+      description = "String to use for INFO/SVMETHOD if missing")
+  private String defaultSvMethod = ".";
+
   public boolean isHelp() {
     return help;
   }
@@ -118,6 +123,14 @@ public final class AnnotateSvsArgs {
     return outputDbInfos;
   }
 
+  public String getDefaultSvMethod() {
+    return defaultSvMethod;
+  }
+
+  public void setDefaultSvMethod(String defaultSvMethod) {
+    this.defaultSvMethod = defaultSvMethod;
+  }
+
   @Override
   public String toString() {
     return "AnnotateSvsArgs{"
@@ -156,6 +169,8 @@ public final class AnnotateSvsArgs {
         + ", contigRegex='"
         + contigRegex
         + '\''
-        + '}';
+        + ", defaultSvMethod='"
+        + defaultSvMethod
+        + "'}";
   }
 }

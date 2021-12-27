@@ -23,7 +23,7 @@
 		<jcommander.version>1.72</jcommander.version>
 		<h2.version>1.4.197</h2.version>
 		<htsjdk.version>2.22.0</htsjdk.version>
-		<jannovar.version>0.37</jannovar.version>
+		<jannovar.version>0.38</jannovar.version>
 	</properties>
 
 	<modules>

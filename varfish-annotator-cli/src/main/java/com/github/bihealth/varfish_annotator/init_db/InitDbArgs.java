@@ -24,7 +24,7 @@ public final class InitDbArgs {
   @Parameter(
       names = "--ref-path",
       description = "Path to reference FASTA file, used for variant normalization",
-      required = true)
+      required = false)
   private String refPath;
 
   @Parameter(
@@ -118,6 +118,14 @@ public final class InitDbArgs {
     return dbReleaseInfos;
   }
 
+  public String getRelease() {
+    return release;
+  }
+
+  public void setRelease(String release) {
+    this.release = release;
+  }
+
   @Override
   public String toString() {
     return "InitDbArgs{"
@@ -150,14 +158,6 @@ public final class InitDbArgs {
         + '\''
         + ", dbReleaseInfos="
         + dbReleaseInfos
-        + '}';
-  }
-
-  public String getRelease() {
-    return release;
-  }
-
-  public void setRelease(String release) {
-    this.release = release;
+        + "'}";
   }
 }

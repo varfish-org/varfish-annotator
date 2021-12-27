@@ -1,6 +1,8 @@
 ## Database
 
-*.h2.db
+/*.h2.db
+/*.vcf*
+/*.tsv
 
 ## Maven
 

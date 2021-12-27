@@ -407,7 +407,10 @@ public final class AnnotateSvsVcf {
       VariantContext ctx,
       GenomeVersion genomeVersion,
       int alleleNo) {
-    final String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", null);
+    String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", null);
+    if (svMethod == null) {
+      svMethod = args.getDefaultSvMethod() == null ? "." : args.getDefaultSvMethod();
+    }
     final boolean isBnd = (svGenomeVar.getType() == Type.BND);
     final int pos2 = isBnd ? svGenomeVar.getPos() + 1 : svGenomeVar.getPos2();
 
