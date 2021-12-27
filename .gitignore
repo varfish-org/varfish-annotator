@@ -1,3 +1,7 @@
+## Database
+
+*.h2.db
+
 ## Maven
 
 varfish-annotator-*/0.*/
