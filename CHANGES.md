@@ -1,6 +1,6 @@
 # Changelog
 
-## HEAD (unreleased)
+## v0.21
 
 - Bumping `jannovar-core` dependency for fixes in `chrMT` annotation.
 
