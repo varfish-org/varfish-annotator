@@ -1,5 +1,9 @@
 # Changelog
 
+## HEAD (unreleased)
+
+- Bumping `jannovar-core` dependency for fixes in `chrMT` annotation.
+
 ## v0.20
 
 - Further bumping of `jannovar-core` against log4shell.
