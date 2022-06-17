@@ -16,6 +16,10 @@ public class DbStats {
           "gnomad_exome_var",
           "gnomad_genome_var");
 
+  /** Tables that only work for GRCh37. */
+  private static final ImmutableList<String> GRCH37_ONLY_TABLES =
+      ImmutableList.of("exac_var", "thousand_genomes_var");
+
   /** Configuration for the command. */
   private final DbStatsArgs args;
 
@@ -42,7 +46,9 @@ public class DbStats {
             "sa",
             ""); ) {
       for (String tableName : TABLE_NAMES) {
-        runForTable(conn, tableName);
+        if (!GRCH37_ONLY_TABLES.contains(tableName) || dbPath.endsWith("grch37")) {
+          runForTable(conn, tableName);
+        }
       }
       System.err.println("Foo bar!");
     } catch (SQLException e) {

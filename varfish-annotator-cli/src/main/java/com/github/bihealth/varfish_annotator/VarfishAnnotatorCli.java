@@ -76,6 +76,7 @@ public class VarfishAnnotatorCli {
         } else {
           new DbStats(dbStats).run();
         }
+        break;
       default:
         System.err.println("Unknown command: " + cmd);
         System.exit(1);
