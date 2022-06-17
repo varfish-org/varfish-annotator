@@ -1,5 +1,9 @@
 # Changelog
 
+## HEAD (unreleased)
+
+- Adding `db-stats` command (#25).
+
 ## v0.21
 
 - Bumping `jannovar-core` dependency for fixes in `chrMT` annotation.

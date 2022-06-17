@@ -6,6 +6,8 @@ import com.github.bihealth.varfish_annotator.annotate.AnnotateArgs;
 import com.github.bihealth.varfish_annotator.annotate.AnnotateVcf;
 import com.github.bihealth.varfish_annotator.annotate_svs.AnnotateSvsArgs;
 import com.github.bihealth.varfish_annotator.annotate_svs.AnnotateSvsVcf;
+import com.github.bihealth.varfish_annotator.dbstats.DbStats;
+import com.github.bihealth.varfish_annotator.dbstats.DbStatsArgs;
 import com.github.bihealth.varfish_annotator.init_db.InitDb;
 import com.github.bihealth.varfish_annotator.init_db.InitDbArgs;
 
@@ -15,12 +17,14 @@ public class VarfishAnnotatorCli {
     final InitDbArgs initDb = new InitDbArgs();
     final AnnotateArgs annotate = new AnnotateArgs();
     final AnnotateSvsArgs annotateSvs = new AnnotateSvsArgs();
+    final DbStatsArgs dbStats = new DbStatsArgs();
 
     final JCommander jc =
         JCommander.newBuilder()
             .addCommand("init-db", initDb)
             .addCommand("annotate", annotate)
             .addCommand("annotate-svs", annotateSvs)
+            .addCommand("db-stats", dbStats)
             .build();
 
     if ((args == null || args.length == 0)) {
@@ -65,6 +69,13 @@ public class VarfishAnnotatorCli {
           new AnnotateSvsVcf(annotateSvs).run();
         }
         break;
+      case "db-stats":
+        System.err.println("db-stats: " + dbStats);
+        if (dbStats.isHelp()) {
+          jc.usage("db-stats");
+        } else {
+          new DbStats(dbStats).run();
+        }
       default:
         System.err.println("Unknown command: " + cmd);
         System.exit(1);
