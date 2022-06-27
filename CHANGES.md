@@ -3,6 +3,7 @@
 ## HEAD (unreleased)
 
 - Adding `db-stats` command (#25).
+- Adding issue templates (#28)
 
 ## v0.21
 

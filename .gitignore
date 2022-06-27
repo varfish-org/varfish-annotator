@@ -1,3 +1,6 @@
+## Scratch files
+out*
+
 ## Database
 
 /*.h2.db
