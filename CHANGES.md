@@ -4,6 +4,7 @@
 
 - Adding `db-stats` command (#25).
 - Adding issue templates (#28)
+- Adding continuous integration with GitHub Actions (#28)
 
 ## v0.21
 
