@@ -56,5 +56,4 @@ public class SmokeTest {
           VarfishAnnotatorCli.main(new String[] {"init-db"});
         });
   }
-
 }

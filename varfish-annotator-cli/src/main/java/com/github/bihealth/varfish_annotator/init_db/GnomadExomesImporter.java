@@ -19,9 +19,11 @@ public final class GnomadExomesImporter extends GnomadImporter {
     super(conn, genomeRelease, gnomadVcfPaths, refFastaPath, genomicRegion);
   }
 
+  public static final String TABLE_NAME = "gnomad_exome_var";
+
   /** The name of the table in the database. */
   protected String getTableName() {
-    return "gnomad_exome_var";
+    return TABLE_NAME;
   }
 
   /** The field prefix. */
