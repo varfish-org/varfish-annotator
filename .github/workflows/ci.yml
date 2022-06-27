@@ -5,15 +5,15 @@ on:
   - pull_request
 
 jobs:
-  cancel-previous:
-    runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
-    steps:
-      - uses: khan/pull-request-workflow-cancel@1.0.0
-        with:
-          workflows: "main.yml"
-        env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+#  cancel-previous:
+#    runs-on: ubuntu-latest
+#    if: github.ref != 'refs/heads/main'
+#    steps:
+#      - uses: khan/pull-request-workflow-cancel@1.0.0
+#        with:
+#          workflows: "main.yml"
+#        env:
+#          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
 
   formatting:
     permissions:
@@ -55,4 +55,4 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
       - name: Build with Maven
-        run: mvn --batch-mode --update-snapshots verify
+        run: mvn --batch-mode --update-snapshots clean test
