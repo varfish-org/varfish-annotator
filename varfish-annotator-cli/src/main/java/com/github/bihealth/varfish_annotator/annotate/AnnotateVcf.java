@@ -3,6 +3,7 @@ package com.github.bihealth.varfish_annotator.annotate;
 import com.github.bihealth.varfish_annotator.DbInfo;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
+import com.github.bihealth.varfish_annotator.utils.GzipUtil;
 import com.github.bihealth.varfish_annotator.utils.UcscBinning;
 import com.github.bihealth.varfish_annotator.utils.VariantDescription;
 import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
@@ -28,10 +29,9 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -146,8 +146,11 @@ public final class AnnotateVcf {
                 "sa",
                 "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
-        FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
-        FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
+        OutputStream gtsStream = Files.newOutputStream(Paths.get(args.getOutputGts()));
+        OutputStream dbInfoStream = Files.newOutputStream(Paths.get(args.getOutputDbInfos()));
+        Writer gtWriter = GzipUtil.maybeOpenGzipOutputStream(gtsStream, args.getOutputGts());
+        Writer dbInfoWriter =
+            GzipUtil.maybeOpenGzipOutputStream(dbInfoStream, args.getOutputDbInfos());
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
       new VcfCompatibilityChecker(reader).check(args.getRelease());
       System.err.println("Deserializing Jannovar file...");
@@ -238,7 +241,7 @@ public final class AnnotateVcf {
       JannovarData refseqJv,
       JannovarData ensemblJv,
       VariantNormalizer normalizer,
-      FileWriter gtWriter)
+      Writer gtWriter)
       throws VarfishAnnotatorException {
 
     // Guess genome version.
@@ -313,7 +316,7 @@ public final class AnnotateVcf {
       VariantContextAnnotator ensemblAnnotator,
       VariantNormalizer normalizer,
       VariantContext ctx,
-      FileWriter gtWriter)
+      Writer gtWriter)
       throws VarfishAnnotatorException {
     ImmutableList<VariantAnnotations> refseqAnnotationsList =
         silentBuildAnnotations(ctx, refseqAnnotator);

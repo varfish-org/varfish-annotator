@@ -3,13 +3,16 @@ package com.github.bihealth.varfish_annotator.annotate_svs;
 import com.ginsberg.junit.exit.FailOnSystemExit;
 import com.github.bihealth.varfish_annotator.ResourceUtils;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorCli;
+import com.github.bihealth.varfish_annotator.utils.GzipUtil;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** Test annotation of VCF files generated with GATK HC for GRCh37 */
 public class AnnotateDellyVcf37Test {
@@ -35,16 +38,19 @@ public class AnnotateDellyVcf37Test {
       String inputPath,
       String expectedDbInfos,
       String expectedGts,
-      String expectedFeatureEffects)
+      String expectedFeatureEffects,
+      boolean gzipOutput)
       throws IOException {
+    final String gzSuffix = gzipOutput ? ".gz" : "";
     final File vcfPath = new File(tmpFolder + "/" + inputFileName);
     final File tbiPath = new File(vcfPath + ".tbi");
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + vcfPath.getName(), vcfPath);
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + tbiPath.getName(), tbiPath);
 
-    final File outputDbInfoPath = new File(tmpFolder + "/output.db-info.tsv");
-    final File outputFeatureEffects = new File(tmpFolder + "/output.feature-effects.tsv");
-    final File outputGtsPath = new File(tmpFolder + "/output.gts.tsv");
+    final File outputDbInfoPath = new File(tmpFolder + "/output.db-info.tsv" + gzSuffix);
+    final File outputFeatureEffects =
+        new File(tmpFolder + "/output.feature-effects.tsv" + gzSuffix);
+    final File outputGtsPath = new File(tmpFolder + "/output.gts.tsv" + gzSuffix);
 
     VarfishAnnotatorCli.main(
         new String[] {
@@ -68,15 +74,26 @@ public class AnnotateDellyVcf37Test {
           outputFeatureEffects.toString(),
         });
 
-    Assertions.assertEquals(expectedDbInfos, FileUtils.readFileToString(outputDbInfoPath, "utf-8"));
-    Assertions.assertEquals(expectedGts, FileUtils.readFileToString(outputGtsPath, "utf-8"));
-    Assertions.assertEquals(
-        expectedFeatureEffects, FileUtils.readFileToString(outputFeatureEffects, "utf-8"));
+    if (gzipOutput) {
+      final File paths[] = {outputDbInfoPath, outputGtsPath, outputFeatureEffects};
+      for (File path : paths) {
+        try (FileInputStream fin = new FileInputStream(path)) {
+          Assertions.assertTrue(GzipUtil.isGZipped(fin));
+        }
+      }
+    } else {
+      Assertions.assertEquals(
+          expectedDbInfos, FileUtils.readFileToString(outputDbInfoPath, "utf-8"));
+      Assertions.assertEquals(expectedGts, FileUtils.readFileToString(outputGtsPath, "utf-8"));
+      Assertions.assertEquals(
+          expectedFeatureEffects, FileUtils.readFileToString(outputFeatureEffects, "utf-8"));
+    }
   }
 
-  @Test
   @FailOnSystemExit
-  void testWithSingleton() throws IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testWithSingleton(boolean gzipOutput) throws IOException {
     final String expectedDbInfo =
         "genomebuild\tdb_name\trelease\n"
             + "GRCh37\tclinvar\ttoday\n"
@@ -98,12 +115,14 @@ public class AnnotateDellyVcf37Test {
         "input/grch37",
         expectedDbInfo,
         expectedGts,
-        expectedFeatureEffects);
+        expectedFeatureEffects,
+        gzipOutput);
   }
 
-  @Test
   @FailOnSystemExit
-  void testWithTrio() throws IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testWithTrio(boolean gzipOutput) throws IOException {
     final String expectedDbInfo =
         "genomebuild\tdb_name\trelease\n"
             + "GRCh37\tclinvar\ttoday\n"
@@ -125,6 +144,7 @@ public class AnnotateDellyVcf37Test {
         "input/grch37",
         expectedDbInfo,
         expectedGts,
-        expectedFeatureEffects);
+        expectedFeatureEffects,
+        gzipOutput);
   }
 }

@@ -2,13 +2,16 @@ package com.github.bihealth.varfish_annotator.annotate;
 
 import com.github.bihealth.varfish_annotator.ResourceUtils;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorCli;
+import com.github.bihealth.varfish_annotator.utils.GzipUtil;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** Test annotation of VCF files generated with GATK HC for GRCh37 */
 public class AnnotateGatkHcVcf37Test {
@@ -35,15 +38,21 @@ public class AnnotateGatkHcVcf37Test {
     ResourceUtils.copyResourceToFile("/grch37/hg19_refseq_curated.ser", refseqSerFile);
   }
 
-  void runTest(String inputFileName, String inputPath, String expectedDbInfos, String expectedGts)
+  void runTest(
+      String inputFileName,
+      String inputPath,
+      String expectedDbInfos,
+      String expectedGts,
+      boolean gzipOutput)
       throws IOException {
+    final String gzSuffix = gzipOutput ? ".gz" : "";
     final File vcfPath = new File(tmpFolder + "/" + inputFileName);
     final File tbiPath = new File(vcfPath + ".tbi");
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + vcfPath.getName(), vcfPath);
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + tbiPath.getName(), tbiPath);
 
-    final File outputDbInfoPath = new File(tmpFolder + "/output.db-info.tsv");
-    final File outputGtsPath = new File(tmpFolder + "/output.gts.tsv");
+    final File outputDbInfoPath = new File(tmpFolder + "/output.db-info.tsv" + gzSuffix);
+    final File outputGtsPath = new File(tmpFolder + "/output.gts.tsv" + gzSuffix);
 
     VarfishAnnotatorCli.main(
         new String[] {
@@ -66,12 +75,23 @@ public class AnnotateGatkHcVcf37Test {
           outputGtsPath.toString(),
         });
 
-    Assertions.assertEquals(expectedDbInfos, FileUtils.readFileToString(outputDbInfoPath, "utf-8"));
-    Assertions.assertEquals(expectedGts, FileUtils.readFileToString(outputGtsPath, "utf-8"));
+    if (gzipOutput) {
+      final File paths[] = {outputDbInfoPath, outputGtsPath};
+      for (File path : paths) {
+        try (FileInputStream fin = new FileInputStream(path)) {
+          Assertions.assertTrue(GzipUtil.isGZipped(fin));
+        }
+      }
+    } else {
+      Assertions.assertEquals(
+          expectedDbInfos, FileUtils.readFileToString(outputDbInfoPath, "utf-8"));
+      Assertions.assertEquals(expectedGts, FileUtils.readFileToString(outputGtsPath, "utf-8"));
+    }
   }
 
-  @Test
-  void testWithSingleton() throws IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testWithSingleton(boolean gzipOutput) throws IOException {
     final String expectedDbInfo =
         "genomebuild\tdb_name\trelease\n"
             + "GRCh37\tclinvar\ttoday\n"
@@ -93,11 +113,12 @@ public class AnnotateGatkHcVcf37Test {
             + "GRCh37\t1\t1\t808928\t808928\t591\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":65,\"\"\"dp\"\"\":65,\"\"\"gq\"\"\":99}}\t1\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t52193\tENSG00000187634\tENST00000420190.1\tTRUE\t.\t.\t{\"intergenic_variant\"}\t51332\n"
             + "GRCh37\t1\t1\t877769\t877769\t591\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":65,\"\"\"dp\"\"\":65,\"\"\"gq\"\"\":99}}\t1\t0\t0\t0\t0\tFALSE\t1.364E-5\t0\t1\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\tc.986-21C>T\tp.=\t{\"coding_transcript_intron_variant\"}\t21\tENSG00000187634\tENST00000341065.4\tTRUE\tc.709-21C>T\tp.=\t{\"coding_transcript_intron_variant\"}\t21\n"
             + "GRCh37\t1\t1\t981952\t981952\t592\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":3,\"\"\"gq\"\"\":9}}\t1\t0\t0\t0\t0\tTRUE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101991\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101997\n";
-    runTest("bwa.gatk_hc.HG00102.vcf.gz", "input/grch37", expectedDbInfo, expectedGts);
+    runTest("bwa.gatk_hc.HG00102.vcf.gz", "input/grch37", expectedDbInfo, expectedGts, gzipOutput);
   }
 
-  @Test
-  void testWithTrio() throws IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testWithTrio(boolean gzipOutput) throws IOException {
     final String expectedDbInfo =
         "genomebuild\tdb_name\trelease\n"
             + "GRCh37\tclinvar\ttoday\n"
@@ -118,6 +139,6 @@ public class AnnotateGatkHcVcf37Test {
             + "GRCh37\t1\t1\t901652\t901652\t591\tA\tG\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":3,\"\"\"gq\"\"\":9},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":3,\"\"\"gq\"\"\":9},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":1,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3}}\t3\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t21691\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t21697\n"
             + "GRCh37\t1\t1\t903245\t903245\t591\tA\tG\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":4,\"\"\"dp\"\"\":4,\"\"\"gq\"\"\":12},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":5,\"\"\"dp\"\"\":5,\"\"\"gq\"\"\":15},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"./.\"\"\",\"\"\"ad\"\"\":-1,\"\"\"dp\"\"\":-1,\"\"\"gq\"\"\":-1}}\t2\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t23284\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t23290\n"
             + "GRCh37\t1\t1\t981952\t981952\t592\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":4,\"\"\"dp\"\"\":5,\"\"\"gq\"\"\":23},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"ad\"\"\":0,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":99}}\t0\t1\t2\t0\t0\tTRUE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101991\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101997\n";
-    runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch37", expectedDbInfo, expectedGts);
+    runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch37", expectedDbInfo, expectedGts, gzipOutput);
   }
 }
