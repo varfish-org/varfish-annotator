@@ -23,7 +23,7 @@ public class DbStatsTest {
 
   @BeforeEach
   void initEach() {
-    h2Db = new File(tmpFolder + "/small-grch37.h2.db");
+    h2Db = new File(tmpFolder + "/small-GRCh37.h2.db");
     fastaFile = new File(tmpFolder + "/hs37d5.1.fa");
     faiFile = new File(tmpFolder + "/hs37d5.1.fa.fai");
 
@@ -49,19 +49,19 @@ public class DbStatsTest {
             + "clinvar_var\tGRCh37\t1\t1000\n"
             + "Table exac_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "exac_var\tgrch37\t1\t1000\n"
+            + "exac_var\tGRCh37\t1\t1000\n"
             + "Table hgmd_locus\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
             + "hgmd_locus\tGRCh37\t1\t954\n"
             + "Table thousand_genomes_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "thousand_genomes_var\tgrch37\t1\t1000\n"
+            + "thousand_genomes_var\tGRCh37\t1\t1000\n"
             + "Table gnomad_exome_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "gnomad_exome_var\tgrch37\t1\t1000\n"
+            + "gnomad_exome_var\tGRCh37\t1\t1000\n"
             + "Table gnomad_genome_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "gnomad_genome_var\tgrch37\t1\t1000\n";
+            + "gnomad_genome_var\tGRCh37\t1\t1000\n";
 
     Assertions.assertEquals(expected, text);
   }
@@ -82,19 +82,19 @@ public class DbStatsTest {
             + "clinvar_var\tGRCh37\t1\t1000\n"
             + "Table exac_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "exac_var\tgrch37\t1\t1000\n"
+            + "exac_var\tGRCh37\t1\t1000\n"
             + "Table hgmd_locus\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
             + "hgmd_locus\tGRCh37\t1\t954\n"
             + "Table thousand_genomes_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "thousand_genomes_var\tgrch37\t1\t1000\n"
+            + "thousand_genomes_var\tGRCh37\t1\t1000\n"
             + "Table gnomad_exome_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "gnomad_exome_var\tgrch37\t1\t1000\n"
+            + "gnomad_exome_var\tGRCh37\t1\t1000\n"
             + "Table gnomad_genome_var\n"
             + "TABLE\tRELEASE\tCHROM\tCOUNT\n"
-            + "gnomad_genome_var\tgrch37\t1\t1000\n";
+            + "gnomad_genome_var\tGRCh37\t1\t1000\n";
 
     Assertions.assertEquals(expected, text);
   }

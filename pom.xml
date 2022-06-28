@@ -93,6 +93,15 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.11.0</version>
+			<scope>test</scope>
+		</dependency>
+
+
 		<!-- Hamcrest, JUnit addon -->
 		<dependency>
 			<groupId>org.hamcrest</groupId>
