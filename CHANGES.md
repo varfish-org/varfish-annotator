@@ -8,6 +8,7 @@
 - Adding unit tests for `annotate` command (#31)
 - Adding unit tests for `annotate-sv` command (#33)
 - Writing out gzip-ed files if output file name ends in `.gz` (#11)
+- Do not write out asterisk alleles (#18)
 
 ## v0.21
 

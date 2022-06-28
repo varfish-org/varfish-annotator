@@ -330,14 +330,17 @@ public final class AnnotateVcf {
 
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
+      // Skip allele if it is the asterisk allele.
+      final String baseString = ctx.getAlternateAllele(i - 1).getBaseString();
+      if ("*".equals(baseString)) {
+        continue;
+      }
+
       // Normalize the from the VCF (will probably pad variant to the left).
       final VariantDescription normalizedVar =
           normalizer.normalizeInsertion(
               new VariantDescription(
-                  contigName,
-                  ctx.getStart() - 1,
-                  ctx.getReference().getBaseString(),
-                  ctx.getAlternateAllele(i - 1).getBaseString()));
+                  contigName, ctx.getStart() - 1, ctx.getReference().getBaseString(), baseString));
 
       // Get annotations sorted descendingly by variant effect.
       final List<Annotation> sortedRefseqAnnos = sortAnnos(refseqAnnotationsList, i);
