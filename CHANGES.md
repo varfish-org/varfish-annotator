@@ -2,9 +2,10 @@
 
 ## HEAD (unreleased)
 
-- Adding `db-stats` command (#25).
+- Adding `db-stats` command (#25)
 - Adding issue templates (#28)
 - Adding continuous integration with GitHub Actions (#28)
+- Adding unit tests for `annotate` command (#31)
 
 ## v0.21
 

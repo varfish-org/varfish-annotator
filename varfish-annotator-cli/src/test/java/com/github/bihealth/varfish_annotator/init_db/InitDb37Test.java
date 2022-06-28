@@ -15,7 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
  *
  * @author <a href="mailto:manuel.holtgrewe@bih-charite.de">Manuel Holtgrewe</a>
  */
-public class InitDbTest {
+public class InitDb37Test {
   @TempDir public File tmpFolder;
   File outputH2Db;
   File fastaFile;
@@ -51,7 +51,8 @@ public class InitDbTest {
     }
   }
 
-  void testTsvImportImpl(String fileName, String argName, String tableName, int expectedCount)
+  void testTsvImportImpl(
+      String fileName, String argName, String tableName, String dbReleaseInfo, int expectedCount)
       throws SQLException {
     final File pathTsv = new File(tmpFolder + "/" + fileName);
 
@@ -61,7 +62,9 @@ public class InitDbTest {
         new String[] {
           "init-db",
           "--release",
-          "grch37",
+          "GRCh37",
+          "--db-release-info",
+          dbReleaseInfo,
           "--ref-path",
           fastaFile.toString(),
           "--db-path",
@@ -73,7 +76,8 @@ public class InitDbTest {
     checkTable(tableName, expectedCount);
   }
 
-  void testVcfImpl(String fileName, String argName, String tableName, int expectedCount)
+  void testVcfImpl(
+      String fileName, String argName, String tableName, String dbReleaseInfo, int expectedCount)
       throws SQLException {
     final File vcfPath = new File(tmpFolder + "/" + fileName);
     final File tbiPath = new File(vcfPath + ".tbi");
@@ -85,7 +89,9 @@ public class InitDbTest {
         new String[] {
           "init-db",
           "--release",
-          "grch37",
+          "GRCh37",
+          "--db-release-info",
+          dbReleaseInfo,
           "--ref-path",
           fastaFile.toString(),
           "--db-path",
@@ -98,67 +104,88 @@ public class InitDbTest {
   }
 
   @Test
-  void testClinvarImport37() throws SQLException {
-    testTsvImportImpl("Clinvar.tsv", "--clinvar-path", ClinvarImporter.TABLE_NAME, 1000);
+  void testClinvarImport() throws SQLException {
+    testTsvImportImpl(
+        "Clinvar.tsv", "--clinvar-path", ClinvarImporter.TABLE_NAME, "clinvar:today", 1000);
   }
 
   @Test
-  void testHgmdImport37() throws SQLException {
-    testTsvImportImpl("HgmdPublicLocus.tsv", "--hgmd-public", HgmdPublicImporter.TABLE_NAME, 954);
+  void testHgmdImport() throws SQLException {
+    testTsvImportImpl(
+        "HgmdPublicLocus.tsv",
+        "--hgmd-public",
+        HgmdPublicImporter.TABLE_NAME,
+        "hgmd_public:ensembl_r104",
+        954);
   }
 
   @Test
-  void testExacImport37() throws IOException, SQLException {
-    testVcfImpl("ExAC.r1.sites.vep.vcf.gz", "--exac-path", ExacImporter.TABLE_NAME, 1000);
+  void testExacImport() throws IOException, SQLException {
+    testVcfImpl(
+        "ExAC.r1.sites.vep.vcf.gz", "--exac-path", ExacImporter.TABLE_NAME, "exac:r1.0", 1000);
   }
 
   @Test
-  void testThousandGenomesImport37() throws IOException, SQLException {
+  void testThousandGenomesImport() throws IOException, SQLException {
     testVcfImpl(
         "ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz",
         "--thousand-genomes-path",
         ThousandGenomesImporter.TABLE_NAME,
+        "thousand_genomes:v3.20101123",
         1000);
   }
 
   @Test
-  void testGnomadExomesImport37() throws IOException, SQLException {
+  void testGnomadExomesImport() throws IOException, SQLException {
     testVcfImpl(
         "gnomad.exomes.r2.1.1.sites.chr1.stripped.vcf.bgz.gz",
         "--gnomad-exomes-path",
         GnomadExomesImporter.TABLE_NAME,
+        "gnomad_exomes:r2.1.1",
         1000);
   }
 
   @Test
-  void testGnomadGenomesImport37() throws IOException, SQLException {
+  void testGnomadGenomesImport() throws IOException, SQLException {
     testVcfImpl(
         "gnomad.genomes.r2.1.1.sites.chr1.stripped.vcf.bgz.gz",
         "--gnomad-genomes-path",
         GnomadGenomesImporter.TABLE_NAME,
+        "gnomad_genomes:r2.1.1",
         1000);
   }
 
   /** The output of this test can be used to rebuild the <code>.h2.db</code> file. */
   @Test
-  void testBuildFull37() throws SQLException {
-    testTsvImportImpl("Clinvar.tsv", "--clinvar-path", ClinvarImporter.TABLE_NAME, 1000);
-    testTsvImportImpl("HgmdPublicLocus.tsv", "--hgmd-public", HgmdPublicImporter.TABLE_NAME, 954);
-    testVcfImpl("ExAC.r1.sites.vep.vcf.gz", "--exac-path", ExacImporter.TABLE_NAME, 1000);
+  void testBuildFull() throws SQLException {
+    testTsvImportImpl(
+        "Clinvar.tsv", "--clinvar-path", ClinvarImporter.TABLE_NAME, "clinvar:today", 1000);
+    testTsvImportImpl(
+        "HgmdPublicLocus.tsv",
+        "--hgmd-public",
+        HgmdPublicImporter.TABLE_NAME,
+        "hgmd_public:ensembl_r104",
+        954);
+    testVcfImpl(
+        "ExAC.r1.sites.vep.vcf.gz", "--exac-path", ExacImporter.TABLE_NAME, "exac:r1.0", 1000);
     testVcfImpl(
         "ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz",
         "--thousand-genomes-path",
         ThousandGenomesImporter.TABLE_NAME,
+        "thousand_genomes:v5b.20130502",
         1000);
     testVcfImpl(
         "gnomad.exomes.r2.1.1.sites.chr1.stripped.vcf.bgz.gz",
         "--gnomad-exomes-path",
         GnomadExomesImporter.TABLE_NAME,
+        "gnomad_exomes:r2.1.1",
         1000);
     testVcfImpl(
         "gnomad.genomes.r2.1.1.sites.chr1.stripped.vcf.bgz.gz",
         "--gnomad-genomes-path",
         GnomadGenomesImporter.TABLE_NAME,
+        "gnomad_genomes:r2.1.1",
         1000);
+    //    Assertions.fail();
   }
 }

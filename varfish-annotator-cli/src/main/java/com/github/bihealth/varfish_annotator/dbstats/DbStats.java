@@ -46,7 +46,7 @@ public class DbStats {
             "sa",
             ""); ) {
       for (String tableName : TABLE_NAMES) {
-        if (!GRCH37_ONLY_TABLES.contains(tableName) || dbPath.endsWith("grch37")) {
+        if (!GRCH37_ONLY_TABLES.contains(tableName) || dbPath.toLowerCase().endsWith("grch37")) {
           runForTable(conn, tableName);
         }
       }
