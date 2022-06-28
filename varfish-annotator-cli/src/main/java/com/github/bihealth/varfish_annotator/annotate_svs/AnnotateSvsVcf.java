@@ -5,6 +5,7 @@ import com.github.bihealth.varfish_annotator.annotate.GenomeVersion;
 import com.github.bihealth.varfish_annotator.annotate.IncompatibleVcfException;
 import com.github.bihealth.varfish_annotator.annotate.VcfCompatibilityChecker;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
+import com.github.bihealth.varfish_annotator.utils.GzipUtil;
 import com.github.bihealth.varfish_annotator.utils.UcscBinning;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -31,10 +32,9 @@ import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -137,9 +137,16 @@ public final class AnnotateSvsVcf {
                 "sa",
                 "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
-        FileWriter gtWriter = new FileWriter(new File(args.getOutputGts()));
-        FileWriter featureEffectsWriter = new FileWriter(new File(args.getOutputFeatureEffects()));
-        FileWriter dbInfoWriter = new FileWriter(new File(args.getOutputDbInfos()));
+        OutputStream gtsStream = Files.newOutputStream(Paths.get(args.getOutputGts()));
+        OutputStream featureEffectsStream =
+            Files.newOutputStream(Paths.get(args.getOutputFeatureEffects()));
+        OutputStream dbInfoStream = Files.newOutputStream(Paths.get(args.getOutputDbInfos()));
+        Writer gtWriter = GzipUtil.maybeOpenGzipOutputStream(gtsStream, args.getOutputGts());
+        Writer featureEffectsWriter =
+            GzipUtil.maybeOpenGzipOutputStream(
+                featureEffectsStream, args.getOutputFeatureEffects());
+        Writer dbInfoWriter =
+            GzipUtil.maybeOpenGzipOutputStream(dbInfoStream, args.getOutputDbInfos());
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
       // Guess genome version.
       GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
@@ -233,8 +240,8 @@ public final class AnnotateSvsVcf {
       VCFFileReader reader,
       JannovarData refseqJv,
       JannovarData ensemblJv,
-      FileWriter gtWriter,
-      FileWriter featureEffectsWriter)
+      Writer gtWriter,
+      Writer featureEffectsWriter)
       throws VarfishAnnotatorException {
 
     // Write out header.
@@ -301,8 +308,8 @@ public final class AnnotateSvsVcf {
       VariantContextAnnotator ensemblAnnotator,
       VariantContext ctx,
       GenomeVersion genomeVersion,
-      FileWriter gtWriter,
-      FileWriter featureEffectsWriter)
+      Writer gtWriter,
+      Writer featureEffectsWriter)
       throws VarfishAnnotatorException {
     ImmutableList<SVAnnotations> refseqAnnotationsList =
         silentBuildAnnotations(ctx, refseqAnnotator);
