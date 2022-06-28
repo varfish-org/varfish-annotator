@@ -122,10 +122,6 @@ public final class InitDbArgs {
     return release;
   }
 
-  public void setRelease(String release) {
-    this.release = release;
-  }
-
   @Override
   public String toString() {
     return "InitDbArgs{"

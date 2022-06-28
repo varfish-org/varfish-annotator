@@ -45,7 +45,7 @@ jobs:
     needs: formatting
     strategy:
       matrix:
-        java: ['8', '11', '16']
+        java: ['8', '16']
     
     steps:
       - uses: actions/checkout@v2
@@ -54,8 +54,37 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
-      - name: Build with Maven
-        run: mvn --batch-mode --update-snapshots clean test
 
-      - name: Coveralls Coverage Report Submission
-        run: mvn coveralls:report --define repoToken=${{ secrets.COVERALLS_REPO_TOKEN }}
+      - name: Build with Maven and submit coverage report
+        run: >
+          mvn
+          --batch-mode
+          --update-snapshots
+          clean
+          test
+
+  testing-coverage:
+    runs-on: ubuntu-latest
+    needs: formatting
+    strategy:
+      matrix:
+        java: ['11']
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'adopt'
+
+      - name: Build with Maven and submit coverage report
+        run: >
+          mvn
+          --define repoToken=${{ secrets.COVERALLS_REPO_TOKEN }}
+          --batch-mode
+          --update-snapshots
+          clean
+          test
+          jacoco:report
+          coveralls:report
