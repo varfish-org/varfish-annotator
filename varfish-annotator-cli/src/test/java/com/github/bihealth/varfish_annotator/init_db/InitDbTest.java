@@ -116,7 +116,11 @@ public class InitDbTest {
 
   @Test
   void testThousandGenomesImport37() throws IOException, SQLException {
-    testVcfImpl("ExAC.r1.sites.vep.vcf.gz", "--exac-path", ExacImporter.TABLE_NAME, 1000);
+    testVcfImpl(
+        "ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.vcf.gz",
+        "--thousand-genomes-path",
+        ThousandGenomesImporter.TABLE_NAME,
+        1000);
   }
 
   @Test
