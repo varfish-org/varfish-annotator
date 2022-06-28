@@ -771,7 +771,10 @@ public final class AnnotateVcf {
    */
   private String buildGenotypeValue(VariantContext ctx, int alleleNo) {
     final List<String> mappings = new ArrayList<>();
-    for (String sample : ctx.getSampleNames()) {
+    final Comparator<String> c = Comparator.comparing(String::toString);
+    final List<String> sortedSampleNames = Lists.newArrayList(ctx.getSampleNames());
+    sortedSampleNames.sort(c);
+    for (String sample : sortedSampleNames) {
       final Genotype genotype = ctx.getGenotype(sample);
       final Map<String, String> gts = new TreeMap<>();
       final List<String> gtList = new ArrayList<>();
