@@ -9,6 +9,7 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -140,5 +141,26 @@ public class AnnotateGatkHcVcf37Test {
             + "GRCh37\t1\t1\t903245\t903245\t591\tA\tG\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":4,\"\"\"dp\"\"\":4,\"\"\"gq\"\"\":12},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":5,\"\"\"dp\"\"\":5,\"\"\"gq\"\"\":15},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"./.\"\"\",\"\"\"ad\"\"\":-1,\"\"\"dp\"\"\":-1,\"\"\"gq\"\"\":-1}}\t2\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t23284\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t23290\n"
             + "GRCh37\t1\t1\t981952\t981952\t592\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":4,\"\"\"dp\"\"\":5,\"\"\"gq\"\"\":23},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"ad\"\"\":0,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":99}}\t0\t1\t2\t0\t0\tTRUE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101991\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101997\n";
     runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch37", expectedDbInfo, expectedGts, gzipOutput);
+  }
+
+  @Test
+  void testWithAsteriskAllele() throws IOException {
+    final String expectedDbInfo =
+        "genomebuild\tdb_name\trelease\n"
+            + "GRCh37\tclinvar\ttoday\n"
+            + "GRCh37\texac\tr1.0\n"
+            + "GRCh37\tgnomad_exomes\tr2.1.1\n"
+            + "GRCh37\tgnomad_genomes\tr2.1.1\n"
+            + "GRCh37\thgmd_public\tensembl_r104\n"
+            + "GRCh37\tthousand_genomes\tv5b.20130502\n";
+    final String expectedGts =
+        "release\tchromosome\tchromosome_no\tstart\tend\tbin\treference\talternative\tvar_type\tcase_id\tset_id\tinfo\tgenotype\tnum_hom_alt\tnum_hom_ref\tnum_het\tnum_hemi_alt\tnum_hemi_ref\tin_clinvar\texac_frequency\texac_homozygous\texac_heterozygous\texac_hemizygous\tthousand_genomes_frequency\tthousand_genomes_homozygous\tthousand_genomes_heterozygous\tthousand_genomes_hemizygous\tgnomad_exomes_frequency\tgnomad_exomes_homozygous\tgnomad_exomes_heterozygous\tgnomad_exomes_hemizygous\tgnomad_genomes_frequency\tgnomad_genomes_homozygous\tgnomad_genomes_heterozygous\tgnomad_genomes_hemizygous\trefseq_gene_id\trefseq_transcript_id\trefseq_transcript_coding\trefseq_hgvs_c\trefseq_hgvs_p\trefseq_effect\trefseq_exon_dist\tensembl_gene_id\tensembl_transcript_id\tensembl_transcript_coding\tensembl_hgvs_c\tensembl_hgvs_p\tensembl_effect\tensembl_exon_dist\n"
+            + "GRCh37\t1\t1\t981952\t981952\t592\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":99}}\t0\t0\t1\t0\t0\tTRUE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101991\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101997\n";
+    runTest(
+        "bwa.gatk_hc.HG00102.asterisk_alleles.vcf.gz",
+        "input/grch37",
+        expectedDbInfo,
+        expectedGts,
+        false);
   }
 }
