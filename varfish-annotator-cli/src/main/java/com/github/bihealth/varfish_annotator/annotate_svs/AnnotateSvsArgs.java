@@ -75,6 +75,11 @@ public final class AnnotateSvsArgs {
       description = "String to use for INFO/SVMETHOD if missing")
   private String defaultSvMethod = ".";
 
+  @Parameter(
+      names = "--sequential-uuids",
+      description = "Generate UUIDs sequentially (for testing)")
+  private Boolean sequentialUuids = false;
+
   public boolean isHelp() {
     return help;
   }
@@ -131,11 +136,21 @@ public final class AnnotateSvsArgs {
     this.defaultSvMethod = defaultSvMethod;
   }
 
+  public Boolean getSequentialUuids() {
+    return sequentialUuids;
+  }
+
+  public void setSequentialUuids(Boolean sequentialUuids) {
+    this.sequentialUuids = sequentialUuids;
+  }
+
   @Override
   public String toString() {
     return "AnnotateSvsArgs{"
         + "help="
         + help
+        + "sequentialUuids="
+        + sequentialUuids
         + ", refseqSerPath='"
         + refseqSerPath
         + '\''

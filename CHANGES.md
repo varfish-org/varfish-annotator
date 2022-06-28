@@ -6,6 +6,7 @@
 - Adding issue templates (#28)
 - Adding continuous integration with GitHub Actions (#28)
 - Adding unit tests for `annotate` command (#31)
+- Adding unit tests for `annotate-sv` command (#33)
 
 ## v0.21
 

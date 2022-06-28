@@ -101,6 +101,20 @@ public final class AnnotateSvsVcf {
     this.args = args;
   }
 
+  /** UUID counter for sequential UUID generation. */
+  private long uuidCounter = 0;
+
+  /** Generate next UUID. */
+  private UUID nextUuid() {
+    if (args.getSequentialUuids()) {
+      final UUID result = new UUID(0, uuidCounter);
+      uuidCounter += 1;
+      return result;
+    } else {
+      return UUID.randomUUID();
+    }
+  }
+
   /** Execute the command. */
   public void run() {
     System.err.println("Running annotate-svs; args: " + args);
@@ -298,7 +312,7 @@ public final class AnnotateSvsVcf {
     final int numAlleles = ctx.getAlleles().size();
     for (int i = 1; i < numAlleles; ++i) {
       // Create UUID for the variant.
-      final UUID variantId = UUID.randomUUID();
+      final UUID variantId = nextUuid();
 
       // Get annotations sorted descendingly by variant effect.
       final List<SVAnnotation> sortedRefseqAnnos = sortAnnos(refseqAnnotationsList, i);
@@ -476,7 +490,10 @@ public final class AnnotateSvsVcf {
 
     // Add "GT" field.
     final List<String> mappings = new ArrayList<>();
-    for (String sample : ctx.getSampleNames()) {
+    final Comparator<String> c = Comparator.comparing(String::toString);
+    final List<String> sortedSampleNames = Lists.newArrayList(ctx.getSampleNames());
+    sortedSampleNames.sort(c);
+    for (String sample : sortedSampleNames) {
       final Genotype genotype = ctx.getGenotype(sample);
       final Map<String, String> gts = new TreeMap<>();
       final List<String> gtList = new ArrayList<>();

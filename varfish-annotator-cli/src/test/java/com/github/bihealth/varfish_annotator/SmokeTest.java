@@ -1,10 +1,9 @@
 package com.github.bihealth.varfish_annotator;
 
 import com.beust.jcommander.ParameterException;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.contrib.java.lang.system.ExpectedSystemExit;
+import com.ginsberg.junit.exit.ExpectSystemExitWithStatus;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Smoke test for varfish-annotator
@@ -13,11 +12,9 @@ import org.junit.jupiter.api.Assertions;
  */
 public class SmokeTest {
 
-  @Rule public final ExpectedSystemExit exit = ExpectedSystemExit.none();
-
   @Test
+  @ExpectSystemExitWithStatus(1)
   public void testCallNonexistingCommand() {
-    exit.expectSystemExitWithStatus(1);
     VarfishAnnotatorCli.main(new String[] {"i-dont-exist"});
   }
 
