@@ -37,3 +37,9 @@ for f in $PATHS_VCF_37; do
     bgzip grch37/$(basename $g)
     tabix -f grch37/$(basename $g).gz
 done
+
+java -jar jannovar-cli/target/jannovar-cli-0.40-SNAPSHOT.jar download --gene-ids SAMD11 --gene-ids ENSG00000187634 --gene-ids 148398 -d hg19/refseq_curated
+java -jar jannovar-cli/target/jannovar-cli-0.40-SNAPSHOT.jar download --gene-ids SAMD11 --gene-ids ENSG00000187634 --gene-ids 148398 -d hg19/refseq
+java -jar jannovar-cli/target/jannovar-cli-0.40-SNAPSHOT.jar download --gene-ids SAMD11 --gene-ids ENSG00000187634 --gene-ids 148398 -d hg19/ensembl
+
+cp ./data/hg19_ensembl.ser ./data/hg19_refseq_curated.ser ./data/hg19_refseq.ser /home/holtgrem_c/Development/varfish/varfish-annotator/varfish-annotator-cli/src/test/resources/grch37
