@@ -1,5 +1,7 @@
 # Changelog
 
+## v0.24-SNAPSHOT
+
 ## v0.23
 
 **IMPORTANT COMPATIBILITY NOTE:**
