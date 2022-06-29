@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Smoke tests for the <code>init-db</code> sub command.
+ * Smoke tests for the <code>init-db</code> sub command with GRCh37
  *
  * @author <a href="mailto:manuel.holtgrewe@bih-charite.de">Manuel Holtgrewe</a>
  */
