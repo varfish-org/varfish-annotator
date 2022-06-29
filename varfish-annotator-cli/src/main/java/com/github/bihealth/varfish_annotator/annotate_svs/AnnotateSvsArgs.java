@@ -54,6 +54,12 @@ public final class AnnotateSvsArgs {
   private String inputVcf;
 
   @Parameter(
+      names = "--input-ped",
+      description = "Path to PED file to use for getting biological sex information",
+      required = false)
+  private String inputPed;
+
+  @Parameter(
       names = "--output-gts",
       description = "Path to output TSV file with SVs and genotype calls",
       required = true)
@@ -122,6 +128,10 @@ public final class AnnotateSvsArgs {
     return inputVcf;
   }
 
+  public String getInputPed() {
+    return inputPed;
+  }
+
   public String getOutputGts() {
     return outputGts;
   }
@@ -181,6 +191,9 @@ public final class AnnotateSvsArgs {
         + '\''
         + ", inputVcf='"
         + inputVcf
+        + '\''
+        + ", inputPed='"
+        + inputPed
         + '\''
         + ", outputGts='"
         + outputGts
