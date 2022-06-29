@@ -10,6 +10,7 @@
 - Writing out gzip-ed files if output file name ends in `.gz` (#11)
 - Do not write out asterisk alleles (#18)
 - Adding tests for GRCh38 (#22)
+- Adding self-tests for annotation (#27)
 
 ## v0.21
 

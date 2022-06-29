@@ -35,6 +35,12 @@ public final class AnnotateSvsArgs {
   @Parameter(names = "--release", description = "The genome release used", required = true)
   private String release;
 
+  @Parameter(
+      names = "--self-test-chr1-only",
+      description = "Self-test with chr1 only (for tests)",
+      hidden = true)
+  private boolean selfTestChr1Only = false;
+
   @Parameter(names = "--case-id", description = "The value to use for case ID")
   private String caseId = ".";
 
@@ -100,6 +106,10 @@ public final class AnnotateSvsArgs {
     return release;
   }
 
+  public boolean isSelfTestChr1Only() {
+    return selfTestChr1Only;
+  }
+
   public String getCaseId() {
     return caseId;
   }
@@ -149,8 +159,6 @@ public final class AnnotateSvsArgs {
     return "AnnotateSvsArgs{"
         + "help="
         + help
-        + "sequentialUuids="
-        + sequentialUuids
         + ", refseqSerPath='"
         + refseqSerPath
         + '\''
@@ -163,6 +171,8 @@ public final class AnnotateSvsArgs {
         + ", release='"
         + release
         + '\''
+        + ", selfTestChr1Only="
+        + selfTestChr1Only
         + ", caseId='"
         + caseId
         + '\''
@@ -186,6 +196,9 @@ public final class AnnotateSvsArgs {
         + '\''
         + ", defaultSvMethod='"
         + defaultSvMethod
-        + "'}";
+        + '\''
+        + ", sequentialUuids="
+        + sequentialUuids
+        + '}';
   }
 }

@@ -1,5 +1,6 @@
 package com.github.bihealth.varfish_annotator.init_db;
 
+import com.ginsberg.junit.exit.FailOnSystemExit;
 import com.github.bihealth.varfish_annotator.ResourceUtils;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorCli;
 import java.io.File;
@@ -103,12 +104,14 @@ public class InitDb38Test {
     checkTable(tableName, expectedCount);
   }
 
+  @FailOnSystemExit
   @Test
   void testClinvarImport() throws SQLException {
     testTsvImportImpl(
         "Clinvar.tsv", "--clinvar-path", ClinvarImporter.TABLE_NAME, "clinvar:today", 1000);
   }
 
+  @FailOnSystemExit
   @Test
   void testHgmdImport() throws SQLException {
     testTsvImportImpl(
@@ -119,6 +122,7 @@ public class InitDb38Test {
         954);
   }
 
+  @FailOnSystemExit
   @Test
   void testGnomadExomesImport() throws IOException, SQLException {
     testVcfImpl(
@@ -129,6 +133,7 @@ public class InitDb38Test {
         1000);
   }
 
+  @FailOnSystemExit
   @Test
   void testGnomadGenomesImport() throws IOException, SQLException {
     testVcfImpl(
@@ -140,6 +145,7 @@ public class InitDb38Test {
   }
 
   /** The output of this test can be used to rebuild the <code>.h2.db</code> file. */
+  @FailOnSystemExit
   @Test
   void testBuildFull() throws SQLException {
     testTsvImportImpl(

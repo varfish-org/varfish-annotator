@@ -1,15 +1,20 @@
 package com.github.bihealth.varfish_annotator.annotate_svs;
 
+import com.ginsberg.junit.exit.ExpectSystemExitWithStatus;
 import com.ginsberg.junit.exit.FailOnSystemExit;
 import com.github.bihealth.varfish_annotator.ResourceUtils;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorCli;
 import com.github.bihealth.varfish_annotator.utils.GzipUtil;
+import com.github.stefanbirkner.systemlambda.SystemLambda;
+import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -39,7 +44,8 @@ public class AnnotateDellyVcf38Test {
       String expectedDbInfos,
       String expectedGts,
       String expectedFeatureEffects,
-      boolean gzipOutput)
+      boolean gzipOutput,
+      boolean selfTestChr1Only)
       throws IOException {
     final String gzSuffix = gzipOutput ? ".gz" : "";
     final File vcfPath = new File(tmpFolder + "/" + inputFileName);
@@ -52,27 +58,32 @@ public class AnnotateDellyVcf38Test {
         new File(tmpFolder + "/output.feature-effects.tsv" + gzSuffix);
     final File outputGtsPath = new File(tmpFolder + "/output.gts.tsv" + gzSuffix);
 
-    VarfishAnnotatorCli.main(
-        new String[] {
-          "annotate-svs",
-          "--release",
-          "GRCh38",
-          "--sequential-uuids",
-          "--db-path",
-          h2DbFile.toString(),
-          "--input-vcf",
-          vcfPath.toString(),
-          "--refseq-ser-path",
-          refseqSerFile.toString(),
-          "--ensembl-ser-path",
-          ensemblSerFile.toString(),
-          "--output-db-info",
-          outputDbInfoPath.toString(),
-          "--output-gts",
-          outputGtsPath.toString(),
-          "--output-feature-effects",
-          outputFeatureEffects.toString(),
-        });
+    final ArrayList<String> args =
+        Lists.newArrayList(
+            "annotate-svs",
+            "--release",
+            "GRCh38",
+            "--sequential-uuids",
+            "--db-path",
+            h2DbFile.toString(),
+            "--input-vcf",
+            vcfPath.toString(),
+            "--refseq-ser-path",
+            refseqSerFile.toString(),
+            "--ensembl-ser-path",
+            ensemblSerFile.toString(),
+            "--output-db-info",
+            outputDbInfoPath.toString(),
+            "--output-gts",
+            outputGtsPath.toString(),
+            "--output-feature-effects",
+            outputFeatureEffects.toString());
+    if (selfTestChr1Only) {
+      args.add("--self-test-chr1-only");
+    }
+    final String[] argsArr = new String[args.size()];
+    args.toArray(argsArr);
+    VarfishAnnotatorCli.main(argsArr);
 
     if (gzipOutput) {
       final File paths[] = {outputDbInfoPath, outputGtsPath, outputFeatureEffects};
@@ -114,7 +125,8 @@ public class AnnotateDellyVcf38Test {
         expectedDbInfo,
         expectedGts,
         expectedFeatureEffects,
-        gzipOutput);
+        gzipOutput,
+        true);
   }
 
   @FailOnSystemExit
@@ -141,6 +153,18 @@ public class AnnotateDellyVcf38Test {
         expectedDbInfo,
         expectedGts,
         expectedFeatureEffects,
-        gzipOutput);
+        gzipOutput,
+        true);
+  }
+
+  @ExpectSystemExitWithStatus(1)
+  @Test
+  void testSelfTestFails() throws Exception {
+    final String text =
+        SystemLambda.tapSystemErr(
+            () -> {
+              runTest("bwa.delly2.NA12878.vcf.gz", "input/grch38", null, null, null, false, false);
+            });
+    Assertions.assertTrue(text.contains("Problem with database self-test:"));
   }
 }

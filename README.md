@@ -1,5 +1,5 @@
 [![Continuous Integration](https://github.com/bihealth/varfish-annotator/actions/workflows/ci.yml/badge.svg)](https://github.com/bihealth/varfish-annotator/actions?query=workflow%3Acontinuous-integration)
-[![Coverage Status](https://coveralls.io/repos/github/bihealth/varfish-annotator/badge.svg)](https://coveralls.io/github/bihealth/varfish-annotator)
+[![Coverage Status](https://coveralls.io/repos/github/bihealth/varfish-annotator/badge.svg?branch=main)](https://coveralls.io/github/bihealth/varfish-annotator?branch=main)
 
 # VarFish Annotator
 
