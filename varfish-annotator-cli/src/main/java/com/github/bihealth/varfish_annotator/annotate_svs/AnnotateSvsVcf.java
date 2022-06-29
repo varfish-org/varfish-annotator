@@ -28,6 +28,10 @@ import de.charite.compbio.jannovar.htsjdk.MissingSVTypeInfoField;
 import de.charite.compbio.jannovar.htsjdk.MultipleSVAlleles;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator.Options;
+import de.charite.compbio.jannovar.pedigree.PedFileContents;
+import de.charite.compbio.jannovar.pedigree.PedFileReader;
+import de.charite.compbio.jannovar.pedigree.PedParseException;
+import de.charite.compbio.jannovar.pedigree.Pedigree;
 import de.charite.compbio.jannovar.reference.SVDescription.Type;
 import de.charite.compbio.jannovar.reference.SVGenomeVariant;
 import htsjdk.variant.variantcontext.Allele;
@@ -98,9 +102,13 @@ public final class AnnotateSvsVcf {
   /** Configuration for the command. */
   private final AnnotateSvsArgs args;
 
+  /** Pedigree to use for annotation. */
+  private Pedigree pedigree;
+
   /** Construct with the given configuration. */
   public AnnotateSvsVcf(AnnotateSvsArgs args) {
     this.args = args;
+    this.pedigree = null;
   }
 
   /** UUID counter for sequential UUID generation. */
@@ -128,6 +136,19 @@ public final class AnnotateSvsVcf {
     String dbPath = args.getDbPath();
     if (dbPath.endsWith(".h2.db")) {
       dbPath = dbPath.substring(0, dbPath.length() - ".h2.db".length());
+    }
+
+    if (args.getInputPed() != null) {
+      final PedFileReader pedReader = new PedFileReader(new File(args.getInputPed()));
+      final PedFileContents pedContents;
+      try {
+        pedContents = pedReader.read();
+        this.pedigree =
+            new Pedigree(pedContents, pedContents.getIndividuals().get(0).getPedigree());
+      } catch (PedParseException | IOException e) {
+        System.err.println("Problem loading pedigree");
+        System.exit(1);
+      }
     }
 
     try (Connection conn =

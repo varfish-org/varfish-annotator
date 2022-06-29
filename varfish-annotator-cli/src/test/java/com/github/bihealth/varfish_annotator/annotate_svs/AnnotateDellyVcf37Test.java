@@ -40,6 +40,7 @@ public class AnnotateDellyVcf37Test {
 
   void runTest(
       String inputFileName,
+      String inputPedFileName,
       String inputPath,
       String expectedDbInfos,
       String expectedGts,
@@ -50,6 +51,7 @@ public class AnnotateDellyVcf37Test {
     final String gzSuffix = gzipOutput ? ".gz" : "";
     final File vcfPath = new File(tmpFolder + "/" + inputFileName);
     final File tbiPath = new File(vcfPath + ".tbi");
+    final File pedPath = new File(tmpFolder + "/" + inputPedFileName);
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + vcfPath.getName(), vcfPath);
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + tbiPath.getName(), tbiPath);
 
@@ -80,6 +82,11 @@ public class AnnotateDellyVcf37Test {
             outputFeatureEffects.toString());
     if (selfTestChr1Only) {
       args.add("--self-test-chr1-only");
+    }
+    if (inputPedFileName != null) {
+      args.add("--input-ped");
+      args.add(pedPath.toString());
+      ResourceUtils.copyResourceToFile("/" + inputPath + "/" + pedPath.getName(), pedPath);
     }
     final String[] argsArr = new String[args.size()];
     args.toArray(argsArr);
@@ -123,6 +130,7 @@ public class AnnotateDellyVcf37Test {
         "case_id\tset_id\tsv_uuid\trefseq_gene_id\trefseq_transcript_id\trefseq_transcript_coding\trefseq_effect\tensembl_gene_id\tensembl_transcript_id\tensembl_transcript_coding\tensembl_effect\n";
     runTest(
         "bwa.delly2.HG00102.vcf.gz",
+        null,
         "input/grch37",
         expectedDbInfo,
         expectedGts,
@@ -153,6 +161,7 @@ public class AnnotateDellyVcf37Test {
         "case_id\tset_id\tsv_uuid\trefseq_gene_id\trefseq_transcript_id\trefseq_transcript_coding\trefseq_effect\tensembl_gene_id\tensembl_transcript_id\tensembl_transcript_coding\tensembl_effect\n";
     runTest(
         "bwa.delly2.NA12878.vcf.gz",
+        null,
         "input/grch37",
         expectedDbInfo,
         expectedGts,
@@ -167,8 +176,72 @@ public class AnnotateDellyVcf37Test {
     final String text =
         SystemLambda.tapSystemErr(
             () -> {
-              runTest("bwa.delly2.NA12878.vcf.gz", "input/grch37", null, null, null, false, false);
+              runTest(
+                  "bwa.delly2.NA12878.vcf.gz",
+                  null,
+                  "input/grch37",
+                  null,
+                  null,
+                  null,
+                  false,
+                  false);
             });
     Assertions.assertTrue(text.contains("Problem with database self-test:"));
+  }
+
+  @FailOnSystemExit
+  @Test
+  void testAnnotateHemiMale() throws Exception {
+    final String expectedDbInfo =
+        "genomebuild\tdb_name\trelease\n"
+            + "GRCh37\tclinvar\ttoday\n"
+            + "GRCh37\texac\tr1.0\n"
+            + "GRCh37\tgnomad_exomes\tr2.1.1\n"
+            + "GRCh37\tgnomad_genomes\tr2.1.1\n"
+            + "GRCh37\thgmd_public\tensembl_r104\n"
+            + "GRCh37\tthousand_genomes\tv5b.20130502\n";
+    final String expectedGts =
+        "release\tchromosome\tchromosome_no\tstart\tend\tbin\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcaller\tsv_type\tsv_sub_type\tinfo\tgenotype\n"
+            + "GRCh37\tX\t23\t1000000\t1001000\t592\t-56\t56\t-56\t56\t.\t.\t00000000-0000-0000-0000-000000000000\tEMBL.DELLYv0.8.5\tDEL\tDEL\t{\"\"\"backgroundCarriers\"\"\":0,\"\"\"affectedCarriers\"\"\":0,\"\"\"unaffectedCarriers\"\"\":0}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":10000,\"\"\"pec\"\"\":22,\"\"\"pev\"\"\":6,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0}}\n"
+            + "GRCh37\tX\t23\t3000000\t3001000\t607\t-624\t624\t-624\t624\t.\t.\t00000000-0000-0000-0000-000000000001\tEMBL.DELLYv0.8.5\tDUP\tDUP\t{\"\"\"backgroundCarriers\"\"\":0,\"\"\"affectedCarriers\"\"\":0,\"\"\"unaffectedCarriers\"\"\":0}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":80,\"\"\"pec\"\"\":13,\"\"\"pev\"\"\":3,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0}}\n";
+    final String expectedFeatureEffects =
+        "case_id\tset_id\tsv_uuid\trefseq_gene_id\trefseq_transcript_id\trefseq_transcript_coding\trefseq_effect\tensembl_gene_id\tensembl_transcript_id\tensembl_transcript_coding\tensembl_effect\n";
+    runTest(
+        "bwa.delly2.HG00102.hemi.vcf.gz",
+        "FAM_HG00102.ped",
+        "input/grch37",
+        expectedDbInfo,
+        expectedGts,
+        expectedFeatureEffects,
+        false,
+        true);
+  }
+
+  @FailOnSystemExit
+  @Test
+  void testAnnotateHemiFamily() throws Exception {
+    final String expectedDbInfo =
+        "genomebuild\tdb_name\trelease\n"
+            + "GRCh37\tclinvar\ttoday\n"
+            + "GRCh37\texac\tr1.0\n"
+            + "GRCh37\tgnomad_exomes\tr2.1.1\n"
+            + "GRCh37\tgnomad_genomes\tr2.1.1\n"
+            + "GRCh37\thgmd_public\tensembl_r104\n"
+            + "GRCh37\tthousand_genomes\tv5b.20130502\n";
+    final String expectedGts =
+        "release\tchromosome\tchromosome_no\tstart\tend\tbin\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcaller\tsv_type\tsv_sub_type\tinfo\tgenotype\n"
+            + "GRCh37\tX\t23\t1000000\t1001000\t592\t-56\t56\t-56\t56\t.\t.\t00000000-0000-0000-0000-000000000000\tEMBL.DELLYv0.8.5\tDEL\tDEL\t{\"\"\"backgroundCarriers\"\"\":0,\"\"\"affectedCarriers\"\"\":0,\"\"\"unaffectedCarriers\"\"\":0}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":10000,\"\"\"pec\"\"\":22,\"\"\"pev\"\"\":6,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":10000,\"\"\"pec\"\"\":22,\"\"\"pev\"\"\":6,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0,\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"gq\"\"\":127,\"\"\"pec\"\"\":11,\"\"\"pev\"\"\":4,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":10000,\"\"\"pec\"\"\":22,\"\"\"pev\"\"\":6,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0,\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"gq\"\"\":127,\"\"\"pec\"\"\":11,\"\"\"pev\"\"\":4,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0,\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"gq\"\"\":57,\"\"\"pec\"\"\":19,\"\"\"pev\"\"\":0,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0}}\n"
+            + "GRCh37\tX\t23\t3000000\t3001000\t607\t-624\t624\t-624\t624\t.\t.\t00000000-0000-0000-0000-000000000001\tEMBL.DELLYv0.8.5\tDUP\tDUP\t{\"\"\"backgroundCarriers\"\"\":0,\"\"\"affectedCarriers\"\"\":0,\"\"\"unaffectedCarriers\"\"\":0}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":80,\"\"\"pec\"\"\":13,\"\"\"pev\"\"\":3,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":80,\"\"\"pec\"\"\":13,\"\"\"pev\"\"\":3,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0,\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"gq\"\"\":24,\"\"\"pec\"\"\":12,\"\"\"pev\"\"\":1,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"gq\"\"\":80,\"\"\"pec\"\"\":13,\"\"\"pev\"\"\":3,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0,\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"gq\"\"\":24,\"\"\"pec\"\"\":12,\"\"\"pev\"\"\":1,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0,\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"gq\"\"\":39,\"\"\"pec\"\"\":13,\"\"\"pev\"\"\":0,\"\"\"src\"\"\":0,\"\"\"srv\"\"\":0}}\n";
+    final String expectedFeatureEffects =
+        "case_id\tset_id\tsv_uuid\trefseq_gene_id\trefseq_transcript_id\trefseq_transcript_coding\trefseq_effect\tensembl_gene_id\tensembl_transcript_id\tensembl_transcript_coding\tensembl_effect\n";
+    runTest(
+        "bwa.delly2.NA12878.hemi.vcf.gz",
+        "FAM_NA12878.ped",
+        "input/grch37",
+        expectedDbInfo,
+        expectedGts,
+        expectedFeatureEffects,
+        false,
+        true);
   }
 }

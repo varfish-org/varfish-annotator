@@ -11,6 +11,7 @@
 - Do not write out asterisk alleles (#18)
 - Adding tests for GRCh38 (#22)
 - Adding self-tests for annotation (#27)
+- Allow properly counting hemizygous variants when pedigree file is given (#36)
 
 ## v0.21
 

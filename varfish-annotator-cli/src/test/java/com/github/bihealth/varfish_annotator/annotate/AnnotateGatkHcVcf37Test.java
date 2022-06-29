@@ -46,6 +46,7 @@ public class AnnotateGatkHcVcf37Test {
 
   void runTest(
       String inputFileName,
+      String inputPedFileName,
       String inputPath,
       String expectedDbInfos,
       String expectedGts,
@@ -55,6 +56,7 @@ public class AnnotateGatkHcVcf37Test {
     final String gzSuffix = gzipOutput ? ".gz" : "";
     final File vcfPath = new File(tmpFolder + "/" + inputFileName);
     final File tbiPath = new File(vcfPath + ".tbi");
+    final File pedPath = new File(tmpFolder + "/" + inputPedFileName);
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + vcfPath.getName(), vcfPath);
     ResourceUtils.copyResourceToFile("/" + inputPath + "/" + tbiPath.getName(), tbiPath);
 
@@ -82,6 +84,11 @@ public class AnnotateGatkHcVcf37Test {
             outputGtsPath.toString());
     if (selfTestChr1Only) {
       args.add("--self-test-chr1-only");
+    }
+    if (inputPedFileName != null) {
+      args.add("--input-ped");
+      args.add(pedPath.toString());
+      ResourceUtils.copyResourceToFile("/" + inputPath + "/" + pedPath.getName(), pedPath);
     }
     final String[] argsArr = new String[args.size()];
     args.toArray(argsArr);
@@ -128,6 +135,7 @@ public class AnnotateGatkHcVcf37Test {
             + "GRCh37\t1\t1\t981952\t981952\t592\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":3,\"\"\"gq\"\"\":9}}\t1\t0\t0\t0\t0\tTRUE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101991\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101997\n";
     runTest(
         "bwa.gatk_hc.HG00102.vcf.gz",
+        null,
         "input/grch37",
         expectedDbInfo,
         expectedGts,
@@ -161,6 +169,7 @@ public class AnnotateGatkHcVcf37Test {
             + "GRCh37\t1\t1\t981952\t981952\t592\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":4,\"\"\"dp\"\"\":5,\"\"\"gq\"\"\":23},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"ad\"\"\":0,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":99}}\t0\t1\t2\t0\t0\tTRUE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101991\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101997\n";
     runTest(
         "bwa.gatk_hc.NA12878.vcf.gz",
+        null,
         "input/grch37",
         expectedDbInfo,
         expectedGts,
@@ -184,6 +193,7 @@ public class AnnotateGatkHcVcf37Test {
             + "GRCh37\t1\t1\t981952\t981952\t592\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":99}}\t0\t0\t1\t0\t0\tTRUE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101991\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t101997\n";
     runTest(
         "bwa.gatk_hc.HG00102.asterisk_alleles.vcf.gz",
+        null,
         "input/grch37",
         expectedDbInfo,
         expectedGts,
@@ -197,8 +207,58 @@ public class AnnotateGatkHcVcf37Test {
     final String text =
         SystemLambda.tapSystemErr(
             () -> {
-              runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch37", null, null, false, false);
+              runTest("bwa.gatk_hc.NA12878.vcf.gz", null, "input/grch37", null, null, false, false);
             });
     Assertions.assertTrue(text.contains("Problem with database self-test:"));
+  }
+
+  @FailOnSystemExit
+  @Test
+  void testAnnotateHemiMale() throws Exception {
+    final String expectedDbInfo =
+        "genomebuild\tdb_name\trelease\n"
+            + "GRCh37\tclinvar\ttoday\n"
+            + "GRCh37\texac\tr1.0\n"
+            + "GRCh37\tgnomad_exomes\tr2.1.1\n"
+            + "GRCh37\tgnomad_genomes\tr2.1.1\n"
+            + "GRCh37\thgmd_public\tensembl_r104\n"
+            + "GRCh37\tthousand_genomes\tv5b.20130502\n";
+    final String expectedGts =
+        "release\tchromosome\tchromosome_no\tstart\tend\tbin\treference\talternative\tvar_type\tcase_id\tset_id\tinfo\tgenotype\tnum_hom_alt\tnum_hom_ref\tnum_het\tnum_hemi_alt\tnum_hemi_ref\tin_clinvar\texac_frequency\texac_homozygous\texac_heterozygous\texac_hemizygous\tthousand_genomes_frequency\tthousand_genomes_homozygous\tthousand_genomes_heterozygous\tthousand_genomes_hemizygous\tgnomad_exomes_frequency\tgnomad_exomes_homozygous\tgnomad_exomes_heterozygous\tgnomad_exomes_hemizygous\tgnomad_genomes_frequency\tgnomad_genomes_homozygous\tgnomad_genomes_heterozygous\tgnomad_genomes_hemizygous\trefseq_gene_id\trefseq_transcript_id\trefseq_transcript_coding\trefseq_hgvs_c\trefseq_hgvs_p\trefseq_effect\trefseq_exon_dist\tensembl_gene_id\tensembl_transcript_id\tensembl_transcript_coding\tensembl_hgvs_c\tensembl_hgvs_p\tensembl_effect\tensembl_exon_dist\n"
+            + "GRCh37\t1\t1\t1000000\t1000000\t592\tG\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":4,\"\"\"dp\"\"\":4,\"\"\"gq\"\"\":12}}\t1\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t120039\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t120045\n"
+            + "GRCh37\t1\t1\t3000000\t3000000\t607\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":4,\"\"\"dp\"\"\":4,\"\"\"gq\"\"\":12}}\t1\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t2120039\tENSG00000187634\tENST00000341065.4\tTRUE\t.\t.\t{\"intergenic_variant\"}\t2120045\n";
+    runTest(
+        "bwa.gatk_hc.HG00102.hemi.vcf.gz",
+        "FAM_HG00102.ped",
+        "input/grch37",
+        expectedDbInfo,
+        expectedGts,
+        false,
+        true);
+  }
+
+  @FailOnSystemExit
+  @Test
+  void testAnnotateHemiFamily() throws Exception {
+    final String expectedDbInfo =
+        "genomebuild\tdb_name\trelease\n"
+            + "GRCh37\tclinvar\ttoday\n"
+            + "GRCh37\texac\tr1.0\n"
+            + "GRCh37\tgnomad_exomes\tr2.1.1\n"
+            + "GRCh37\tgnomad_genomes\tr2.1.1\n"
+            + "GRCh37\thgmd_public\tensembl_r104\n"
+            + "GRCh37\tthousand_genomes\tv5b.20130502\n";
+    final String expectedGts =
+        "release\tchromosome\tchromosome_no\tstart\tend\tbin\treference\talternative\tvar_type\tcase_id\tset_id\tinfo\tgenotype\tnum_hom_alt\tnum_hom_ref\tnum_het\tnum_hemi_alt\tnum_hemi_ref\tin_clinvar\texac_frequency\texac_homozygous\texac_heterozygous\texac_hemizygous\tthousand_genomes_frequency\tthousand_genomes_homozygous\tthousand_genomes_heterozygous\tthousand_genomes_hemizygous\tgnomad_exomes_frequency\tgnomad_exomes_homozygous\tgnomad_exomes_heterozygous\tgnomad_exomes_hemizygous\tgnomad_genomes_frequency\tgnomad_genomes_homozygous\tgnomad_genomes_heterozygous\tgnomad_genomes_hemizygous\trefseq_gene_id\trefseq_transcript_id\trefseq_transcript_coding\trefseq_hgvs_c\trefseq_hgvs_p\trefseq_effect\trefseq_exon_dist\tensembl_gene_id\tensembl_transcript_id\tensembl_transcript_coding\tensembl_hgvs_c\tensembl_hgvs_p\tensembl_effect\tensembl_exon_dist\n"
+            + "GRCh37\tX\t23\t1000000\t1000000\t592\tG\tT\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":6,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":18},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":1,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":1,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3}}\t3\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\n"
+            + "GRCh37\tX\t23\t3000000\t3000000\t607\tC\tT\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":6,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":18},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":1,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":1,\"\"\"dp\"\"\":1,\"\"\"gq\"\"\":3}}\t3\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\t.\n";
+    runTest(
+        "bwa.gatk_hc.NA12878.hemi.vcf.gz",
+        "FAM_NA12878.ped",
+        "input/grch37",
+        expectedDbInfo,
+        expectedGts,
+        false,
+        true);
   }
 }

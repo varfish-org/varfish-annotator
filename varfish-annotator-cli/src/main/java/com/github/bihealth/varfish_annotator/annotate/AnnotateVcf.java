@@ -19,6 +19,10 @@ import de.charite.compbio.jannovar.hgvs.AminoAcidCode;
 import de.charite.compbio.jannovar.htsjdk.InvalidCoordinatesException;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator;
 import de.charite.compbio.jannovar.htsjdk.VariantContextAnnotator.Options;
+import de.charite.compbio.jannovar.pedigree.PedFileContents;
+import de.charite.compbio.jannovar.pedigree.PedFileReader;
+import de.charite.compbio.jannovar.pedigree.PedParseException;
+import de.charite.compbio.jannovar.pedigree.Pedigree;
 import de.charite.compbio.jannovar.reference.GenomeInterval;
 import de.charite.compbio.jannovar.reference.Strand;
 import de.charite.compbio.jannovar.reference.TranscriptModel;
@@ -116,9 +120,13 @@ public final class AnnotateVcf {
   /** Configuration for the command. */
   private final AnnotateArgs args;
 
+  /** Pedigree to use for annotation. */
+  private Pedigree pedigree;
+
   /** Construct with the given configuration. */
   public AnnotateVcf(AnnotateArgs args) {
     this.args = args;
+    this.pedigree = null;
   }
 
   /** Execute the command. */
@@ -134,6 +142,18 @@ public final class AnnotateVcf {
       dbPath = dbPath.substring(0, dbPath.length() - ".h2.db".length());
     }
 
+    if (args.getInputPed() != null) {
+      final PedFileReader pedReader = new PedFileReader(new File(args.getInputPed()));
+      final PedFileContents pedContents;
+      try {
+        pedContents = pedReader.read();
+        this.pedigree =
+            new Pedigree(pedContents, pedContents.getIndividuals().get(0).getPedigree());
+      } catch (PedParseException | IOException e) {
+        System.err.println("Problem loading pedigree");
+        System.exit(1);
+      }
+    }
     try (Connection conn =
             DriverManager.getConnection(
                 "jdbc:h2:"
@@ -345,6 +365,15 @@ public final class AnnotateVcf {
               new VariantDescription(
                   contigName, ctx.getStart() - 1, ctx.getReference().getBaseString(), baseString));
 
+      final String varType;
+      if ((normalizedVar.getRef().length() == 1) && (normalizedVar.getAlt().length() == 1)) {
+        varType = "snv";
+      } else if (normalizedVar.getRef().length() == normalizedVar.getAlt().length()) {
+        varType = "mnv";
+      } else {
+        varType = "indel";
+      }
+
       // Get annotations sorted descendingly by variant effect.
       final List<Annotation> sortedRefseqAnnos = sortAnnos(refseqAnnotationsList, i);
       final List<Annotation> sortedEnsemblAnnos = sortAnnos(ensemblAnnotationsList, i);
@@ -430,6 +459,11 @@ public final class AnnotateVcf {
       // List of gene IDs that have been processed now.
       final TreeSet<String> doneGeneIds = new TreeSet<>();
 
+      // Additional information.
+      final String infoStr = "{}";
+
+      final GenotypeCounts gtCounts = buildGenotypeCounts(ctx, i);
+
       // Write one entry for each gene into the annotated genotype call file.
       for (String geneId : geneIds) {
         if (doneGeneIds.contains(geneId)) {
@@ -468,25 +502,11 @@ public final class AnnotateVcf {
           }
         }
 
-        final String varType;
-        if ((normalizedVar.getRef().length() == 1) && (normalizedVar.getAlt().length() == 1)) {
-          varType = "snv";
-        } else if (normalizedVar.getRef().length() == normalizedVar.getAlt().length()) {
-          varType = "mnv";
-        } else {
-          varType = "indel";
-        }
-
-        // Additional information.
-        final String infoStr = "{}";
-
         // Distance to next base of exon.
         final int refSeqExonDist =
             getDistance(normalizedVar, refseqAnno == null ? null : refseqAnno.getTranscript());
         final int ensemblExonDist =
             getDistance(normalizedVar, ensemblAnno == null ? null : ensemblAnno.getTranscript());
-
-        final GenotypeCounts gtCounts = buildGenotypeCounts(ctx, i);
 
         // Construct output record.
         final List<Object> gtOutRec =
@@ -591,6 +611,76 @@ public final class AnnotateVcf {
                     ? "{}"
                     : buildEffectsValue(ensemblAnno.getEffects()),
                 (ensemblExonDist >= 0) ? Integer.toString(ensemblExonDist) : ".");
+        // Write record to output stream.
+        try {
+          gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
+        } catch (IOException e) {
+          throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
+        }
+      }
+
+      if (geneIds.isEmpty()) {
+        // Construct output record.
+        final List<Object> gtOutRec =
+            Lists.newArrayList(
+                args.getRelease(),
+                normalizedVar.getChrom(),
+                refDict.getContigNameToID().get(normalizedVar.getChrom()),
+                String.valueOf(normalizedVar.getPos() + 1),
+                String.valueOf(normalizedVar.getPos() + normalizedVar.getRef().length()),
+                UcscBinning.getContainingBin(
+                    normalizedVar.getPos(),
+                    normalizedVar.getPos() + normalizedVar.getRef().length()),
+                normalizedVar.getRef(),
+                normalizedVar.getAlt(),
+                varType,
+                args.getCaseId(),
+                args.getSetId(),
+                infoStr,
+                buildGenotypeValue(ctx, i),
+                String.valueOf(gtCounts.numHomAlt),
+                String.valueOf(gtCounts.numHomRef),
+                String.valueOf(gtCounts.numHet),
+                String.valueOf(gtCounts.numHemiAlt),
+                String.valueOf(gtCounts.numHemiRef),
+                // ClinVar
+                inClinvar ? "TRUE" : "FALSE",
+                // EXAC
+                exacInfo.getAfPopmaxStr(),
+                exacInfo.getHomTotalStr(),
+                exacInfo.getHetTotalStr(),
+                exacInfo.getHemiTotalStr(),
+                // Thousand Genomes
+                thousandGenomesInfo.getAfPopmaxStr(),
+                thousandGenomesInfo.getHomTotalStr(),
+                thousandGenomesInfo.getHetTotalStr(),
+                thousandGenomesInfo.getHemiTotalStr(),
+                // gnomAD exomes
+                gnomadExomesInfo.getAfPopmaxStr(),
+                gnomadExomesInfo.getHomTotalStr(),
+                gnomadExomesInfo.getHetTotalStr(),
+                gnomadExomesInfo.getHemiTotalStr(),
+                // gnomAD genomes
+                gnomadGenomesInfo.getAfPopmaxStr(),
+                gnomadGenomesInfo.getHomTotalStr(),
+                gnomadGenomesInfo.getHetTotalStr(),
+                gnomadGenomesInfo.getHemiTotalStr(),
+                // RefSeq
+                ".",
+                ".",
+                ".",
+                ".",
+                ".",
+                ".",
+                ".",
+                // ENSEMBL
+                ".",
+                ".",
+                ".",
+                ".",
+                ".",
+                ".",
+                ".");
         // Write record to output stream.
         try {
           gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
@@ -758,9 +848,21 @@ public final class AnnotateVcf {
       if (gt.equals("0/1") || gt.equals("1/0") || gt.equals("0|1") || gt.equals("1|0")) {
         result.numHet += 1;
       } else if (gt.equals("0/0") || gt.equals("0|0")) {
-        result.numHomRef += 1;
+        if (PseudoAutosomalRegionHelper.isChrX(ctx.getContig())
+            && !PseudoAutosomalRegionHelper.isInPar(
+                args.getRelease(), ctx.getContig(), ctx.getStart())) {
+          result.numHemiRef += 1;
+        } else {
+          result.numHomRef += 1;
+        }
       } else if (gt.equals("1/1") || gt.equals("1|1")) {
-        result.numHomAlt += 1;
+        if (PseudoAutosomalRegionHelper.isChrX(ctx.getContig())
+            && !PseudoAutosomalRegionHelper.isInPar(
+                args.getRelease(), ctx.getContig(), ctx.getStart())) {
+          result.numHemiAlt += 1;
+        } else {
+          result.numHomAlt += 1;
+        }
       } else if (gt.equals("0")) {
         result.numHemiRef += 1;
       } else if (gt.equals("1")) {
