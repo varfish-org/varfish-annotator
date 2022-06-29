@@ -92,6 +92,9 @@ public final class AnnotateSvsArgs {
       description = "Generate UUIDs sequentially (for testing)")
   private Boolean sequentialUuids = false;
 
+  @Parameter(names = "--opt-out", description = "Features to opt out for")
+  private String optOutFeatures = "";
+
   public boolean isHelp() {
     return help;
   }
@@ -164,6 +167,14 @@ public final class AnnotateSvsArgs {
     this.sequentialUuids = sequentialUuids;
   }
 
+  public String getOptOutFeatures() {
+    return optOutFeatures;
+  }
+
+  public void setOptOutFeatures(String optOutFeatures) {
+    this.optOutFeatures = optOutFeatures;
+  }
+
   @Override
   public String toString() {
     return "AnnotateSvsArgs{"
@@ -212,6 +223,10 @@ public final class AnnotateSvsArgs {
         + '\''
         + ", sequentialUuids="
         + sequentialUuids
+        + '\''
+        + ", optOutFeatures=\'"
+        + optOutFeatures
+        + "\'"
         + '}';
   }
 }

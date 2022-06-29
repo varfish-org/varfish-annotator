@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.23-SNAPSHOT (unrelated)
+
+**IMPORTANT COMPATIBILITY NOTE:**
+For annotating SVs, the output of this version is not compatible with `varfish-server` v1.2 (Anthenea) and early versions of the v2 (Bollonaster) development branch.
+You can generate compatible files by adding the `--opt-out=chrom2-columns,dbcounts-columns` as arguments to `annotate-svs`.
+
+- Adding chrom2/count columns to output of `annotate-sv` (#41)
+
 ## v0.22
 
 - Adding `db-stats` command (#25)
