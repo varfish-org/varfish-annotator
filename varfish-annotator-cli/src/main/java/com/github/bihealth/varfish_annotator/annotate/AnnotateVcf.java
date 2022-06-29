@@ -3,10 +3,7 @@ package com.github.bihealth.varfish_annotator.annotate;
 import com.github.bihealth.varfish_annotator.DbInfo;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
-import com.github.bihealth.varfish_annotator.utils.GzipUtil;
-import com.github.bihealth.varfish_annotator.utils.UcscBinning;
-import com.github.bihealth.varfish_annotator.utils.VariantDescription;
-import com.github.bihealth.varfish_annotator.utils.VariantNormalizer;
+import com.github.bihealth.varfish_annotator.utils.*;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -153,6 +150,8 @@ public final class AnnotateVcf {
             GzipUtil.maybeOpenGzipOutputStream(dbInfoStream, args.getOutputDbInfos());
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
       new VcfCompatibilityChecker(reader).check(args.getRelease());
+      new DatabaseSelfTest(conn).selfTest(args.getRelease(), args.isSelfTestChr1Only());
+
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
@@ -177,6 +176,10 @@ public final class AnnotateVcf {
       System.exit(1);
     } catch (IncompatibleVcfException e) {
       System.err.println("Problem with VCF compatibility: " + e.getMessage());
+      e.printStackTrace();
+      System.exit(1);
+    } catch (SelfTestFailedException e) {
+      System.err.println("Problem with database self-test: " + e.getMessage());
       e.printStackTrace();
       System.exit(1);
     }

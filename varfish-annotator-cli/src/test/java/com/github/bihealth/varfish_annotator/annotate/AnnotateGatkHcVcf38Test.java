@@ -1,11 +1,16 @@
 package com.github.bihealth.varfish_annotator.annotate;
 
+import com.ginsberg.junit.exit.ExpectSystemExitWithStatus;
+import com.ginsberg.junit.exit.FailOnSystemExit;
 import com.github.bihealth.varfish_annotator.ResourceUtils;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorCli;
 import com.github.bihealth.varfish_annotator.utils.GzipUtil;
+import com.github.stefanbirkner.systemlambda.SystemLambda;
+import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +49,8 @@ public class AnnotateGatkHcVcf38Test {
       String inputPath,
       String expectedDbInfos,
       String expectedGts,
-      boolean gzipOutput)
+      boolean gzipOutput,
+      boolean selfTestChr1Only)
       throws IOException {
     final String gzSuffix = gzipOutput ? ".gz" : "";
     final File vcfPath = new File(tmpFolder + "/" + inputFileName);
@@ -55,26 +61,31 @@ public class AnnotateGatkHcVcf38Test {
     final File outputDbInfoPath = new File(tmpFolder + "/output.db-info.tsv" + gzSuffix);
     final File outputGtsPath = new File(tmpFolder + "/output.gts.tsv" + gzSuffix);
 
-    VarfishAnnotatorCli.main(
-        new String[] {
-          "annotate",
-          "--release",
-          "GRCh38",
-          "--ref-path",
-          fastaFile.toString(),
-          "--db-path",
-          h2DbFile.toString(),
-          "--input-vcf",
-          vcfPath.toString(),
-          "--refseq-ser-path",
-          refseqSerFile.toString(),
-          "--ensembl-ser-path",
-          ensemblSerFile.toString(),
-          "--output-db-info",
-          outputDbInfoPath.toString(),
-          "--output-gts",
-          outputGtsPath.toString(),
-        });
+    final ArrayList<String> args =
+        Lists.newArrayList(
+            "annotate",
+            "--release",
+            "GRCh38",
+            "--ref-path",
+            fastaFile.toString(),
+            "--db-path",
+            h2DbFile.toString(),
+            "--input-vcf",
+            vcfPath.toString(),
+            "--refseq-ser-path",
+            refseqSerFile.toString(),
+            "--ensembl-ser-path",
+            ensemblSerFile.toString(),
+            "--output-db-info",
+            outputDbInfoPath.toString(),
+            "--output-gts",
+            outputGtsPath.toString());
+    if (selfTestChr1Only) {
+      args.add("--self-test-chr1-only");
+    }
+    final String[] argsArr = new String[args.size()];
+    args.toArray(argsArr);
+    VarfishAnnotatorCli.main(argsArr);
 
     if (gzipOutput) {
       final File paths[] = {outputDbInfoPath, outputGtsPath};
@@ -90,6 +101,7 @@ public class AnnotateGatkHcVcf38Test {
     }
   }
 
+  @FailOnSystemExit
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testWithSingleton(boolean gzipOutput) throws IOException {
@@ -111,9 +123,16 @@ public class AnnotateGatkHcVcf38Test {
             + "GRCh38\tchr1\t1\t873251\t873251\t591\tG\tA\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":13,\"\"\"dp\"\"\":13,\"\"\"gq\"\"\":39}}\t1\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\t.\t.\t{\"intergenic_variant\"}\t.\n"
             + "GRCh38\tchr1\t1\t930165\t930165\t592\tG\tA\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":64,\"\"\"dp\"\"\":64,\"\"\"gq\"\"\":99}}\t1\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\tc.83G>A\tp.R28Q\t{\"missense_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\tc.83G>A\tp.R28Q\t{\"missense_variant\"}\t.\n"
             + "GRCh38\tchr1\t1\t930317\t930317\t592\tA\tG\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":65,\"\"\"dp\"\"\":65,\"\"\"gq\"\"\":99}}\t1\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\n";
-    runTest("bwa.gatk_hc.HG00102.vcf.gz", "input/grch38", expectedDbInfo, expectedGts, gzipOutput);
+    runTest(
+        "bwa.gatk_hc.HG00102.vcf.gz",
+        "input/grch38",
+        expectedDbInfo,
+        expectedGts,
+        gzipOutput,
+        true);
   }
 
+  @FailOnSystemExit
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testWithTrio(boolean gzipOutput) throws IOException {
@@ -135,9 +154,16 @@ public class AnnotateGatkHcVcf38Test {
             + "GRCh38\tchr1\t1\t187102\t187102\t586\tC\tG\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"./.\"\"\",\"\"\"ad\"\"\":-1,\"\"\"dp\"\"\":-1,\"\"\"gq\"\"\":-1},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":6,\"\"\"dp\"\"\":12,\"\"\"gq\"\"\":99},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"./.\"\"\",\"\"\"ad\"\"\":-1,\"\"\"dp\"\"\":-1,\"\"\"gq\"\"\":-1}}\t0\t0\t1\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\t.\t.\t{\"intergenic_variant\"}\t.\n"
             + "GRCh38\tchr1\t1\t930165\t930165\t592\tG\tA\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":37,\"\"\"dp\"\"\":38,\"\"\"gq\"\"\":89},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":43,\"\"\"dp\"\"\":64,\"\"\"gq\"\"\":99},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"./.\"\"\",\"\"\"ad\"\"\":-1,\"\"\"dp\"\"\":-1,\"\"\"gq\"\"\":-1}}\t1\t0\t1\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\tc.83G>A\tp.R28Q\t{\"missense_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\tc.83G>A\tp.R28Q\t{\"missense_variant\"}\t.\n"
             + "GRCh38\tchr1\t1\t930317\t930317\t592\tA\tG\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":9,\"\"\"dp\"\"\":54,\"\"\"gq\"\"\":95},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"ad\"\"\":1,\"\"\"dp\"\"\":69,\"\"\"gq\"\"\":99},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"./.\"\"\",\"\"\"ad\"\"\":-1,\"\"\"dp\"\"\":-1,\"\"\"gq\"\"\":-1}}\t0\t1\t1\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\n";
-    runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch38", expectedDbInfo, expectedGts, gzipOutput);
+    runTest(
+        "bwa.gatk_hc.NA12878.vcf.gz",
+        "input/grch38",
+        expectedDbInfo,
+        expectedGts,
+        gzipOutput,
+        true);
   }
 
+  @FailOnSystemExit
   @Test
   void testWithAsteriskAllele() throws IOException {
     final String expectedDbInfo =
@@ -154,6 +180,18 @@ public class AnnotateGatkHcVcf38Test {
         "input/grch38",
         expectedDbInfo,
         expectedGts,
-        false);
+        false,
+        true);
+  }
+
+  @ExpectSystemExitWithStatus(1)
+  @Test
+  void testSelfTestFails() throws Exception {
+    final String text =
+        SystemLambda.tapSystemErr(
+            () -> {
+              runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch38", null, null, false, false);
+            });
+    Assertions.assertTrue(text.contains("Problem with database self-test:"));
   }
 }

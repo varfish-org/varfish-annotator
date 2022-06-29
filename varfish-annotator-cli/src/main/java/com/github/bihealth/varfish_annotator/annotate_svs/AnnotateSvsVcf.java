@@ -5,7 +5,9 @@ import com.github.bihealth.varfish_annotator.annotate.GenomeVersion;
 import com.github.bihealth.varfish_annotator.annotate.IncompatibleVcfException;
 import com.github.bihealth.varfish_annotator.annotate.VcfCompatibilityChecker;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
+import com.github.bihealth.varfish_annotator.utils.DatabaseSelfTest;
 import com.github.bihealth.varfish_annotator.utils.GzipUtil;
+import com.github.bihealth.varfish_annotator.utils.SelfTestFailedException;
 import com.github.bihealth.varfish_annotator.utils.UcscBinning;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -152,6 +154,8 @@ public final class AnnotateSvsVcf {
       GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
 
       new VcfCompatibilityChecker(reader).check(args.getRelease());
+      new DatabaseSelfTest(conn).selfTest(args.getRelease(), args.isSelfTestChr1Only());
+
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
@@ -176,6 +180,10 @@ public final class AnnotateSvsVcf {
       System.exit(1);
     } catch (IncompatibleVcfException e) {
       System.err.println("Problem with VCF compatibility: " + e.getMessage());
+      e.printStackTrace();
+      System.exit(1);
+    } catch (SelfTestFailedException e) {
+      System.err.println("Problem with database self-test: " + e.getMessage());
       e.printStackTrace();
       System.exit(1);
     }
