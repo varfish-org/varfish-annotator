@@ -5,10 +5,7 @@ import com.github.bihealth.varfish_annotator.annotate.GenomeVersion;
 import com.github.bihealth.varfish_annotator.annotate.IncompatibleVcfException;
 import com.github.bihealth.varfish_annotator.annotate.VcfCompatibilityChecker;
 import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
-import com.github.bihealth.varfish_annotator.utils.DatabaseSelfTest;
-import com.github.bihealth.varfish_annotator.utils.GzipUtil;
-import com.github.bihealth.varfish_annotator.utils.SelfTestFailedException;
-import com.github.bihealth.varfish_annotator.utils.UcscBinning;
+import com.github.bihealth.varfish_annotator.utils.*;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -41,11 +38,7 @@ import htsjdk.variant.vcf.VCFFileReader;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -62,15 +55,20 @@ import java.util.stream.Collectors;
 /** Implementation of the <tt>annotate-svs</tt> command. */
 public final class AnnotateSvsVcf {
 
-  /** Header fields for the SV and genotype file. */
-  public static final ImmutableList<String> HEADERS_GT =
+  private static final String FEATURE_CHROM2_COLUMNS = "chrom2-columns";
+  private static final String FEATURE_DBCOUNTS_COLUMNS = "dbcounts-columns";
+
+  /** Header fields for the SV and genotype file (part 1). */
+  private static final ImmutableList<String> HEADERS_GT_PART_1 =
+      ImmutableList.of("release", "chromosome", "chromosome_no", "bin");
+  /** Header fields for the SV and genotype file (part 2, optional). */
+  private static final ImmutableList<String> HEADERS_GT_PART_2 =
+      ImmutableList.of("chromosome2", "chromosome_no2", "bin2", "pe_orientation");
+  /** Header fields for the SV and genotype file (part 3). */
+  private static final ImmutableList<String> HEADERS_GT_PART_3 =
       ImmutableList.of(
-          "release",
-          "chromosome",
-          "chromosome_no",
           "start",
           "end",
-          "bin",
           "start_ci_left",
           "start_ci_right",
           "end_ci_left",
@@ -81,8 +79,12 @@ public final class AnnotateSvsVcf {
           "caller",
           "sv_type",
           "sv_sub_type",
-          "info",
-          "genotype");
+          "info");
+  /** Header fields for the SV and genotype file (part 4, optional). */
+  private static final ImmutableList<String> HEADERS_GT_PART_4 =
+      ImmutableList.of("num_hom_alt", "num_hom_ref", "num_het", "num_hemi_alt", "num_hemi_ref");
+  /** Header fields for the SV and genotype file (part 5). */
+  private static final ImmutableList<String> HEADERS_GT_PART_5 = ImmutableList.of("genotype");
 
   /** Header fields for the gene-wise feature effects file. */
   public static final ImmutableList<String> HEADERS_FEATURE_EFFECTS =
@@ -127,6 +129,8 @@ public final class AnnotateSvsVcf {
 
   /** Execute the command. */
   public void run() {
+    checkOptOutFeatures();
+
     System.err.println("Running annotate-svs; args: " + args);
     if (!ImmutableList.of("GRCh37", "GRCh38").contains(args.getRelease())) {
       System.err.println("Invalid release: " + args.getRelease() + ", not one of GRCh37, GRCh38");
@@ -210,6 +214,26 @@ public final class AnnotateSvsVcf {
     }
   }
 
+  private void checkOptOutFeatures() {
+    if ("".equals(args.getOptOutFeatures()) || args.getOptOutFeatures() == null) {
+      return;
+    }
+
+    final ImmutableList<String> supportedFeatures =
+        ImmutableList.of(FEATURE_CHROM2_COLUMNS, FEATURE_DBCOUNTS_COLUMNS);
+    final String features[] = args.getOptOutFeatures().split(",");
+    boolean allGood = true;
+    for (String feature : features) {
+      if (!supportedFeatures.contains(feature)) {
+        System.err.println("Unsupported feature in --opt-out: " + feature);
+        allGood = false;
+      }
+    }
+    if (!allGood) {
+      System.exit(1);
+    }
+  }
+
   /**
    * Write information about used databases to TSV file.
    *
@@ -275,7 +299,19 @@ public final class AnnotateSvsVcf {
 
     // Write out header.
     try {
-      gtWriter.append(Joiner.on("\t").join(HEADERS_GT) + "\n");
+      // (Conditionally) write genotype header.
+      final List<String> headers = new ArrayList<>();
+      headers.addAll(HEADERS_GT_PART_1);
+      if (!args.getOptOutFeatures().contains(FEATURE_CHROM2_COLUMNS)) {
+        headers.addAll(HEADERS_GT_PART_2);
+      }
+      headers.addAll(HEADERS_GT_PART_3);
+      if (!args.getOptOutFeatures().contains(FEATURE_DBCOUNTS_COLUMNS)) {
+        headers.addAll(HEADERS_GT_PART_4);
+      }
+      headers.addAll(HEADERS_GT_PART_5);
+      gtWriter.append(Joiner.on("\t").join(headers) + "\n");
+      // Write feature-effects header.
       featureEffectsWriter.append(Joiner.on("\t").join(HEADERS_FEATURE_EFFECTS) + "\n");
     } catch (IOException e) {
       throw new VarfishAnnotatorException("Could not write out headers", e);
@@ -461,21 +497,67 @@ public final class AnnotateSvsVcf {
     if (svMethod == null) {
       svMethod = args.getDefaultSvMethod() == null ? "." : args.getDefaultSvMethod();
     }
-    final boolean isBnd = (svGenomeVar.getType() == Type.BND);
-    final int pos2 = isBnd ? svGenomeVar.getPos() + 1 : svGenomeVar.getPos2();
+
+    final int bin;
+    final int bin2;
+    final int pos2;
+    if (svGenomeVar.getType() == Type.BND) {
+      pos2 = svGenomeVar.getPos() + 1;
+      bin = UcscBinning.getContainingBin(svGenomeVar.getPos(), svGenomeVar.getPos() + 1);
+      bin2 = UcscBinning.getContainingBin(pos2, pos2 + 1);
+    } else {
+      pos2 = svGenomeVar.getPos2();
+      bin = UcscBinning.getContainingBin(svGenomeVar.getPos(), pos2);
+      bin2 = bin;
+    }
 
     final String contigName =
         (genomeVersion == GenomeVersion.HG19)
             ? svGenomeVar.getChrName().replaceFirst("chr", "")
             : svGenomeVar.getChrName();
+    final String contigName2 =
+        (genomeVersion == GenomeVersion.HG19)
+            ? svGenomeVar.getChr2Name().replaceFirst("chr", "")
+            : svGenomeVar.getChr2Name();
 
-    return ImmutableList.of(
+    final ImmutableList.Builder result = ImmutableList.builder();
+    // part 1
+    result.add(
         args.getRelease(),
         contigName,
         svGenomeVar.getChr(),
+        UcscBinning.getContainingBin(svGenomeVar.getPos(), pos2));
+    // optional part 2
+    if (!args.getOptOutFeatures().contains(FEATURE_CHROM2_COLUMNS)) {
+      final String peOrientation;
+      if (svGenomeVar.getType() == Type.INV) {
+        peOrientation = "3to3";
+      } else if (svGenomeVar.getType() == Type.DUP) {
+        peOrientation = "5to3";
+      } else if (svGenomeVar.getType() == Type.DEL) {
+        peOrientation = "3to5";
+      } else if (svGenomeVar.getType() == Type.BND) {
+        final String altBases = ctx.getAlternateAllele(alleleNo - 1).getDisplayString();
+        if (altBases.startsWith("[")) {
+          peOrientation = "3to5";
+        } else if (altBases.startsWith("]")) {
+          peOrientation = "5to3";
+        } else if (altBases.endsWith("[")) {
+          peOrientation = "3to5";
+        } else if (altBases.endsWith("]")) {
+          peOrientation = "3to3";
+        } else {
+          peOrientation = ".";
+        }
+      } else {
+        peOrientation = ".";
+      }
+      result.add(contigName2, svGenomeVar.getChr2(), bin2, peOrientation);
+    }
+    // part 3
+    result.add(
         svGenomeVar.getPos() + 1,
         pos2,
-        UcscBinning.getContainingBin(svGenomeVar.getPos(), pos2),
         svGenomeVar.getPosCILowerBound(),
         svGenomeVar.getPosCIUpperBound(),
         svGenomeVar.getPos2CILowerBound(),
@@ -487,8 +569,22 @@ public final class AnnotateSvsVcf {
         // TODO: improve type and sub type annotation!
         svGenomeVar.getType(),
         svGenomeVar.getType(),
-        buildInfoValue(ctx, genomeVersion, svGenomeVar),
-        buildGenotypeValue(ctx, alleleNo));
+        buildInfoValue(ctx, genomeVersion, svGenomeVar));
+    // optional part 4
+    if (!args.getOptOutFeatures().contains(FEATURE_DBCOUNTS_COLUMNS)) {
+      final GenotypeCounts gtCounts =
+          GenotypeCounts.buildGenotypeCounts(ctx, alleleNo, pedigree, args.getRelease());
+      result.add(
+          String.valueOf(gtCounts.numHomAlt),
+          String.valueOf(gtCounts.numHomRef),
+          String.valueOf(gtCounts.numHet),
+          String.valueOf(gtCounts.numHemiAlt),
+          String.valueOf(gtCounts.numHemiRef));
+    }
+    // part 5
+    result.add(buildGenotypeValue(ctx, alleleNo));
+
+    return result.build();
   }
 
   private String buildInfoValue(
