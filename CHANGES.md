@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.23-SNAPSHOT (unrelated)
+## v0.23
 
 **IMPORTANT COMPATIBILITY NOTE:**
 For annotating SVs, the output of this version is not compatible with `varfish-server` v1.2 (Anthenea) and early versions of the v2 (Bollonaster) development branch.
