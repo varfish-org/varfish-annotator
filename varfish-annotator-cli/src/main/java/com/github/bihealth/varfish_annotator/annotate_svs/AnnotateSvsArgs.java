@@ -95,6 +95,9 @@ public final class AnnotateSvsArgs {
   @Parameter(names = "--opt-out", description = "Features to opt out for")
   private String optOutFeatures = "";
 
+  @Parameter(names = "--write-bnd-mate", description = "Write out BND mates (true, false, or auto)")
+  private String writeBndMates = "auto";
+
   public boolean isHelp() {
     return help;
   }
@@ -175,6 +178,14 @@ public final class AnnotateSvsArgs {
     this.optOutFeatures = optOutFeatures;
   }
 
+  public String getWriteBndMates() {
+    return writeBndMates;
+  }
+
+  public void setWriteBndMates(String writeBndMates) {
+    this.writeBndMates = writeBndMates;
+  }
+
   @Override
   public String toString() {
     return "AnnotateSvsArgs{"
@@ -226,6 +237,9 @@ public final class AnnotateSvsArgs {
         + '\''
         + ", optOutFeatures=\'"
         + optOutFeatures
+        + "\'"
+        + ", writeBndMates=\'"
+        + writeBndMates
         + "\'"
         + '}';
   }
