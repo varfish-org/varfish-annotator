@@ -4,11 +4,11 @@
 	<groupId>com.github.bihealth</groupId>
 	<artifactId>VarfishAnnotator</artifactId>
 	<packaging>pom</packaging>
-	<version>0.22-SNAPSHOT</version>
+	<version>0.22</version>
 
 	<name>${project.groupId}:${project.artifactId}</name>
 	<description>Variant annotation for Varfish</description>
-	<url>https://cubi-gitlab.bihealth.org/CUBI_Engineering/VarFish/varfish-annotator</url>
+	<url>https://github.com/bihealth/varfish-annotator</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
