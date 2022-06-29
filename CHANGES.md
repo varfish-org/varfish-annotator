@@ -1,6 +1,6 @@
 # Changelog
 
-## HEAD (unreleased)
+## v0.22
 
 - Adding `db-stats` command (#25)
 - Adding issue templates (#28)
