@@ -8,6 +8,7 @@ import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
 import com.github.bihealth.varfish_annotator.utils.*;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -34,6 +35,7 @@ import de.charite.compbio.jannovar.reference.SVGenomeVariant;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.vcf.VCFFileReader;
 import java.io.*;
 import java.nio.file.Files;
@@ -50,6 +52,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /** Implementation of the <tt>annotate-svs</tt> command. */
@@ -130,6 +134,7 @@ public final class AnnotateSvsVcf {
   /** Execute the command. */
   public void run() {
     checkOptOutFeatures();
+    checkWriteOutBndMates();
 
     System.err.println("Running annotate-svs; args: " + args);
     if (!ImmutableList.of("GRCh37", "GRCh38").contains(args.getRelease())) {
@@ -210,6 +215,13 @@ public final class AnnotateSvsVcf {
     } catch (SelfTestFailedException e) {
       System.err.println("Problem with database self-test: " + e.getMessage());
       e.printStackTrace();
+      System.exit(1);
+    }
+  }
+
+  private void checkWriteOutBndMates() {
+    if (!ImmutableList.of("true", "false", "auto").contains(args.getWriteBndMates())) {
+      System.err.println("Unsupported feature in --opt-out: " + args.getWriteBndMates());
       System.exit(1);
     }
   }
@@ -352,8 +364,98 @@ public final class AnnotateSvsVcf {
       }
       annotateVariantContext(
           refseqAnnotator, ensemblAnnotator, ctx, genomeVersion, gtWriter, featureEffectsWriter);
+
+      // Maybe generate mate's record and write it out.
+      final boolean isBnd = "BND".equals(ctx.getAttributeAsString("SVTYPE", ""));
+      final boolean isDelly = ctx.getAttributeAsString("SVMETHOD", "").startsWith("EMBL.DELLYv");
+      if (isBnd
+          && (args.getWriteBndMates().equals("true")
+              || args.getWriteBndMates().equals("auto") && isDelly)) {
+        final VariantContext mateCtx = buildMateCtx(ctx);
+        if (mateCtx != null) {
+          annotateVariantContext(
+              refseqAnnotator,
+              ensemblAnnotator,
+              mateCtx,
+              genomeVersion,
+              gtWriter,
+              featureEffectsWriter);
+        }
+      }
+
       prevChr = ctx.getContig();
     }
+  }
+
+  /**
+   * Build the {@link VariantContext} for the mate of <code>ctx</code>.
+   *
+   * <p>We do not try to guess the mate's reference base currently but place "N" there.
+   *
+   * @param ctx The {@link VariantContext} to build the mate for.
+   * @return The BND mate's record.
+   */
+  private VariantContext buildMateCtx(VariantContext ctx) {
+    // From the VCF4.2 docs (Section 5.4)
+    //
+    //    2  321681 bndW G G]17:198982] 6 PASS SVTYPE=BND 5to5    hasLeading       leftOpen
+    //    17 198982 bndY A A]2:321681]  6 PASS SVTYPE=BND 5to5    hasLeading       leftOpen
+    //
+    //    2  321682 bndV T ]13:123456]T 6 PASS SVTYPE=BND 3to5   !hasLeading       leftOpen
+    //    13 123456 bndU C C[2:321682[  6 PASS SVTYPE=BND 5to3    hasLeading      !leftOpen
+    //
+    //    13 123457 bndX A [17:198983[A 6 PASS SVTYPE=BND 3to3   !hasLeading      !leftOpen
+    //    17 198983 bndZ C [13:123457[C 6 PASS SVTYPE=BND 3to3   !hasLeading      !leftOpen
+
+    if (!"BND".equals(ctx.getAttributeAsString("SVTYPE", ""))) {
+      throw new RuntimeException("Can only build mate records for SVTYPE=BND");
+    }
+
+    final VariantContextBuilder result = new VariantContextBuilder(ctx);
+    result.attribute("CHR2", ctx.getContig());
+    result.attribute("END", ctx.getStart());
+
+    final ImmutableMap ctMap = ImmutableMap.of("3to5", "5to3", "5to3", "3to5");
+    final String ct = ctx.getAttributeAsString("CT", null);
+    result.attribute("CT", ctMap.getOrDefault(ct, ct));
+
+    final String pattern = "^([a-zA-Z]*)([\\]\\[])([^:]+):(\\d+)([\\]\\[])([a-zA-Z]*)$";
+    final Pattern r = Pattern.compile(pattern);
+    final Matcher m = r.matcher(ctx.getAlternateAllele(0).getDisplayString());
+    if (!m.matches()) {
+      System.err.println("WARNING: could not build mate variant for " + ctx);
+      return null;
+    }
+    final String leading = m.group(1);
+    final String leftBracket = m.group(2);
+    final String chrom = m.group(3);
+    final int pos = Integer.valueOf(m.group(4));
+    //    final String rightBracket = m.group(5);
+    //    final String trailing = m.group(6);
+
+    boolean hasLeading = leading != null;
+    boolean leftOpen = "]".equals(leftBracket);
+
+    final String mateDisplayBases;
+    if (hasLeading && leftOpen) {
+      mateDisplayBases = "N]" + ctx.getContig() + ":" + ctx.getStart() + "]";
+    } else if (!hasLeading && !leftOpen) {
+      mateDisplayBases = "[" + ctx.getContig() + ":" + ctx.getStart() + "[N";
+    } else {
+      if (hasLeading) { // => !leftOpen
+        mateDisplayBases = "]" + ctx.getContig() + ":" + ctx.getStart() + "]N";
+      } else { // => !hasLeading && leftOpen
+        mateDisplayBases = "N]" + ctx.getContig() + ":" + ctx.getStart() + "]";
+      }
+    }
+    result.chr(chrom);
+    result.start(pos);
+    result.stop(ctx.getStart());
+    result.alleles("N", mateDisplayBases);
+    result.attribute("CIPOS", ctx.getAttribute("CIEND"));
+    result.attribute("CIEND", ctx.getAttribute("CIPOS"));
+
+    return result.make();
   }
 
   /**

@@ -7,6 +7,7 @@ For annotating SVs, the output of this version is not compatible with `varfish-s
 You can generate compatible files by adding the `--opt-out=chrom2-columns,dbcounts-columns` as arguments to `annotate-svs`.
 
 - Adding chrom2/count columns to output of `annotate-sv` (#41)
+- Writing out BND mates for Delly (#45)
 
 ## v0.22
 
