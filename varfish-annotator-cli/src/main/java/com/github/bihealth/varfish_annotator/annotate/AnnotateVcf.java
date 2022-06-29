@@ -824,6 +824,11 @@ public final class AnnotateVcf {
     final GenotypeCounts result = new GenotypeCounts();
 
     for (String sample : ctx.getSampleNames()) {
+      final boolean isMale =
+          (pedigree != null
+              && pedigree.hasPerson(sample)
+              && pedigree.getNameToMember().get(sample).getPerson().isMale());
+
       final Genotype genotype = ctx.getGenotype(sample);
       final Map<String, String> gts = new TreeMap<>();
       final List<String> gtList = new ArrayList<>();
@@ -848,7 +853,8 @@ public final class AnnotateVcf {
       if (gt.equals("0/1") || gt.equals("1/0") || gt.equals("0|1") || gt.equals("1|0")) {
         result.numHet += 1;
       } else if (gt.equals("0/0") || gt.equals("0|0")) {
-        if (PseudoAutosomalRegionHelper.isChrX(ctx.getContig())
+        if (isMale
+            && PseudoAutosomalRegionHelper.isChrX(ctx.getContig())
             && !PseudoAutosomalRegionHelper.isInPar(
                 args.getRelease(), ctx.getContig(), ctx.getStart())) {
           result.numHemiRef += 1;
@@ -856,7 +862,8 @@ public final class AnnotateVcf {
           result.numHomRef += 1;
         }
       } else if (gt.equals("1/1") || gt.equals("1|1")) {
-        if (PseudoAutosomalRegionHelper.isChrX(ctx.getContig())
+        if (isMale
+            && PseudoAutosomalRegionHelper.isChrX(ctx.getContig())
             && !PseudoAutosomalRegionHelper.isInPar(
                 args.getRelease(), ctx.getContig(), ctx.getStart())) {
           result.numHemiAlt += 1;
