@@ -5,7 +5,7 @@ public class PseudoAutosomalRegionHelper {
 
   /** Return whether or not a chromosome is on chrX */
   public static boolean isChrX(String chromosome) {
-    return chromosome.toLowerCase().contains("X");
+    return chromosome.toLowerCase().toLowerCase().contains("x");
   }
 
   /**
