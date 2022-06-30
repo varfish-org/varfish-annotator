@@ -2,6 +2,8 @@
 
 ## v0.24-SNAPSHOT
 
+- Fixing problem with self-test on gnomAD genomes with chrY (#51)
+
 ## v0.23
 
 **IMPORTANT COMPATIBILITY NOTE:**
