@@ -54,6 +54,11 @@ public class DatabaseSelfTest {
       stmt.setString(1, release);
       for (String chrom : chromNames) {
         final String chromName = chrPrefix + chrom;
+        if ("grch37".equalsIgnoreCase(release)
+            && release.equals(AnnotateVcf.GNOMAD_GENOMES_PREFIX)
+            && chromName.equals("Y")) {
+          continue; // skip chrY for gnomAD genomes on GRCh37
+        }
         stmt.setString(2, chromName);
 
         try (ResultSet rs = stmt.executeQuery()) {
