@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.24-SNAPSHOT
+## v0.24
 
 - Fixing problem with self-test on gnomAD genomes with chrY (#51)
 - Suppress writing out `*Carriers` information in INFO column for SVs (#53)
