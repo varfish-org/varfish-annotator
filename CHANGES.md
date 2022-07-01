@@ -1,5 +1,7 @@
 # Changelog
 
+## v0.25-SNAPSHOT
+
 ## v0.24
 
 - Fixing problem with self-test on gnomAD genomes with chrY (#51)
