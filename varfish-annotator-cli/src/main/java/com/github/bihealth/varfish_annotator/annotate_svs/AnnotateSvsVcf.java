@@ -61,6 +61,7 @@ public final class AnnotateSvsVcf {
 
   private static final String FEATURE_CHROM2_COLUMNS = "chrom2-columns";
   private static final String FEATURE_DBCOUNTS_COLUMNS = "dbcounts-columns";
+  private static final String FEATURE_SUPPRESS_CARRIER_COUNTS = "suppress-carriers-in-info";
 
   /** Header fields for the SV and genotype file (part 1). */
   private static final ImmutableList<String> HEADERS_GT_PART_1 =
@@ -232,7 +233,8 @@ public final class AnnotateSvsVcf {
     }
 
     final ImmutableList<String> supportedFeatures =
-        ImmutableList.of(FEATURE_CHROM2_COLUMNS, FEATURE_DBCOUNTS_COLUMNS);
+        ImmutableList.of(
+            FEATURE_CHROM2_COLUMNS, FEATURE_DBCOUNTS_COLUMNS, FEATURE_SUPPRESS_CARRIER_COUNTS);
     final String features[] = args.getOptOutFeatures().split(",");
     boolean allGood = true;
     for (String feature : features) {
@@ -693,28 +695,30 @@ public final class AnnotateSvsVcf {
       VariantContext ctx, GenomeVersion genomeVersion, SVGenomeVariant svGenomeVar) {
     final List<String> mappings = new ArrayList<>();
 
-    if (svGenomeVar.getType() == Type.BND) {
-      final String contigName2 =
-          (genomeVersion == GenomeVersion.HG19)
-              ? svGenomeVar.getChr2Name().replaceFirst("chr", "")
-              : svGenomeVar.getChr2Name();
+    if (args.getOptOutFeatures().contains(FEATURE_SUPPRESS_CARRIER_COUNTS)) {
+      if (svGenomeVar.getType() == Type.BND) {
+        final String contigName2 =
+            (genomeVersion == GenomeVersion.HG19)
+                ? svGenomeVar.getChr2Name().replaceFirst("chr", "")
+                : svGenomeVar.getChr2Name();
 
-      mappings.add(tripleQuote("chr2") + ":" + tripleQuote(contigName2));
-      mappings.add(tripleQuote("pos2") + ":" + svGenomeVar.getPos2());
+        mappings.add(tripleQuote("chr2") + ":" + tripleQuote(contigName2));
+        mappings.add(tripleQuote("pos2") + ":" + svGenomeVar.getPos2());
+      }
+
+      mappings.add(
+          tripleQuote("backgroundCarriers")
+              + ":"
+              + ctx.getCommonInfo().getAttributeAsInt("BACKGROUND_CARRIERS", 0));
+      mappings.add(
+          tripleQuote("affectedCarriers")
+              + ":"
+              + ctx.getCommonInfo().getAttributeAsInt("AFFECTED_CARRIERS", 0));
+      mappings.add(
+          tripleQuote("unaffectedCarriers")
+              + ":"
+              + ctx.getCommonInfo().getAttributeAsInt("UNAFFECTED_CARRIERS", 0));
     }
-
-    mappings.add(
-        tripleQuote("backgroundCarriers")
-            + ":"
-            + ctx.getCommonInfo().getAttributeAsInt("BACKGROUND_CARRIERS", 0));
-    mappings.add(
-        tripleQuote("affectedCarriers")
-            + ":"
-            + ctx.getCommonInfo().getAttributeAsInt("AFFECTED_CARRIERS", 0));
-    mappings.add(
-        tripleQuote("unaffectedCarriers")
-            + ":"
-            + ctx.getCommonInfo().getAttributeAsInt("UNAFFECTED_CARRIERS", 0));
 
     return "{" + Joiner.on(",").join(mappings) + "}";
   }
