@@ -1,5 +1,7 @@
 # Changelog
 
+## v0.26-SNAPSHOT
+
 ## v0.25
 
 - Fixing unresolved issue with self-test (#51, #56)
