@@ -2,6 +2,8 @@
 
 ## v0.25-SNAPSHOT
 
+- Fixing unresolved issue with self-test (#51, #56)
+
 ## v0.24
 
 - Fixing problem with self-test on gnomAD genomes with chrY (#51)
