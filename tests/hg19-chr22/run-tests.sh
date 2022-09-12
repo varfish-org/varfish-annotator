@@ -7,7 +7,7 @@ JAR=$(ls ../../varfish-annotator-cli/target/varfish-annotator-cli-*.jar | grep -
 
 ## prepare
 
-gzip -d -k chr22_part.fa.gz
+gzip -d -c chr22_part.fa.gz > chr22_part.fa
 
 ## step 0: help
 
@@ -84,9 +84,13 @@ java -jar $JAR annotate-svs \
   --db-path /tmp/out.h2.db \
   --self-test-chr22-only
 
-diff /tmp/Case_1_index.delly2.gts.tsv Case_1_index.delly2.gts.tsv-expected
+awk -F $'\t' 'BEGIN { OFS=FS } { if (NR > 1) $17 = "UUID"; print $0; }' /tmp/Case_1_index.delly2.gts.tsv \
+> /tmp/Case_1_index.delly2.gts.tsv.replaced
+diff /tmp/Case_1_index.delly2.gts.tsv.replaced Case_1_index.delly2.gts.tsv-expected
 diff /tmp/Case_1_index.delly2.db-info.tsv Case_1_index.delly2.db-info.tsv-expected
-diff /tmp/Case_1_index.delly2.feature-effects.tsv Case_1_index.delly2.feature-effects.tsv-expected
+awk -F $'\t' 'BEGIN { OFS=FS } { if (NR > 1) $3 = "UUID"; print $0; }' /tmp/Case_1_index.delly2.feature-effects.tsv \
+> /tmp/Case_1_index.delly2.feature-effects.tsv.replaced
+diff /tmp/Case_1_index.delly2.feature-effects.tsv.replaced Case_1_index.delly2.feature-effects.tsv-expected
 
 ## if we reach here, everything is fine
 

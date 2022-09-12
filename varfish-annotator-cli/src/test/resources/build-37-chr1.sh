@@ -29,13 +29,13 @@ done
 for f in $PATHS_VCF_37; do
     g=${f%.gz}
     tabix --only-header $f \
-    > grch37/$(basename $g)
+    > grch37-chr1/$(basename $g)
     tabix $f 1 \
     | head -n 1000 \
-    >> grch37/$(basename $g)
+    >> grch37-chr1/$(basename $g)
 
-    bgzip grch37/$(basename $g)
-    tabix -f grch37/$(basename $g).gz
+    bgzip grch37-chr1/$(basename $g)
+    tabix -f grch37-chr1/$(basename $g).gz
 done
 
 java -jar jannovar-cli/target/jannovar-cli-0.40-SNAPSHOT.jar download --gene-ids SAMD11 --gene-ids ENSG00000187634 --gene-ids 148398 -d hg19/refseq_curated

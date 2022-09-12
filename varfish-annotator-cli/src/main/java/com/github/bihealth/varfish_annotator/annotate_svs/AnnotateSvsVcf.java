@@ -696,7 +696,7 @@ public final class AnnotateSvsVcf {
       VariantContext ctx, GenomeVersion genomeVersion, SVGenomeVariant svGenomeVar) {
     final List<String> mappings = new ArrayList<>();
 
-    if (args.getOptOutFeatures().contains(FEATURE_SUPPRESS_CARRIER_COUNTS)) {
+    if (!args.getOptOutFeatures().contains(FEATURE_SUPPRESS_CARRIER_COUNTS)) {
       if (svGenomeVar.getType() == Type.BND) {
         final String contigName2 =
             (genomeVersion == GenomeVersion.HG19)

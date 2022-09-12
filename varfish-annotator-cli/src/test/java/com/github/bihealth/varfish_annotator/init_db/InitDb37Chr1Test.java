@@ -15,7 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
  *
  * @author <a href="mailto:manuel.holtgrewe@bih-charite.de">Manuel Holtgrewe</a>
  */
-public class InitDb37Test {
+public class InitDb37Chr1Test {
   @TempDir public File tmpFolder;
   File outputH2Db;
   File fastaFile;
@@ -27,8 +27,8 @@ public class InitDb37Test {
     fastaFile = new File(tmpFolder + "/hs37d5.1.fa");
     faiFile = new File(tmpFolder + "/hs37d5.1.fa.fai");
 
-    ResourceUtils.gunzipResourceToFile("/grch37/hs37d5.1.fa.gz", fastaFile);
-    ResourceUtils.copyResourceToFile("/grch37/hs37d5.1.fa.fai", faiFile);
+    ResourceUtils.gunzipResourceToFile("/grch37-chr1/hs37d5.1.fa.gz", fastaFile);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/hs37d5.1.fa.fai", faiFile);
   }
 
   void checkTable(String tableName, int expectedCount) throws SQLException {
@@ -56,7 +56,7 @@ public class InitDb37Test {
       throws SQLException {
     final File pathTsv = new File(tmpFolder + "/" + fileName);
 
-    ResourceUtils.copyResourceToFile("/grch37/" + fileName, pathTsv);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/" + fileName, pathTsv);
 
     VarfishAnnotatorCli.main(
         new String[] {
@@ -82,8 +82,8 @@ public class InitDb37Test {
     final File vcfPath = new File(tmpFolder + "/" + fileName);
     final File tbiPath = new File(vcfPath + ".tbi");
 
-    ResourceUtils.copyResourceToFile("/grch37/" + vcfPath.getName(), vcfPath);
-    ResourceUtils.copyResourceToFile("/grch37/" + tbiPath.getName(), tbiPath);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/" + vcfPath.getName(), vcfPath);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/" + tbiPath.getName(), tbiPath);
 
     VarfishAnnotatorCli.main(
         new String[] {

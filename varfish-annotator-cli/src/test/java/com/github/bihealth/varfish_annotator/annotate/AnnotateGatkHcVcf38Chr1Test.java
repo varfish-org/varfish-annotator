@@ -20,7 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** Test annotation of VCF files generated with GATK HC for GRCh38 */
-public class AnnotateGatkHcVcf38Test {
+public class AnnotateGatkHcVcf38Chr1Test {
 
   @TempDir public File tmpFolder;
   File h2DbFile;
@@ -37,11 +37,11 @@ public class AnnotateGatkHcVcf38Test {
     ensemblSerFile = new File(tmpFolder + "/hg38_ensembl.ser");
     refseqSerFile = new File(tmpFolder + "/hg38_refseq_curated.ser");
 
-    ResourceUtils.gunzipResourceToFile("/grch38/hs38.chr1.fa.gz", fastaFile);
-    ResourceUtils.copyResourceToFile("/grch38/hs38.chr1.fa.fai", faiFile);
-    ResourceUtils.copyResourceToFile("/grch38/small-grch38.h2.db", h2DbFile);
-    ResourceUtils.copyResourceToFile("/grch38/hg38_ensembl.ser", ensemblSerFile);
-    ResourceUtils.copyResourceToFile("/grch38/hg38_refseq_curated.ser", refseqSerFile);
+    ResourceUtils.gunzipResourceToFile("/grch38-chr1/hs38.chr1.fa.gz", fastaFile);
+    ResourceUtils.copyResourceToFile("/grch38-chr1/hs38.chr1.fa.fai", faiFile);
+    ResourceUtils.copyResourceToFile("/grch38-chr1/small-grch38.h2.db", h2DbFile);
+    ResourceUtils.copyResourceToFile("/grch38-chr1/hg38_ensembl.ser", ensemblSerFile);
+    ResourceUtils.copyResourceToFile("/grch38-chr1/hg38_refseq_curated.ser", refseqSerFile);
   }
 
   void runTest(
@@ -125,7 +125,7 @@ public class AnnotateGatkHcVcf38Test {
             + "GRCh38\tchr1\t1\t930317\t930317\t592\tA\tG\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"1/1\"\"\",\"\"\"ad\"\"\":65,\"\"\"dp\"\"\":65,\"\"\"gq\"\"\":99}}\t1\t0\t0\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\n";
     runTest(
         "bwa.gatk_hc.HG00102.vcf.gz",
-        "input/grch38",
+        "input/grch38-chr1",
         expectedDbInfo,
         expectedGts,
         gzipOutput,
@@ -156,7 +156,7 @@ public class AnnotateGatkHcVcf38Test {
             + "GRCh38\tchr1\t1\t930317\t930317\t592\tA\tG\tsnv\t.\t.\t{}\t{\"\"\"NA12878\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":9,\"\"\"dp\"\"\":54,\"\"\"gq\"\"\":95},\"\"\"NA12891\"\"\":{\"\"\"gt\"\"\":\"\"\"0/0\"\"\",\"\"\"ad\"\"\":1,\"\"\"dp\"\"\":69,\"\"\"gq\"\"\":99},\"\"\"NA12892\"\"\":{\"\"\"gt\"\"\":\"\"\"./.\"\"\",\"\"\"ad\"\"\":-1,\"\"\"dp\"\"\":-1,\"\"\"gq\"\"\":-1}}\t0\t1\t1\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\tc.235A>G\tp.I79V\t{\"missense_variant\"}\t.\n";
     runTest(
         "bwa.gatk_hc.NA12878.vcf.gz",
-        "input/grch38",
+        "input/grch38-chr1",
         expectedDbInfo,
         expectedGts,
         gzipOutput,
@@ -177,7 +177,7 @@ public class AnnotateGatkHcVcf38Test {
             + "GRCh38\tchr1\t1\t185428\t185428\t586\tA\tT\tsnv\t.\t.\t{}\t{\"\"\"HG00102\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ad\"\"\":3,\"\"\"dp\"\"\":6,\"\"\"gq\"\"\":99}}\t0\t0\t1\t0\t0\tFALSE\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t148398\tNM_152486.2\tTRUE\t.\t.\t{\"intergenic_variant\"}\t.\tENSG00000187634\tENST00000437963.5\tTRUE\t.\t.\t{\"intergenic_variant\"}\t.\n";
     runTest(
         "bwa.gatk_hc.HG00102.asterisk_alleles.vcf.gz",
-        "input/grch38",
+        "input/grch38-chr1",
         expectedDbInfo,
         expectedGts,
         false,
@@ -190,7 +190,7 @@ public class AnnotateGatkHcVcf38Test {
     final String text =
         SystemLambda.tapSystemErr(
             () -> {
-              runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch38", null, null, false, false);
+              runTest("bwa.gatk_hc.NA12878.vcf.gz", "input/grch38-chr1", null, null, false, false);
             });
     Assertions.assertTrue(text.contains("Problem with database self-test:"));
   }

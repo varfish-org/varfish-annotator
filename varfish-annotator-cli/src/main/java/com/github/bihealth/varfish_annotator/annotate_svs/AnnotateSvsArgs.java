@@ -168,32 +168,16 @@ public final class AnnotateSvsArgs {
     return defaultSvMethod;
   }
 
-  public void setDefaultSvMethod(String defaultSvMethod) {
-    this.defaultSvMethod = defaultSvMethod;
-  }
-
   public Boolean getSequentialUuids() {
     return sequentialUuids;
-  }
-
-  public void setSequentialUuids(Boolean sequentialUuids) {
-    this.sequentialUuids = sequentialUuids;
   }
 
   public String getOptOutFeatures() {
     return optOutFeatures;
   }
 
-  public void setOptOutFeatures(String optOutFeatures) {
-    this.optOutFeatures = optOutFeatures;
-  }
-
   public String getWriteBndMates() {
     return writeBndMates;
-  }
-
-  public void setWriteBndMates(String writeBndMates) {
-    this.writeBndMates = writeBndMates;
   }
 
   @Override

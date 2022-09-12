@@ -27,24 +27,12 @@ public class DbStatsArgs {
     return help;
   }
 
-  public void setHelp(boolean help) {
-    this.help = help;
-  }
-
   public String getDbPath() {
     return dbPath;
   }
 
-  public void setDbPath(String dbPath) {
-    this.dbPath = dbPath;
-  }
-
   public boolean isParseable() {
     return parseable;
-  }
-
-  public void setParseable(boolean parseable) {
-    this.parseable = parseable;
   }
 
   @Override

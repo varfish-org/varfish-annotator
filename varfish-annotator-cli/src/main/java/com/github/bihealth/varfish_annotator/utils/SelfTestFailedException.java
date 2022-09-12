@@ -10,8 +10,4 @@ public class SelfTestFailedException extends Exception {
   public SelfTestFailedException(String message) {
     super(message);
   }
-
-  public SelfTestFailedException(Throwable cause) {
-    super(cause);
-  }
 }

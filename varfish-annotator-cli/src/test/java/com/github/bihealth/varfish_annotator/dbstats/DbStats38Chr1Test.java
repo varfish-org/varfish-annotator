@@ -14,7 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
  *
  * @author <a href="mailto:manuel.holtgrewe@bih-charite.de">Manuel Holtgrewe</a>
  */
-public class DbStats38Test {
+public class DbStats38Chr1Test {
 
   @TempDir public File tmpFolder;
   File h2Db;
@@ -27,9 +27,9 @@ public class DbStats38Test {
     fastaFile = new File(tmpFolder + "/hs38.chr1.fa");
     faiFile = new File(tmpFolder + "/hs38.chr1.fa.fai");
 
-    ResourceUtils.gunzipResourceToFile("/grch38/hs38.chr1.fa.gz", fastaFile);
-    ResourceUtils.copyResourceToFile("/grch38/hs38.chr1.fa.fai", faiFile);
-    ResourceUtils.copyResourceToFile("/grch38/small-grch38.h2.db", h2Db);
+    ResourceUtils.gunzipResourceToFile("/grch38-chr1/hs38.chr1.fa.gz", fastaFile);
+    ResourceUtils.copyResourceToFile("/grch38-chr1/hs38.chr1.fa.fai", faiFile);
+    ResourceUtils.copyResourceToFile("/grch38-chr1/small-grch38.h2.db", h2Db);
   }
 
   @Test
