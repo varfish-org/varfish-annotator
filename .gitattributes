@@ -1,3 +1,4 @@
 /tests/**/*.fa* filter=lfs diff=lfs merge=lfs -text
 /tests/**/*.ser filter=lfs diff=lfs merge=lfs -text
 /tests/**/*.vcf* filter=lfs diff=lfs merge=lfs -text
+/varfish-annotator-cli/src/test/resources/input/real-world-37/* filter=lfs diff=lfs merge=lfs -text

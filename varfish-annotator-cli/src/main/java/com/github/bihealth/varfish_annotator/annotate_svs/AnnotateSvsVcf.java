@@ -352,6 +352,10 @@ public final class AnnotateSvsVcf {
         // TODO: make this configurable
         continue; // skip low-quality SVs
       }
+      // Skip DRAGEN "reference" lines; they have no alternate allele.
+      if (ctx.getNAlleles() == 1) {
+        continue;
+      }
 
       // Check whether contigs should be skipped.
       if (skippedContigs.contains(ctx.getContig())) {

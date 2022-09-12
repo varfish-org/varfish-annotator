@@ -23,8 +23,8 @@
 		<mockito.version>2.8.47</mockito.version>
 		<jcommander.version>1.72</jcommander.version>
 		<h2.version>1.4.197</h2.version>
-		<htsjdk.version>2.22.0</htsjdk.version>
-		<jannovar.version>0.39</jannovar.version>
+		<htsjdk.version>2.24.1</htsjdk.version>
+		<jannovar.version>0.41</jannovar.version>
 	</properties>
 
 	<modules>
