@@ -110,9 +110,12 @@ VCF=$BASEDIR/wgs_sv_calling/output/bwa.delly2.Case_1_index-N1-DNA1-WGS1/out/bwa.
 
 ( \
   tabix --only-header $VCF $REGIONS; \
-  tabix $VCF $REGIONS \
+  ( \
+    cat Case_1_index.delly2.extra.vcf; \
+    tabix $VCF $REGIONS; \
+  ) \
   | sort -k1,1V -k2,2n \
-  | uniq; \
+  | uniq; \b
 ) \
 | bgzip -c \
 > Case_1_index.delly2.vcf.gz

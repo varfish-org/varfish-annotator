@@ -74,60 +74,6 @@ public final class UcscBinning {
   }
 
   /**
-   * Given an (0-based, half-open) interval {@code begin:end} return all bins that completely
-   * contain {@code begin:end}.
-   *
-   * @param begin interval start position
-   * @param end interval end position
-   * @return the smallest bin that contains {@code begin:end}
-   */
-  public static List<Integer> getContainingBins(int begin, int end) {
-    final ArrayList<Integer> result = new ArrayList<>();
-    final int maxBin = getContainingBin(begin, end);
-    for (int bin : getOverlappingBins(begin, end)) {
-      if (bin <= maxBin) {
-        result.add(bin);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Given an (0-based, half-open) interval {@code begin:end} return all bins that are completely
-   * contained by {@code begin:end}.
-   *
-   * @param begin interval start position
-   * @param end interval end position
-   * @return the smallest bin that contains {@code begin:end}
-   */
-  public static List<Integer> getContainedBins(int begin, int end) {
-    final ArrayList<Integer> result = new ArrayList<>();
-    final int minBin = getContainingBin(begin, end);
-    for (int bin : getOverlappingBins(begin, end)) {
-      if (bin >= minBin) {
-        result.add(bin);
-      }
-    }
-    return result;
-  }
-
-  /** Return (0-based, half-open) interval that {@code bin} covers. */
-  public static int[] getCoveredBin(int bin) {
-    if (bin < 0 || bin > maxBin) {
-      throw new RuntimeException("Invalid bin number " + bin + ", max bin is " + maxBin);
-    }
-    int shift = binFirstShift;
-    for (int offset : binOffsets) {
-      if (offset <= bin) {
-        final int[] result = {(bin - offset) << shift, (bin + 1 - offset) << shift};
-        return result;
-      }
-      shift += binNextShift;
-    }
-    throw new RuntimeException("Unexpected error when computing covered bins");
-  }
-
-  /**
    * Helper class for generating the first and last bins overlapping an interval {@code begin:end}.
    */
   private static class BinGenerator {

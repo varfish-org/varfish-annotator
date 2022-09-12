@@ -20,7 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** Test annotation of VCF files generated with GATK HC for GRCh37 */
-public class AnnotateGatkHcVcf37Test {
+public class AnnotateGatkHcVcf37Chr1Test {
 
   @TempDir public File tmpFolder;
   File h2DbFile;
@@ -37,11 +37,11 @@ public class AnnotateGatkHcVcf37Test {
     ensemblSerFile = new File(tmpFolder + "/hg19_ensembl.ser");
     refseqSerFile = new File(tmpFolder + "/hg19_refseq_curated.ser");
 
-    ResourceUtils.gunzipResourceToFile("/grch37/hs37d5.1.fa.gz", fastaFile);
-    ResourceUtils.copyResourceToFile("/grch37/hs37d5.1.fa.fai", faiFile);
-    ResourceUtils.copyResourceToFile("/grch37/small-grch37.h2.db", h2DbFile);
-    ResourceUtils.copyResourceToFile("/grch37/hg19_ensembl.ser", ensemblSerFile);
-    ResourceUtils.copyResourceToFile("/grch37/hg19_refseq_curated.ser", refseqSerFile);
+    ResourceUtils.gunzipResourceToFile("/grch37-chr1/hs37d5.1.fa.gz", fastaFile);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/hs37d5.1.fa.fai", faiFile);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/small-grch37.h2.db", h2DbFile);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/hg19_ensembl.ser", ensemblSerFile);
+    ResourceUtils.copyResourceToFile("/grch37-chr1/hg19_refseq_curated.ser", refseqSerFile);
   }
 
   void runTest(
@@ -136,7 +136,7 @@ public class AnnotateGatkHcVcf37Test {
     runTest(
         "bwa.gatk_hc.HG00102.vcf.gz",
         null,
-        "input/grch37",
+        "input/grch37-chr1",
         expectedDbInfo,
         expectedGts,
         gzipOutput,
@@ -170,7 +170,7 @@ public class AnnotateGatkHcVcf37Test {
     runTest(
         "bwa.gatk_hc.NA12878.vcf.gz",
         null,
-        "input/grch37",
+        "input/grch37-chr1",
         expectedDbInfo,
         expectedGts,
         gzipOutput,
@@ -194,7 +194,7 @@ public class AnnotateGatkHcVcf37Test {
     runTest(
         "bwa.gatk_hc.HG00102.asterisk_alleles.vcf.gz",
         null,
-        "input/grch37",
+        "input/grch37-chr1",
         expectedDbInfo,
         expectedGts,
         false,
@@ -207,7 +207,14 @@ public class AnnotateGatkHcVcf37Test {
     final String text =
         SystemLambda.tapSystemErr(
             () -> {
-              runTest("bwa.gatk_hc.NA12878.vcf.gz", null, "input/grch37", null, null, false, false);
+              runTest(
+                  "bwa.gatk_hc.NA12878.vcf.gz",
+                  null,
+                  "input/grch37-chr1",
+                  null,
+                  null,
+                  false,
+                  false);
             });
     Assertions.assertTrue(text.contains("Problem with database self-test:"));
   }
@@ -230,7 +237,7 @@ public class AnnotateGatkHcVcf37Test {
     runTest(
         "bwa.gatk_hc.HG00102.hemi.vcf.gz",
         "FAM_HG00102.ped",
-        "input/grch37",
+        "input/grch37-chr1",
         expectedDbInfo,
         expectedGts,
         false,
@@ -255,7 +262,7 @@ public class AnnotateGatkHcVcf37Test {
     runTest(
         "bwa.gatk_hc.NA12878.hemi.vcf.gz",
         "FAM_NA12878.ped",
-        "input/grch37",
+        "input/grch37-chr1",
         expectedDbInfo,
         expectedGts,
         false,

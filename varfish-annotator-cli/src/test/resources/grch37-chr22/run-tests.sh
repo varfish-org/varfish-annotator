@@ -1,0 +1,1 @@
+../../../../../tests/hg19-chr22/run-tests.sh
