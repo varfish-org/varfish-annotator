@@ -47,6 +47,12 @@ public final class AnnotateArgs {
       hidden = true)
   private boolean selfTestChr1Only = false;
 
+  @Parameter(
+      names = "--self-test-chr22-only",
+      description = "Self-test with chr22 only (for tests)",
+      hidden = true)
+  private boolean selfTestChr22Only = false;
+
   @Parameter(names = "--case-id", description = "The value to use for case ID")
   private String caseId = ".";
 
@@ -110,6 +116,10 @@ public final class AnnotateArgs {
     return selfTestChr1Only;
   }
 
+  public boolean isSelfTestChr22Only() {
+    return selfTestChr22Only;
+  }
+
   public String getCaseId() {
     return caseId;
   }
@@ -160,6 +170,8 @@ public final class AnnotateArgs {
         + '\''
         + ", selfTestChr1Only="
         + selfTestChr1Only
+        + ", selfTestChr22Only="
+        + selfTestChr22Only
         + ", caseId='"
         + caseId
         + '\''

@@ -1,0 +1,12 @@
+Table clinvar_var
+TABLE	RELEASE	CHROM	COUNT
+clinvar_var	GRCh37	22	124
+Table hgmd_locus
+TABLE	RELEASE	CHROM	COUNT
+hgmd_locus	GRCh37	22	11
+Table gnomad_exome_var
+TABLE	RELEASE	CHROM	COUNT
+gnomad_exome_var	GRCh37	22	1437
+Table gnomad_genome_var
+TABLE	RELEASE	CHROM	COUNT
+gnomad_genome_var	GRCh37	22	6072

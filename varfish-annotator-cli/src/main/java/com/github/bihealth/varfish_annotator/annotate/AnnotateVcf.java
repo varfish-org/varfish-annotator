@@ -170,7 +170,8 @@ public final class AnnotateVcf {
             GzipUtil.maybeOpenGzipOutputStream(dbInfoStream, args.getOutputDbInfos());
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
       new VcfCompatibilityChecker(reader).check(args.getRelease());
-      new DatabaseSelfTest(conn).selfTest(args.getRelease(), args.isSelfTestChr1Only());
+      new DatabaseSelfTest(conn)
+          .selfTest(args.getRelease(), args.isSelfTestChr1Only(), args.isSelfTestChr22Only());
 
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();

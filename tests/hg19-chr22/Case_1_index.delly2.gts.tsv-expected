@@ -1,0 +1,1 @@
+release	chromosome	chromosome_no	bin	chromosome2	chromosome_no2	bin2	pe_orientation	start	end	start_ci_left	start_ci_right	end_ci_left	end_ci_right	case_id	set_id	sv_uuid	caller	sv_type	sv_sub_type	info	num_hom_alt	num_hom_ref	num_het	num_hemi_alt	num_hemi_ref	genotype
