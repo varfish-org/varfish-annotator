@@ -30,6 +30,9 @@ public class VarfishAnnotatorCli {
     if ((args == null || args.length == 0)) {
       jc.usage();
       System.exit(1);
+    } else if (args.length == 1 && "--help".equals(args[0])) {
+      jc.usage();
+      System.exit(0);
     }
 
     try {

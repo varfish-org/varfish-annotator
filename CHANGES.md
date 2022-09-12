@@ -2,6 +2,8 @@
 
 ## v0.26-SNAPSHOT
 
+- Adding end-to-end tests `hg19-chr22` (#61)
+
 ## v0.25
 
 - Fixing unresolved issue with self-test (#51, #56)

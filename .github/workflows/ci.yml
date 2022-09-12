@@ -49,19 +49,28 @@ jobs:
     
     steps:
       - uses: actions/checkout@v2
+        with:
+          lfs: true
+      - name: Check out LFS objects
+        run: git lfs fetch --all
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
 
-      - name: Build with Maven and submit coverage report
+      - name: Build JAR with Maven without submitting coverage report
         run: >
           mvn
           --batch-mode
           --update-snapshots
           clean
-          test
+          package
+
+      - name: Run end-to-end tests
+        run: |
+          cd tests/hg19-chr22
+          bash run-tests.sh
 
   testing-coverage:
     runs-on: ubuntu-latest
@@ -78,7 +87,7 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: 'adopt'
 
-      - name: Build with Maven and submit coverage report
+      - name: Run test with Maven and submit coverage report
         run: >
           mvn
           --define repoToken=${{ secrets.COVERALLS_REPO_TOKEN }}

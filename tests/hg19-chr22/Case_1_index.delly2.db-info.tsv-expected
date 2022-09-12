@@ -1,0 +1,9 @@
+genomebuild	db_name	release
+GRCh37	clinvar	for-testing
+GRCh37	exac	r1.0
+GRCh37	gnomad_exomes	r2.1.1
+GRCh37	gnomad_genomes	r2.1.1
+GRCh37	hgmd_public	for-testing
+GRCh37	thousand_genomes	v3.20101123
+GRCh37	varfish-annotator	0.26-SNAPSHOT
+GRCh37	varfish-annotator-db	for-testing

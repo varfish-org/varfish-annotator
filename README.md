@@ -62,3 +62,15 @@ The following will create `varfish-annotator-db-1906.h2.db` and fill it.
 ```
 # mvn com.coveo:fmt-maven-plugin:format -Dverbose=true
 ```
+
+## Tests
+
+The folder `/tests` contains some data sets that are appropriate for system (aka "end-to-end") tests of the software.
+
+- `hg19-chr22` --
+   This folder contains examples for annotating GATK HC and Delly2 calls on the first 20MB of chr22.
+   Only the variants overlapping with `ADA2` and `GAB4` are used.
+
+You can build the data sets with the `build.sh` script that is available in each folder.
+This script also serves for documenting the test data's provenance.
+The Jannovar software must be available as `jannovar` (e.g., through bioconda) on your `PATH` and you will need `samtools`.

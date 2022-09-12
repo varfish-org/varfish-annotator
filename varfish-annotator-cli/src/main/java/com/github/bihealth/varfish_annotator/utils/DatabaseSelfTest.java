@@ -23,10 +23,13 @@ public class DatabaseSelfTest {
     this.conn = conn;
   }
 
-  public void selfTest(String release, boolean checkChr1Only) throws SelfTestFailedException {
+  public void selfTest(String release, boolean checkChr1Only, boolean checkChr22Only)
+      throws SelfTestFailedException {
     final List<String> chromNames;
     if (checkChr1Only) {
       chromNames = CHROMS.subList(0, 1);
+    } else if (checkChr22Only) {
+      chromNames = CHROMS.subList(21, 22);
     } else {
       chromNames = CHROMS;
     }

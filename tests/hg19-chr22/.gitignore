@@ -1,0 +1,6 @@
+*.tmp
+
+chr22.*
+chr22_part.fa
+
+/data
