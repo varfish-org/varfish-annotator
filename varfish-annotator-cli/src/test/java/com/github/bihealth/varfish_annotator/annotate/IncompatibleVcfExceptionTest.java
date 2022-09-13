@@ -1,5 +1,6 @@
 package com.github.bihealth.varfish_annotator.annotate;
 
+import com.github.bihealth.varfish_annotator.checks.IncompatibleVcfException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

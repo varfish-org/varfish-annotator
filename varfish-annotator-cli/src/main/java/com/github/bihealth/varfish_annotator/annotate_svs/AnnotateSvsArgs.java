@@ -104,9 +104,11 @@ public final class AnnotateSvsArgs {
   @Parameter(names = "--write-bnd-mate", description = "Write out BND mates (true, false, or auto)")
   private String writeBndMates = "auto";
 
-  public boolean isHelp() {
-    return help;
-  }
+  @Parameter(
+      names = "skip-filters",
+      description =
+          "Skip records with this filter value (comma-separated list), default is 'LowQual'")
+  private String skipFilters = "LowQual";
 
   public String getRefseqSerPath() {
     return refseqSerPath;
@@ -180,6 +182,10 @@ public final class AnnotateSvsArgs {
     return writeBndMates;
   }
 
+  public String getSkipFilters() {
+    return skipFilters;
+  }
+
   @Override
   public String toString() {
     return "AnnotateSvsArgs{"
@@ -236,6 +242,9 @@ public final class AnnotateSvsArgs {
         + "\'"
         + ", writeBndMates=\'"
         + writeBndMates
+        + "\'"
+        + ", skipFilters=\'"
+        + skipFilters
         + "\'"
         + '}';
   }

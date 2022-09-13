@@ -1,8 +1,12 @@
 package com.github.bihealth.varfish_annotator.annotate;
 
-import com.github.bihealth.varfish_annotator.DbInfo;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
-import com.github.bihealth.varfish_annotator.init_db.DbReleaseUpdater;
+import com.github.bihealth.varfish_annotator.checks.IncompatibleVcfException;
+import com.github.bihealth.varfish_annotator.checks.VcfCompatibilityChecker;
+import com.github.bihealth.varfish_annotator.data.GenomeVersion;
+import com.github.bihealth.varfish_annotator.data.VcfConstants;
+import com.github.bihealth.varfish_annotator.db.DbInfo;
+import com.github.bihealth.varfish_annotator.db.DbInfoWriterHelper;
 import com.github.bihealth.varfish_annotator.utils.*;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -51,71 +55,6 @@ import java.util.stream.Collectors;
 
 /** Implementation of the <tt>annotate</tt> command. */
 public final class AnnotateVcf {
-
-  /** Name of table with ExAC variants. */
-  public static final String EXAC_PREFIX = "exac";
-
-  /** Name of table with gnomAD exomes variants. */
-  public static final String GNOMAD_EXOMES_PREFIX = "gnomad_exome";
-
-  /** Name of table with gnomAD genomes variants. */
-  public static final String GNOMAD_GENOMES_PREFIX = "gnomad_genome";
-
-  /** Name of table with Thousand Genomes variants. */
-  public static final String THOUSAND_GENOMES_PREFIX = "thousand_genomes";
-
-  /** Header fields for the genotypes file. */
-  public static final ImmutableList<String> HEADERS_GT =
-      ImmutableList.of(
-          "release",
-          "chromosome",
-          "chromosome_no",
-          "start",
-          "end",
-          "bin",
-          "reference",
-          "alternative",
-          "var_type",
-          "case_id",
-          "set_id",
-          "info",
-          "genotype",
-          "num_hom_alt",
-          "num_hom_ref",
-          "num_het",
-          "num_hemi_alt",
-          "num_hemi_ref",
-          "in_clinvar",
-          "exac_frequency",
-          "exac_homozygous",
-          "exac_heterozygous",
-          "exac_hemizygous",
-          "thousand_genomes_frequency",
-          "thousand_genomes_homozygous",
-          "thousand_genomes_heterozygous",
-          "thousand_genomes_hemizygous",
-          "gnomad_exomes_frequency",
-          "gnomad_exomes_homozygous",
-          "gnomad_exomes_heterozygous",
-          "gnomad_exomes_hemizygous",
-          "gnomad_genomes_frequency",
-          "gnomad_genomes_homozygous",
-          "gnomad_genomes_heterozygous",
-          "gnomad_genomes_hemizygous",
-          "refseq_gene_id",
-          "refseq_transcript_id",
-          "refseq_transcript_coding",
-          "refseq_hgvs_c",
-          "refseq_hgvs_p",
-          "refseq_effect",
-          "refseq_exon_dist",
-          "ensembl_gene_id",
-          "ensembl_transcript_id",
-          "ensembl_transcript_coding",
-          "ensembl_hgvs_c",
-          "ensembl_hgvs_p",
-          "ensembl_effect",
-          "ensembl_exon_dist");
 
   /** Configuration for the command. */
   private final AnnotateArgs args;
@@ -178,7 +117,8 @@ public final class AnnotateVcf {
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
       final VariantNormalizer normalizer = new VariantNormalizer(args.getRefPath());
       annotateVcf(conn, reader, refseqJvData, ensemblJvData, normalizer, gtWriter);
-      writeDbInfos(conn, dbInfoBufWriter);
+      new DbInfoWriterHelper()
+          .writeDbInfos(conn, dbInfoBufWriter, args.getRelease(), AnnotateVcf.class);
     } catch (SQLException e) {
       System.err.println("Problem with database connection");
       e.printStackTrace();
@@ -207,48 +147,6 @@ public final class AnnotateVcf {
   }
 
   /**
-   * Write information about used databases to TSV file.
-   *
-   * @param conn Database connection to get the information from.
-   * @param dbInfoWriter Writer for database information.
-   * @throws VarfishAnnotatorException in case of problems
-   */
-  private void writeDbInfos(Connection conn, BufferedWriter dbInfoWriter)
-      throws VarfishAnnotatorException {
-    try {
-      dbInfoWriter.write("genomebuild\tdb_name\trelease\n");
-    } catch (IOException e) {
-      throw new VarfishAnnotatorException("Could not write out headers", e);
-    }
-
-    final String query =
-        "SELECT db_name, release FROM " + DbReleaseUpdater.TABLE_NAME + " ORDER BY db_name";
-    try {
-      final PreparedStatement stmt = conn.prepareStatement(query);
-
-      try (ResultSet rs = stmt.executeQuery()) {
-        while (true) {
-          if (!rs.next()) {
-            return;
-          }
-          final String versionString;
-          if (rs.getString(1).equals("varfish-annotator")) {
-            versionString = AnnotateVcf.class.getPackage().getSpecificationVersion();
-          } else {
-            versionString = rs.getString(2);
-          }
-          dbInfoWriter.write(
-              args.getRelease() + "\t" + rs.getString(1) + "\t" + versionString + "\n");
-        }
-      }
-    } catch (SQLException e) {
-      throw new VarfishAnnotatorException("Problem with querying database", e);
-    } catch (IOException e) {
-      throw new VarfishAnnotatorException("Could not write TSV info", e);
-    }
-  }
-
-  /**
    * Perform the variant annotation.
    *
    * @param conn Database connection for getting ExAC/ClinVar information from.
@@ -267,13 +165,12 @@ public final class AnnotateVcf {
       VariantNormalizer normalizer,
       Writer gtWriter)
       throws VarfishAnnotatorException {
-
     // Guess genome version.
-    GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
+    final GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
 
     // Write out header.
     try {
-      gtWriter.append(Joiner.on("\t").join(HEADERS_GT) + "\n");
+      gtWriter.append(Joiner.on("\t").join(VcfConstants.HEADERS_GT) + "\n");
     } catch (IOException e) {
       throw new VarfishAnnotatorException("Could not write out headers", e);
     }
@@ -365,20 +262,11 @@ public final class AnnotateVcf {
           normalizer.normalizeInsertion(
               new VariantDescription(
                   contigName, ctx.getStart() - 1, ctx.getReference().getBaseString(), baseString));
-
-      final String varType;
-      if ((normalizedVar.getRef().length() == 1) && (normalizedVar.getAlt().length() == 1)) {
-        varType = "snv";
-      } else if (normalizedVar.getRef().length() == normalizedVar.getAlt().length()) {
-        varType = "mnv";
-      } else {
-        varType = "indel";
-      }
+      // Get variant type string.
+      final String varType = getVarType(normalizedVar);
 
       // Get annotations sorted descendingly by variant effect.
-      final List<Annotation> sortedRefseqAnnos = sortAnnos(refseqAnnotationsList, i);
-      final List<Annotation> sortedEnsemblAnnos = sortAnnos(ensemblAnnotationsList, i);
-
+      //
       // Collect RefSeq and ENSEMBL annotations per gene.  Jannovar provides gene ID mappings
       // *to* both RefSeq and ENSEMBL *from* both RefSeq and ENSEMBL.  We use an (arbitrarily)
       // fixed lookup order as any should give sensible results except for genes whose annotation
@@ -389,65 +277,41 @@ public final class AnnotateVcf {
       // so many more transcripts/genes such that we would expect them to never match.
 
       // RefSeq first
-
+      final List<Annotation> sortedRefseqAnnos =
+          AnnoSorting.sortAnnotations(refseqAnnotationsList, i);
       final HashMap<String, Annotation> refSeqAnnoByRefSeqGene = new HashMap<>();
       final HashMap<String, Annotation> refSeqAnnoByEnsemblGene = new HashMap<>();
-
-      for (Annotation annotation : sortedRefseqAnnos) {
-        if (annotation.getEffects().isEmpty()
-            || annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
-          // Put into map under pseudo-identifier "__intergenic__". This ways, intergenic variants
-          // are written out only once for RefSeq/ENSEMBL and not twice if different genes are
-          // closest.
-          refSeqAnnoByRefSeqGene.put("__intergenic__", annotation);
-          refSeqAnnoByEnsemblGene.put("__intergenic__", annotation);
-        } else {
-          final String refseqGeneId = annotation.getTranscript().getGeneID();
-          final String ensemblGeneId =
-              annotation.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID");
-          if (refseqGeneId != null && !refSeqAnnoByRefSeqGene.containsKey(refseqGeneId)) {
-            refSeqAnnoByRefSeqGene.put(refseqGeneId, annotation);
-          }
-          if (ensemblGeneId != null && !refSeqAnnoByEnsemblGene.containsKey(ensemblGeneId)) {
-            refSeqAnnoByEnsemblGene.put(ensemblGeneId, annotation);
-          }
-        }
-      }
+      extractAnnotations(sortedRefseqAnnos, refSeqAnnoByRefSeqGene, refSeqAnnoByEnsemblGene, true);
 
       // Then ENSEMBL
-
+      final List<Annotation> sortedEnsemblAnnos =
+          AnnoSorting.sortAnnotations(ensemblAnnotationsList, i);
       final HashMap<String, Annotation> ensemblAnnoByRefSeqGene = new HashMap<>();
       final HashMap<String, Annotation> ensemblAnnoByEnsemblGene = new HashMap<>();
+      extractAnnotations(
+          sortedEnsemblAnnos, ensemblAnnoByRefSeqGene, ensemblAnnoByEnsemblGene, false);
 
-      for (Annotation annotation : sortedEnsemblAnnos) {
-        if (annotation.getEffects().isEmpty()
-            || annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
-          // Put into map under pseudo-identifier "__intergenic__". This ways, intergenic variants
-          // are written out only once for RefSeq/ENSEMBL and not twice if different genes are
-          // closest.
-          ensemblAnnoByRefSeqGene.put("__intergenic__", annotation);
-          ensemblAnnoByEnsemblGene.put("__intergenic__", annotation);
-        } else {
-          final String refseqGeneId = annotation.getTranscript().getAltGeneIDs().get("ENTREZ_ID");
-          final String ensemblGeneId = annotation.getTranscript().getGeneID();
-          if (refseqGeneId != null && !ensemblAnnoByRefSeqGene.containsKey(refseqGeneId)) {
-            ensemblAnnoByRefSeqGene.put(refseqGeneId, annotation);
-          }
-          if (ensemblGeneId != null && !ensemblAnnoByEnsemblGene.containsKey(ensemblGeneId)) {
-            ensemblAnnoByEnsemblGene.put(ensemblGeneId, annotation);
-          }
-        }
-      }
-
-      // Query information in databases.
+      // Query for frequency/presence information in databases.
       final String gnomadChrPrefix = "GRCh38".equals(args.getRelease()) ? "chr" : "";
-      final DbInfo exacInfo = getDbInfo(conn, args.getRelease(), normalizedVar, EXAC_PREFIX, "");
+      final DbInfo exacInfo =
+          getDbInfo(conn, args.getRelease(), normalizedVar, VcfConstants.EXAC_PREFIX, "");
       final DbInfo gnomadExomesInfo =
-          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_EXOMES_PREFIX, gnomadChrPrefix);
+          getDbInfo(
+              conn,
+              args.getRelease(),
+              normalizedVar,
+              VcfConstants.GNOMAD_EXOMES_PREFIX,
+              gnomadChrPrefix);
       final DbInfo gnomadGenomesInfo =
-          getDbInfo(conn, args.getRelease(), normalizedVar, GNOMAD_GENOMES_PREFIX, gnomadChrPrefix);
+          getDbInfo(
+              conn,
+              args.getRelease(),
+              normalizedVar,
+              VcfConstants.GNOMAD_GENOMES_PREFIX,
+              gnomadChrPrefix);
       final DbInfo thousandGenomesInfo =
-          getDbInfo(conn, args.getRelease(), normalizedVar, THOUSAND_GENOMES_PREFIX, "");
+          getDbInfo(
+              conn, args.getRelease(), normalizedVar, VcfConstants.THOUSAND_GENOMES_PREFIX, "");
       final boolean inClinvar = getClinVarInfo(conn, args.getRelease(), normalizedVar);
 
       // Build a list of all gene IDs that we will iterate over later.
@@ -463,231 +327,398 @@ public final class AnnotateVcf {
       // Additional information.
       final String infoStr = "{}";
 
+      // Build per-genotype counts, taking into consideration the sex information from pedigree.
       final GenotypeCounts gtCounts =
           GenotypeCounts.buildGenotypeCounts(ctx, i, pedigree, args.getRelease());
 
-      // Write one entry for each gene into the annotated genotype call file.
-      for (String geneId : geneIds) {
-        if (doneGeneIds.contains(geneId)) {
-          continue; // Do not process twice.
-        }
+      // Write output record (alsow write out empty one if necessary).
+      writeOutputRecords(
+          refDict,
+          ctx,
+          gtWriter,
+          i,
+          normalizedVar,
+          varType,
+          refSeqAnnoByRefSeqGene,
+          refSeqAnnoByEnsemblGene,
+          ensemblAnnoByRefSeqGene,
+          ensemblAnnoByEnsemblGene,
+          exacInfo,
+          gnomadExomesInfo,
+          gnomadGenomesInfo,
+          thousandGenomesInfo,
+          inClinvar,
+          geneIds,
+          doneGeneIds,
+          infoStr,
+          gtCounts);
+    }
+  }
 
-        // Select both RefSeq and ENSEMBL annotation for the given (RefSeq or ENSEMBL gene ID).
-        final Annotation refseqAnno;
-        if (refSeqAnnoByRefSeqGene.containsKey(geneId)) {
-          refseqAnno = refSeqAnnoByRefSeqGene.get(geneId);
-        } else if (refSeqAnnoByEnsemblGene.containsKey(geneId)) {
-          refseqAnno = refSeqAnnoByEnsemblGene.get(geneId);
-        } else {
-          refseqAnno = null;
-        }
-        final Annotation ensemblAnno;
-        if (ensemblAnnoByEnsemblGene.containsKey(geneId)) {
-          ensemblAnno = ensemblAnnoByEnsemblGene.get(geneId);
-        } else if (ensemblAnnoByRefSeqGene.containsKey(geneId)) {
-          ensemblAnno = ensemblAnnoByRefSeqGene.get(geneId);
-        } else {
-          ensemblAnno = null;
-        }
+  private static String getVarType(VariantDescription normalizedVar) {
+    final String varType;
+    if ((normalizedVar.getRef().length() == 1) && (normalizedVar.getAlt().length() == 1)) {
+      varType = "snv";
+    } else if (normalizedVar.getRef().length() == normalizedVar.getAlt().length()) {
+      varType = "mnv";
+    } else {
+      varType = "indel";
+    }
+    return varType;
+  }
 
-        // Mark all gene IDs as done.
-        if (ensemblAnno != null && ensemblAnno.getTranscript() != null) {
-          doneGeneIds.add(ensemblAnno.getTranscript().getGeneID());
-          if (ensemblAnno.getTranscript().getAltGeneIDs().containsKey("ENTREZ_ID")) {
-            doneGeneIds.add(ensemblAnno.getTranscript().getAltGeneIDs().get("ENTREZ_ID"));
-          }
-        }
-        if (refseqAnno != null && refseqAnno.getTranscript() != null) {
-          doneGeneIds.add(refseqAnno.getTranscript().getGeneID());
-          if (refseqAnno.getTranscript().getAltGeneIDs().containsKey("ENSEMBL_GENE_ID")) {
-            doneGeneIds.add(refseqAnno.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID"));
-          }
-        }
+  /**
+   * Write output records with the data built for {@code ctx).
+   *
+   * This function will also take care of writing out an empty record in case there were no overlapping genes.
+   */
+  private void writeOutputRecords(
+      ReferenceDictionary refDict,
+      VariantContext ctx,
+      Writer gtWriter,
+      int i,
+      VariantDescription normalizedVar,
+      String varType,
+      HashMap<String, Annotation> refSeqAnnoByRefSeqGene,
+      HashMap<String, Annotation> refSeqAnnoByEnsemblGene,
+      HashMap<String, Annotation> ensemblAnnoByRefSeqGene,
+      HashMap<String, Annotation> ensemblAnnoByEnsemblGene,
+      DbInfo exacInfo,
+      DbInfo gnomadExomesInfo,
+      DbInfo gnomadGenomesInfo,
+      DbInfo thousandGenomesInfo,
+      boolean inClinvar,
+      TreeSet<String> geneIds,
+      TreeSet<String> doneGeneIds,
+      String infoStr,
+      GenotypeCounts gtCounts)
+      throws VarfishAnnotatorException {
+    // Write one entry for each gene into the annotated genotype call file.
+    for (String geneId : geneIds) {
+      if (doneGeneIds.contains(geneId)) {
+        continue; // Do not process twice.
+      }
 
-        // Distance to next base of exon.
-        final int refSeqExonDist =
-            getDistance(normalizedVar, refseqAnno == null ? null : refseqAnno.getTranscript());
-        final int ensemblExonDist =
-            getDistance(normalizedVar, ensemblAnno == null ? null : ensemblAnno.getTranscript());
+      // Select both RefSeq and ENSEMBL annotation for the given (RefSeq or ENSEMBL gene ID).
+      final Annotation refseqAnno;
+      if (refSeqAnnoByRefSeqGene.containsKey(geneId)) {
+        refseqAnno = refSeqAnnoByRefSeqGene.get(geneId);
+      } else if (refSeqAnnoByEnsemblGene.containsKey(geneId)) {
+        refseqAnno = refSeqAnnoByEnsemblGene.get(geneId);
+      } else {
+        refseqAnno = null;
+      }
+      final Annotation ensemblAnno;
+      if (ensemblAnnoByEnsemblGene.containsKey(geneId)) {
+        ensemblAnno = ensemblAnnoByEnsemblGene.get(geneId);
+      } else if (ensemblAnnoByRefSeqGene.containsKey(geneId)) {
+        ensemblAnno = ensemblAnnoByRefSeqGene.get(geneId);
+      } else {
+        ensemblAnno = null;
+      }
 
-        // Construct output record.
-        final List<Object> gtOutRec =
-            Lists.newArrayList(
-                args.getRelease(),
-                normalizedVar.getChrom(),
-                refDict.getContigNameToID().get(normalizedVar.getChrom()),
-                String.valueOf(normalizedVar.getPos() + 1),
-                String.valueOf(normalizedVar.getPos() + normalizedVar.getRef().length()),
-                UcscBinning.getContainingBin(
-                    normalizedVar.getPos(),
-                    normalizedVar.getPos() + normalizedVar.getRef().length()),
-                normalizedVar.getRef(),
-                normalizedVar.getAlt(),
-                varType,
-                args.getCaseId(),
-                args.getSetId(),
-                infoStr,
-                buildGenotypeValue(ctx, i),
-                String.valueOf(gtCounts.numHomAlt),
-                String.valueOf(gtCounts.numHomRef),
-                String.valueOf(gtCounts.numHet),
-                String.valueOf(gtCounts.numHemiAlt),
-                String.valueOf(gtCounts.numHemiRef),
-                // ClinVar
-                inClinvar ? "TRUE" : "FALSE",
-                // EXAC
-                exacInfo.getAfPopmaxStr(),
-                exacInfo.getHomTotalStr(),
-                exacInfo.getHetTotalStr(),
-                exacInfo.getHemiTotalStr(),
-                // Thousand Genomes
-                thousandGenomesInfo.getAfPopmaxStr(),
-                thousandGenomesInfo.getHomTotalStr(),
-                thousandGenomesInfo.getHetTotalStr(),
-                thousandGenomesInfo.getHemiTotalStr(),
-                // gnomAD exomes
-                gnomadExomesInfo.getAfPopmaxStr(),
-                gnomadExomesInfo.getHomTotalStr(),
-                gnomadExomesInfo.getHetTotalStr(),
-                gnomadExomesInfo.getHemiTotalStr(),
-                // gnomAD genomes
-                gnomadGenomesInfo.getAfPopmaxStr(),
-                gnomadGenomesInfo.getHomTotalStr(),
-                gnomadGenomesInfo.getHetTotalStr(),
-                gnomadGenomesInfo.getHemiTotalStr(),
-                // RefSeq
-                (refseqAnno == null || refseqAnno.getTranscript() == null)
-                    ? "."
-                    : refseqAnno.getTranscript().getGeneID(),
-                (refseqAnno == null || refseqAnno.getTranscript() == null)
-                    ? "."
-                    : refseqAnno.getTranscript().getAccession(),
-                (refseqAnno == null || refseqAnno.getTranscript() == null)
-                    ? "."
-                    : refseqAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
-                (refseqAnno == null || refseqAnno.getTranscript() == null)
-                    ? "."
-                    : refseqAnno.getCDSNTChange() == null
-                        ? "."
-                        : (refseqAnno.getTranscript().isCoding() ? "c." : "n.")
-                            + refseqAnno.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
-                refseqAnno == null
-                    ? "."
-                    : refseqAnno.getProteinChange() == null
-                        ? "."
-                        : "p."
-                            + refseqAnno
-                                .getProteinChange()
-                                .withOnlyPredicted(false)
-                                .toHGVSString(AminoAcidCode.ONE_LETTER),
-                (refseqAnno == null || refseqAnno.getTranscript() == null)
-                    ? "{}"
-                    : buildEffectsValue(refseqAnno.getEffects()),
-                (refSeqExonDist >= 0) ? Integer.toString(refSeqExonDist) : ".",
-                // ENSEMBL
-                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
-                    ? "."
-                    : ensemblAnno.getTranscript().getGeneID(),
-                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
-                    ? "."
-                    : ensemblAnno.getTranscript().getAccession(),
-                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
-                    ? "."
-                    : ensemblAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
-                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
-                    ? "."
-                    : ensemblAnno.getCDSNTChange() == null
-                        ? "."
-                        : (ensemblAnno.getTranscript().isCoding() ? "c." : "n.")
-                            + ensemblAnno.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
-                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
-                    ? "."
-                    : ensemblAnno.getProteinChange() == null
-                        ? "."
-                        : "p."
-                            + ensemblAnno
-                                .getProteinChange()
-                                .withOnlyPredicted(false)
-                                .toHGVSString(AminoAcidCode.ONE_LETTER),
-                (ensemblAnno == null || ensemblAnno.getTranscript() == null)
-                    ? "{}"
-                    : buildEffectsValue(ensemblAnno.getEffects()),
-                (ensemblExonDist >= 0) ? Integer.toString(ensemblExonDist) : ".");
-        // Write record to output stream.
-        try {
-          gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
-        } catch (IOException e) {
-          throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
+      // Mark all gene IDs as done.
+      if (ensemblAnno != null && ensemblAnno.getTranscript() != null) {
+        doneGeneIds.add(ensemblAnno.getTranscript().getGeneID());
+        if (ensemblAnno.getTranscript().getAltGeneIDs().containsKey("ENTREZ_ID")) {
+          doneGeneIds.add(ensemblAnno.getTranscript().getAltGeneIDs().get("ENTREZ_ID"));
+        }
+      }
+      if (refseqAnno != null && refseqAnno.getTranscript() != null) {
+        doneGeneIds.add(refseqAnno.getTranscript().getGeneID());
+        if (refseqAnno.getTranscript().getAltGeneIDs().containsKey("ENSEMBL_GENE_ID")) {
+          doneGeneIds.add(refseqAnno.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID"));
         }
       }
 
-      if (geneIds.isEmpty()) {
-        // Construct output record.
-        final List<Object> gtOutRec =
-            Lists.newArrayList(
-                args.getRelease(),
-                normalizedVar.getChrom(),
-                refDict.getContigNameToID().get(normalizedVar.getChrom()),
-                String.valueOf(normalizedVar.getPos() + 1),
-                String.valueOf(normalizedVar.getPos() + normalizedVar.getRef().length()),
-                UcscBinning.getContainingBin(
-                    normalizedVar.getPos(),
-                    normalizedVar.getPos() + normalizedVar.getRef().length()),
-                normalizedVar.getRef(),
-                normalizedVar.getAlt(),
-                varType,
-                args.getCaseId(),
-                args.getSetId(),
-                infoStr,
-                buildGenotypeValue(ctx, i),
-                String.valueOf(gtCounts.numHomAlt),
-                String.valueOf(gtCounts.numHomRef),
-                String.valueOf(gtCounts.numHet),
-                String.valueOf(gtCounts.numHemiAlt),
-                String.valueOf(gtCounts.numHemiRef),
-                // ClinVar
-                inClinvar ? "TRUE" : "FALSE",
-                // EXAC
-                exacInfo.getAfPopmaxStr(),
-                exacInfo.getHomTotalStr(),
-                exacInfo.getHetTotalStr(),
-                exacInfo.getHemiTotalStr(),
-                // Thousand Genomes
-                thousandGenomesInfo.getAfPopmaxStr(),
-                thousandGenomesInfo.getHomTotalStr(),
-                thousandGenomesInfo.getHetTotalStr(),
-                thousandGenomesInfo.getHemiTotalStr(),
-                // gnomAD exomes
-                gnomadExomesInfo.getAfPopmaxStr(),
-                gnomadExomesInfo.getHomTotalStr(),
-                gnomadExomesInfo.getHetTotalStr(),
-                gnomadExomesInfo.getHemiTotalStr(),
-                // gnomAD genomes
-                gnomadGenomesInfo.getAfPopmaxStr(),
-                gnomadGenomesInfo.getHomTotalStr(),
-                gnomadGenomesInfo.getHetTotalStr(),
-                gnomadGenomesInfo.getHemiTotalStr(),
-                // RefSeq
-                ".",
-                ".",
-                ".",
-                ".",
-                ".",
-                ".",
-                ".",
-                // ENSEMBL
-                ".",
-                ".",
-                ".",
-                ".",
-                ".",
-                ".",
-                ".");
-        // Write record to output stream.
-        try {
-          gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
-        } catch (IOException e) {
-          throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
+      // Distance to next base of exon.
+      final int refSeqExonDist =
+          getDistance(normalizedVar, refseqAnno == null ? null : refseqAnno.getTranscript());
+      final int ensemblExonDist =
+          getDistance(normalizedVar, ensemblAnno == null ? null : ensemblAnno.getTranscript());
+
+      // Construct output record.
+      final List<Object> gtOutRec =
+          constructOutputRecord(
+              refDict,
+              ctx,
+              i,
+              normalizedVar,
+              varType,
+              exacInfo,
+              gnomadExomesInfo,
+              gnomadGenomesInfo,
+              thousandGenomesInfo,
+              inClinvar,
+              infoStr,
+              gtCounts,
+              refseqAnno,
+              ensemblAnno,
+              refSeqExonDist,
+              ensemblExonDist);
+      // Write record to output stream.
+      try {
+        gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
+      } catch (IOException e) {
+        throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
+      }
+    }
+
+    if (geneIds.isEmpty()) {
+      // Construct output record.
+      final List<Object> gtOutRec =
+          constructEmptyOutputRecord(
+              refDict,
+              ctx,
+              i,
+              normalizedVar,
+              varType,
+              exacInfo,
+              gnomadExomesInfo,
+              gnomadGenomesInfo,
+              thousandGenomesInfo,
+              inClinvar,
+              infoStr,
+              gtCounts);
+      // Write record to output stream.
+      try {
+        gtWriter.append(Joiner.on("\t").join(gtOutRec) + "\n");
+      } catch (IOException e) {
+        throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
+      }
+    }
+  }
+
+  private List<Object> constructOutputRecord(
+      ReferenceDictionary refDict,
+      VariantContext ctx,
+      int i,
+      VariantDescription normalizedVar,
+      String varType,
+      DbInfo exacInfo,
+      DbInfo gnomadExomesInfo,
+      DbInfo gnomadGenomesInfo,
+      DbInfo thousandGenomesInfo,
+      boolean inClinvar,
+      String infoStr,
+      GenotypeCounts gtCounts,
+      Annotation refseqAnno,
+      Annotation ensemblAnno,
+      int refSeqExonDist,
+      int ensemblExonDist) {
+    return Lists.newArrayList(
+        args.getRelease(),
+        normalizedVar.getChrom(),
+        refDict.getContigNameToID().get(normalizedVar.getChrom()),
+        String.valueOf(normalizedVar.getPos() + 1),
+        String.valueOf(normalizedVar.getPos() + normalizedVar.getRef().length()),
+        UcscBinning.getContainingBin(
+            normalizedVar.getPos(), normalizedVar.getPos() + normalizedVar.getRef().length()),
+        normalizedVar.getRef(),
+        normalizedVar.getAlt(),
+        varType,
+        args.getCaseId(),
+        args.getSetId(),
+        infoStr,
+        buildGenotypeValue(ctx, i),
+        String.valueOf(gtCounts.numHomAlt),
+        String.valueOf(gtCounts.numHomRef),
+        String.valueOf(gtCounts.numHet),
+        String.valueOf(gtCounts.numHemiAlt),
+        String.valueOf(gtCounts.numHemiRef),
+        // ClinVar
+        inClinvar ? "TRUE" : "FALSE",
+        // EXAC
+        exacInfo.getAfPopmaxStr(),
+        exacInfo.getHomTotalStr(),
+        exacInfo.getHetTotalStr(),
+        exacInfo.getHemiTotalStr(),
+        // Thousand Genomes
+        thousandGenomesInfo.getAfPopmaxStr(),
+        thousandGenomesInfo.getHomTotalStr(),
+        thousandGenomesInfo.getHetTotalStr(),
+        thousandGenomesInfo.getHemiTotalStr(),
+        // gnomAD exomes
+        gnomadExomesInfo.getAfPopmaxStr(),
+        gnomadExomesInfo.getHomTotalStr(),
+        gnomadExomesInfo.getHetTotalStr(),
+        gnomadExomesInfo.getHemiTotalStr(),
+        // gnomAD genomes
+        gnomadGenomesInfo.getAfPopmaxStr(),
+        gnomadGenomesInfo.getHomTotalStr(),
+        gnomadGenomesInfo.getHetTotalStr(),
+        gnomadGenomesInfo.getHemiTotalStr(),
+        // RefSeq
+        (refseqAnno == null || refseqAnno.getTranscript() == null)
+            ? "."
+            : refseqAnno.getTranscript().getGeneID(),
+        (refseqAnno == null || refseqAnno.getTranscript() == null)
+            ? "."
+            : refseqAnno.getTranscript().getAccession(),
+        (refseqAnno == null || refseqAnno.getTranscript() == null)
+            ? "."
+            : refseqAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
+        (refseqAnno == null || refseqAnno.getTranscript() == null)
+            ? "."
+            : refseqAnno.getCDSNTChange() == null
+                ? "."
+                : (refseqAnno.getTranscript().isCoding() ? "c." : "n.")
+                    + refseqAnno.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
+        refseqAnno == null
+            ? "."
+            : refseqAnno.getProteinChange() == null
+                ? "."
+                : "p."
+                    + refseqAnno
+                        .getProteinChange()
+                        .withOnlyPredicted(false)
+                        .toHGVSString(AminoAcidCode.ONE_LETTER),
+        (refseqAnno == null || refseqAnno.getTranscript() == null)
+            ? "{}"
+            : buildEffectsValue(refseqAnno.getEffects()),
+        (refSeqExonDist >= 0) ? Integer.toString(refSeqExonDist) : ".",
+        // ENSEMBL
+        (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+            ? "."
+            : ensemblAnno.getTranscript().getGeneID(),
+        (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+            ? "."
+            : ensemblAnno.getTranscript().getAccession(),
+        (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+            ? "."
+            : ensemblAnno.getTranscript().isCoding() ? "TRUE" : "FALSE",
+        (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+            ? "."
+            : ensemblAnno.getCDSNTChange() == null
+                ? "."
+                : (ensemblAnno.getTranscript().isCoding() ? "c." : "n.")
+                    + ensemblAnno.getCDSNTChange().toHGVSString(AminoAcidCode.ONE_LETTER),
+        (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+            ? "."
+            : ensemblAnno.getProteinChange() == null
+                ? "."
+                : "p."
+                    + ensemblAnno
+                        .getProteinChange()
+                        .withOnlyPredicted(false)
+                        .toHGVSString(AminoAcidCode.ONE_LETTER),
+        (ensemblAnno == null || ensemblAnno.getTranscript() == null)
+            ? "{}"
+            : buildEffectsValue(ensemblAnno.getEffects()),
+        (ensemblExonDist >= 0) ? Integer.toString(ensemblExonDist) : ".");
+  }
+
+  private List<Object> constructEmptyOutputRecord(
+      ReferenceDictionary refDict,
+      VariantContext ctx,
+      int i,
+      VariantDescription normalizedVar,
+      String varType,
+      DbInfo exacInfo,
+      DbInfo gnomadExomesInfo,
+      DbInfo gnomadGenomesInfo,
+      DbInfo thousandGenomesInfo,
+      boolean inClinvar,
+      String infoStr,
+      GenotypeCounts gtCounts) {
+    return Lists.newArrayList(
+        args.getRelease(),
+        normalizedVar.getChrom(),
+        refDict.getContigNameToID().get(normalizedVar.getChrom()),
+        String.valueOf(normalizedVar.getPos() + 1),
+        String.valueOf(normalizedVar.getPos() + normalizedVar.getRef().length()),
+        UcscBinning.getContainingBin(
+            normalizedVar.getPos(), normalizedVar.getPos() + normalizedVar.getRef().length()),
+        normalizedVar.getRef(),
+        normalizedVar.getAlt(),
+        varType,
+        args.getCaseId(),
+        args.getSetId(),
+        infoStr,
+        buildGenotypeValue(ctx, i),
+        String.valueOf(gtCounts.numHomAlt),
+        String.valueOf(gtCounts.numHomRef),
+        String.valueOf(gtCounts.numHet),
+        String.valueOf(gtCounts.numHemiAlt),
+        String.valueOf(gtCounts.numHemiRef),
+        // ClinVar
+        inClinvar ? "TRUE" : "FALSE",
+        // EXAC
+        exacInfo.getAfPopmaxStr(),
+        exacInfo.getHomTotalStr(),
+        exacInfo.getHetTotalStr(),
+        exacInfo.getHemiTotalStr(),
+        // Thousand Genomes
+        thousandGenomesInfo.getAfPopmaxStr(),
+        thousandGenomesInfo.getHomTotalStr(),
+        thousandGenomesInfo.getHetTotalStr(),
+        thousandGenomesInfo.getHemiTotalStr(),
+        // gnomAD exomes
+        gnomadExomesInfo.getAfPopmaxStr(),
+        gnomadExomesInfo.getHomTotalStr(),
+        gnomadExomesInfo.getHetTotalStr(),
+        gnomadExomesInfo.getHemiTotalStr(),
+        // gnomAD genomes
+        gnomadGenomesInfo.getAfPopmaxStr(),
+        gnomadGenomesInfo.getHomTotalStr(),
+        gnomadGenomesInfo.getHetTotalStr(),
+        gnomadGenomesInfo.getHemiTotalStr(),
+        // RefSeq
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        // ENSEMBL
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".");
+  }
+
+  /**
+   * Collect RefSeq or ENSEMBL annotations per gene.
+   *
+   * <p>See comment in {@link #annotateVariantContext} on the reasoning behind "__integergenic__".
+   *
+   * @param sortedAnnos Sorted annotations to process.
+   * @param annoByRefSeqGene Annotations by RefSeq gene are written here.
+   * @param annoByEnsemblGene Annotations by ENSEMBL gene ID.
+   * @param isRefSeq Whether to process as refseq or
+   */
+  private static void extractAnnotations(
+      List<Annotation> sortedAnnos,
+      HashMap<String, Annotation> annoByRefSeqGene,
+      HashMap<String, Annotation> annoByEnsemblGene,
+      boolean isRefSeq) {
+    for (Annotation annotation : sortedAnnos) {
+      if (annotation.getEffects().isEmpty()
+          || annotation.getEffects().equals(ImmutableSet.of(VariantEffect.INTERGENIC_VARIANT))) {
+        // Put into map under pseudo-identifier "__intergenic__". This ways, intergenic variants
+        // are written out only once for RefSeq/ENSEMBL and not twice if different genes are
+        // closest.
+        annoByRefSeqGene.put("__intergenic__", annotation);
+        annoByEnsemblGene.put("__intergenic__", annotation);
+      } else {
+        final String refseqGeneId;
+        final String ensemblGeneId;
+        if (isRefSeq) {
+          refseqGeneId = annotation.getTranscript().getGeneID();
+          ensemblGeneId = annotation.getTranscript().getAltGeneIDs().get("ENSEMBL_GENE_ID");
+        } else {
+          refseqGeneId = annotation.getTranscript().getAltGeneIDs().get("ENTREZ_ID");
+          ensemblGeneId = annotation.getTranscript().getGeneID();
+        }
+        if (refseqGeneId != null && !annoByRefSeqGene.containsKey(refseqGeneId)) {
+          annoByRefSeqGene.put(refseqGeneId, annotation);
+        }
+        if (ensemblGeneId != null && !annoByEnsemblGene.containsKey(ensemblGeneId)) {
+          annoByEnsemblGene.put(ensemblGeneId, annotation);
         }
       }
     }
@@ -752,33 +783,6 @@ public final class AnnotateVcf {
       return annotator.buildAnnotations(ctx);
     } catch (InvalidCoordinatesException e) {
       return null;
-    }
-  }
-
-  private List<Annotation> sortAnnos(
-      ImmutableList<VariantAnnotations> refseqAnnotationsList, int i) {
-    if (refseqAnnotationsList == null) {
-      return new ArrayList<>();
-    } else {
-      return refseqAnnotationsList
-          .get(i - 1)
-          .getAnnotations()
-          .stream()
-          .sorted(
-              Comparator.<Annotation, VariantEffect>comparing(
-                  Annotation::getMostPathogenicVarType,
-                  (t1, t2) -> {
-                    if (t1 == null && t2 == null) {
-                      return 0;
-                    } else if (t2 == null) {
-                      return -1;
-                    } else if (t1 == null) {
-                      return 1;
-                    } else {
-                      return t1.compareTo(t2);
-                    }
-                  }))
-          .collect(Collectors.toList());
     }
   }
 
@@ -885,7 +889,8 @@ public final class AnnotateVcf {
     // Return "not found" if looking for ExAC or Thousand Genomes but not using GRCh37.
     // These are only available for GRCh37.
     if (!"GRCh37".equals(release)
-        && ImmutableList.of(EXAC_PREFIX, THOUSAND_GENOMES_PREFIX).contains(prefix)) {
+        && ImmutableList.of(VcfConstants.EXAC_PREFIX, VcfConstants.THOUSAND_GENOMES_PREFIX)
+            .contains(prefix)) {
       return DbInfo.nullValue();
     }
 

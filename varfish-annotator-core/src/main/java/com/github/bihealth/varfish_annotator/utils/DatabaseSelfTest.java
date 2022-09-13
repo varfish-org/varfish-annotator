@@ -1,6 +1,6 @@
 package com.github.bihealth.varfish_annotator.utils;
 
-import com.github.bihealth.varfish_annotator.annotate.AnnotateVcf;
+import com.github.bihealth.varfish_annotator.data.VcfConstants;
 import com.google.common.collect.ImmutableList;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -34,13 +34,13 @@ public class DatabaseSelfTest {
       chromNames = CHROMS;
     }
     if ("grch37".equals(release.toLowerCase())) {
-      selfTestDb(AnnotateVcf.EXAC_PREFIX, "GRCh37", "", chromNames);
-      selfTestDb(AnnotateVcf.GNOMAD_EXOMES_PREFIX, "GRCh37", "", chromNames);
-      selfTestDb(AnnotateVcf.GNOMAD_GENOMES_PREFIX, "GRCh37", "", chromNames);
-      selfTestDb(AnnotateVcf.THOUSAND_GENOMES_PREFIX, "GRCh37", "", chromNames);
+      selfTestDb(VcfConstants.EXAC_PREFIX, "GRCh37", "", chromNames);
+      selfTestDb(VcfConstants.GNOMAD_EXOMES_PREFIX, "GRCh37", "", chromNames);
+      selfTestDb(VcfConstants.GNOMAD_GENOMES_PREFIX, "GRCh37", "", chromNames);
+      selfTestDb(VcfConstants.THOUSAND_GENOMES_PREFIX, "GRCh37", "", chromNames);
     } else if ("grch38".equals(release.toLowerCase())) {
-      selfTestDb(AnnotateVcf.GNOMAD_EXOMES_PREFIX, "GRCh38", "chr", chromNames);
-      selfTestDb(AnnotateVcf.GNOMAD_GENOMES_PREFIX, "GRCh38", "chr", chromNames);
+      selfTestDb(VcfConstants.GNOMAD_EXOMES_PREFIX, "GRCh38", "chr", chromNames);
+      selfTestDb(VcfConstants.GNOMAD_GENOMES_PREFIX, "GRCh38", "chr", chromNames);
     } else {
       throw new RuntimeException("Invalid release: " + release);
     }
@@ -58,7 +58,7 @@ public class DatabaseSelfTest {
       for (String chrom : chromNames) {
         final String chromName = chrPrefix + chrom;
         if ("grch37".equalsIgnoreCase(release)
-            && tablePrefix.equals(AnnotateVcf.GNOMAD_GENOMES_PREFIX)
+            && tablePrefix.equals(VcfConstants.GNOMAD_GENOMES_PREFIX)
             && chromName.equals("Y")) {
           continue; // skip chrY for gnomAD genomes on GRCh37
         }

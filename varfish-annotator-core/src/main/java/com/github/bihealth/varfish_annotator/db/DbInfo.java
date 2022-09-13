@@ -1,4 +1,4 @@
-package com.github.bihealth.varfish_annotator;
+package com.github.bihealth.varfish_annotator.db;
 
 /** Information from variant from DB. */
 public class DbInfo {

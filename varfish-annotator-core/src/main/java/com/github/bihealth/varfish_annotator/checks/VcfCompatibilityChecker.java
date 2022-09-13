@@ -1,5 +1,6 @@
-package com.github.bihealth.varfish_annotator.annotate;
+package com.github.bihealth.varfish_annotator.checks;
 
+import com.github.bihealth.varfish_annotator.data.GenomeVersion;
 import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.variant.vcf.VCFContigHeaderLine;
 import htsjdk.variant.vcf.VCFFileReader;
@@ -36,7 +37,7 @@ public class VcfCompatibilityChecker {
    * <p>Throws an exception in case of problems and otherwise just returns. Will print a warning to
    * stderr if no reliable decision could be made.
    *
-   * @param requiredRElease The required release.
+   * @param requiredRelease The required release.
    * @throws IncompatibleVcfException If the VCF file looks to be incompatible.
    */
   public void check(String requiredRelease) throws IncompatibleVcfException {

@@ -2,6 +2,7 @@
 
 ## v0.26-SNAPSHOT
 
+- Explicitely model support for SV callers (#68)
 - Removing explicit support for SV2 (#67)
 - Adding end-to-end tests `hg19-chr22` (#61)
 
