@@ -53,12 +53,13 @@ public class GtRecordBuilder {
   /** Header fields for the SV and genotype file (part 5). */
   private static final ImmutableList<String> HEADERS_GT_PART_5 = ImmutableList.of("genotype");
 
-  String release;
-  String defaultSvMethod;
-  String optOutFeatures;
-  String caseId;
-  String setId;
-  Pedigree pedigree;
+  private final String release;
+  private final String defaultSvMethod;
+  private final String optOutFeatures;
+  private final String caseId;
+  private final String setId;
+  private final Pedigree pedigree;
+  private final CallerSupport callerSupport;
 
   public GtRecordBuilder(
       String release,
@@ -66,13 +67,15 @@ public class GtRecordBuilder {
       String optOutFeatures,
       String caseId,
       String setId,
-      Pedigree pedigree) {
+      Pedigree pedigree,
+      CallerSupport callerSupport) {
     this.release = release;
     this.defaultSvMethod = defaultSvMethod;
     this.optOutFeatures = optOutFeatures;
     this.caseId = caseId;
     this.setId = setId;
     this.pedigree = pedigree;
+    this.callerSupport = callerSupport;
   }
 
   public List<String> getHeaders() {
@@ -221,8 +224,7 @@ public class GtRecordBuilder {
     return "{" + Joiner.on(",").join(mappings) + "}";
   }
 
-  private static String buildGenotypeValue(VariantContext ctx, int alleleNo) {
-    final ArrayList<String> attrs = new ArrayList<>();
+  private String buildGenotypeValue(VariantContext ctx, int alleleNo) {
 
     // Add "GT" field.
     final List<String> mappings = new ArrayList<>();
@@ -230,120 +232,127 @@ public class GtRecordBuilder {
     final List<String> sortedSampleNames = Lists.newArrayList(ctx.getSampleNames());
     sortedSampleNames.sort(c);
     for (String sample : sortedSampleNames) {
-      final Genotype genotype = ctx.getGenotype(sample);
-      final Map<String, String> gts = new TreeMap<>();
-      final List<String> gtList = new ArrayList<>();
-      for (Allele allele : genotype.getAlleles()) {
-        if (allele.isNoCall()) {
-          gtList.add(".");
-        } else if (ctx.getAlleleIndex(allele) == alleleNo) {
-          gtList.add("1");
-        } else {
-          gtList.add("0");
-        }
-      }
-      if (genotype.isPhased()) {
-        gts.put(sample, Joiner.on("|").join(gtList));
-      } else {
-        gtList.sort(Comparator.naturalOrder());
-        gts.put(sample, Joiner.on("/").join(gtList));
-      }
-      attrs.add(Joiner.on("").join(tripleQuote("gt"), ":", tripleQuote(gts.get(sample))));
-
-      // FT -- genotype filters
-      if (genotype.hasExtendedAttribute("FT")
-          && genotype.getFilters() != null
-          && !genotype.getFilters().equals("")) {
-        final List<String> fts =
-            Arrays.stream(genotype.getFilters().split(","))
-                .map(s -> tripleQuote(s))
-                .collect(Collectors.toList());
-        attrs.add(Joiner.on("").join(tripleQuote("ft"), ":{", Joiner.on(",").join(fts), "}"));
-      }
-
-      // GQ -- genotype quality
-      if (genotype.hasGQ()) {
-        attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", genotype.getGQ()));
-      }
-
-      // Additional integer attributes, currently Delly only.
-      boolean looksLikeDelly = ctx.getAttributeAsString("SVMETHOD", "").contains("DELLY");
-      boolean looksLikeXHMM = ctx.getAttributeAsString("SVMETHOD", "").contains("XHMM");
-      boolean looksLikeGcnv = ctx.getAttributeAsString("SVMETHOD", "").contains("gcnvkernel");
-      if (looksLikeDelly) {
-        // * DR -- reference pairs
-        // * DV -- variant pairs
-        // * RR -- reference junction
-        // * RV -- variant junction
-        final int dr = Integer.parseInt(genotype.getExtendedAttribute("DR", "0").toString());
-        final int dv = Integer.parseInt(genotype.getExtendedAttribute("DV", "0").toString());
-        final int rr = Integer.parseInt(genotype.getExtendedAttribute("RR", "0").toString());
-        final int rv = Integer.parseInt(genotype.getExtendedAttribute("RV", "0").toString());
-
-        // Attributes to write out.
-        //
-        // * pec - paired end coverage
-        // * pev - paired end variant support
-        // * src - split read coverage
-        // * srv - split read end variant support
-        attrs.add(Joiner.on("").join(tripleQuote("pec"), ":", String.valueOf(dr + dv)));
-        attrs.add(Joiner.on("").join(tripleQuote("pev"), ":", String.valueOf(dv)));
-        attrs.add(Joiner.on("").join(tripleQuote("src"), ":", String.valueOf(rr + rv)));
-        attrs.add(Joiner.on("").join(tripleQuote("srv"), ":", String.valueOf(rv)));
-      } else if (looksLikeXHMM) {
-        // * DQ  -- diploid quality
-        // * NDQ -- non-diploid quality
-        // * RD  -- mean normalized read depth over region
-        // * PL  -- genotype likelihoods, for [diploid, deletion, duplication]
-        final float dq = Float.parseFloat(genotype.getExtendedAttribute("DQ", "0.0").toString());
-        final float ndq = Float.parseFloat(genotype.getExtendedAttribute("NDQ", "0.0").toString());
-        final float rd = Float.parseFloat(genotype.getExtendedAttribute("RD", "0.0").toString());
-        final int pl[] = genotype.getPL();
-
-        // Attributes to write out.
-        //
-        // * dq  -- diploid quality
-        // * ndq -- non-diploid quality
-        // * rd  -- mean normalized read depth over region
-        // * pl  -- genotype likelihoods, for [diploid, deletion, duplication]
-        attrs.add(Joiner.on("").join(tripleQuote("dq"), ":", String.valueOf(dq)));
-        attrs.add(Joiner.on("").join(tripleQuote("ndq"), ":", String.valueOf(ndq)));
-        attrs.add(Joiner.on("").join(tripleQuote("rd"), ":", String.valueOf(rd)));
-        attrs.add(
-            Joiner.on("").join(tripleQuote("pl"), ":[", Joiner.on(',').join(Ints.asList(pl)), "]"));
-      } else if (looksLikeGcnv) {
-        // * CN  -- copy number
-        // * NP  -- number of points in segment
-        // * QA  -- phred-scaled quality of all points agreeing
-        // * QS  -- phred-scaled quality of at least one point agreeing
-        // * QSS -- phred-scaled quality of start breakpoint
-        // * QSE -- phred-scaled quality of end breakpoint
-        final int cn = Integer.parseInt(genotype.getExtendedAttribute("CN", "0").toString());
-        final int np = Integer.parseInt(genotype.getExtendedAttribute("NP", "0").toString());
-        final int qa = Integer.parseInt(genotype.getExtendedAttribute("QA", "0").toString());
-        final int qs = Integer.parseInt(genotype.getExtendedAttribute("QS", "0").toString());
-        final int qss = Integer.parseInt(genotype.getExtendedAttribute("QSS", "0").toString());
-        final int qse = Integer.parseInt(genotype.getExtendedAttribute("QSE", "0").toString());
-
-        // Attributes to write out.
-        //
-        // * cn  -- copy number
-        // * np  -- number of points in segment
-        // * qa  -- phred-scaled quality of all points agreeing
-        // * qs  -- phred-scaled quality of at least one point agreeing
-        // * qss -- phred-scaled quality of start breakpoint
-        // * qse -- phred-scaled quality of end breakpoint
-        attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
-        attrs.add(Joiner.on("").join(tripleQuote("np"), ":", String.valueOf(np)));
-        attrs.add(Joiner.on("").join(tripleQuote("qa"), ":", String.valueOf(qa)));
-        attrs.add(Joiner.on("").join(tripleQuote("qs"), ":", String.valueOf(qs)));
-        attrs.add(Joiner.on("").join(tripleQuote("qss"), ":", String.valueOf(qss)));
-        attrs.add(Joiner.on("").join(tripleQuote("qse"), ":", String.valueOf(qse)));
-      }
-
-      mappings.add(Joiner.on("").join(tripleQuote(sample), ":{", Joiner.on(",").join(attrs), "}"));
+      mappings.add(callerSupport.buildSampleGenotype(ctx, alleleNo, sample).buildStringFragment());
     }
 
     return "{" + Joiner.on(",").join(mappings) + "}";
+  }
+
+  private static List<String> buildSampleGenotypeValue(
+      VariantContext ctx, int alleleNo, String sample) {
+    final ArrayList<String> attrs = new ArrayList<>();
+
+    final Genotype genotype = ctx.getGenotype(sample);
+    final Map<String, String> gts = new TreeMap<>();
+    final List<String> gtList = new ArrayList<>();
+    for (Allele allele : genotype.getAlleles()) {
+      if (allele.isNoCall()) {
+        gtList.add(".");
+      } else if (ctx.getAlleleIndex(allele) == alleleNo) {
+        gtList.add("1");
+      } else {
+        gtList.add("0");
+      }
+    }
+    if (genotype.isPhased()) {
+      gts.put(sample, Joiner.on("|").join(gtList));
+    } else {
+      gtList.sort(Comparator.naturalOrder());
+      gts.put(sample, Joiner.on("/").join(gtList));
+    }
+    attrs.add(Joiner.on("").join(tripleQuote("gt"), ":", tripleQuote(gts.get(sample))));
+
+    // FT -- genotype filters
+    if (genotype.hasExtendedAttribute("FT")
+        && genotype.getFilters() != null
+        && !genotype.getFilters().equals("")) {
+      final List<String> fts =
+          Arrays.stream(genotype.getFilters().split(","))
+              .map(s -> tripleQuote(s))
+              .collect(Collectors.toList());
+      attrs.add(Joiner.on("").join(tripleQuote("ft"), ":{", Joiner.on(",").join(fts), "}"));
+    }
+
+    // GQ -- genotype quality
+    if (genotype.hasGQ()) {
+      attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", genotype.getGQ()));
+    }
+
+    // Additional integer attributes, currently Delly only.
+    boolean looksLikeDelly = ctx.getAttributeAsString("SVMETHOD", "").contains("DELLY");
+    boolean looksLikeXHMM = ctx.getAttributeAsString("SVMETHOD", "").contains("XHMM");
+    boolean looksLikeGcnv = ctx.getAttributeAsString("SVMETHOD", "").contains("gcnvkernel");
+    if (looksLikeDelly) {
+      // * DR -- reference pairs
+      // * DV -- variant pairs
+      // * RR -- reference junction
+      // * RV -- variant junction
+      final int dr = Integer.parseInt(genotype.getExtendedAttribute("DR", "0").toString());
+      final int dv = Integer.parseInt(genotype.getExtendedAttribute("DV", "0").toString());
+      final int rr = Integer.parseInt(genotype.getExtendedAttribute("RR", "0").toString());
+      final int rv = Integer.parseInt(genotype.getExtendedAttribute("RV", "0").toString());
+
+      // Attributes to write out.
+      //
+      // * pec - paired end coverage
+      // * pev - paired end variant support
+      // * src - split read coverage
+      // * srv - split read end variant support
+      attrs.add(Joiner.on("").join(tripleQuote("pec"), ":", String.valueOf(dr + dv)));
+      attrs.add(Joiner.on("").join(tripleQuote("pev"), ":", String.valueOf(dv)));
+      attrs.add(Joiner.on("").join(tripleQuote("src"), ":", String.valueOf(rr + rv)));
+      attrs.add(Joiner.on("").join(tripleQuote("srv"), ":", String.valueOf(rv)));
+    } else if (looksLikeXHMM) {
+      // * DQ  -- diploid quality
+      // * NDQ -- non-diploid quality
+      // * RD  -- mean normalized read depth over region
+      // * PL  -- genotype likelihoods, for [diploid, deletion, duplication]
+      final float dq = Float.parseFloat(genotype.getExtendedAttribute("DQ", "0.0").toString());
+      final float ndq = Float.parseFloat(genotype.getExtendedAttribute("NDQ", "0.0").toString());
+      final float rd = Float.parseFloat(genotype.getExtendedAttribute("RD", "0.0").toString());
+      final int pl[] = genotype.getPL();
+
+      // Attributes to write out.
+      //
+      // * dq  -- diploid quality
+      // * ndq -- non-diploid quality
+      // * rd  -- mean normalized read depth over region
+      // * pl  -- genotype likelihoods, for [diploid, deletion, duplication]
+      attrs.add(Joiner.on("").join(tripleQuote("dq"), ":", String.valueOf(dq)));
+      attrs.add(Joiner.on("").join(tripleQuote("ndq"), ":", String.valueOf(ndq)));
+      attrs.add(Joiner.on("").join(tripleQuote("rd"), ":", String.valueOf(rd)));
+      attrs.add(
+          Joiner.on("").join(tripleQuote("pl"), ":[", Joiner.on(',').join(Ints.asList(pl)), "]"));
+    } else if (looksLikeGcnv) {
+      // * CN  -- copy number
+      // * NP  -- number of points in segment
+      // * QA  -- phred-scaled quality of all points agreeing
+      // * QS  -- phred-scaled quality of at least one point agreeing
+      // * QSS -- phred-scaled quality of start breakpoint
+      // * QSE -- phred-scaled quality of end breakpoint
+      final int cn = Integer.parseInt(genotype.getExtendedAttribute("CN", "0").toString());
+      final int np = Integer.parseInt(genotype.getExtendedAttribute("NP", "0").toString());
+      final int qa = Integer.parseInt(genotype.getExtendedAttribute("QA", "0").toString());
+      final int qs = Integer.parseInt(genotype.getExtendedAttribute("QS", "0").toString());
+      final int qss = Integer.parseInt(genotype.getExtendedAttribute("QSS", "0").toString());
+      final int qse = Integer.parseInt(genotype.getExtendedAttribute("QSE", "0").toString());
+
+      // Attributes to write out.
+      //
+      // * cn  -- copy number
+      // * np  -- number of points in segment
+      // * qa  -- phred-scaled quality of all points agreeing
+      // * qs  -- phred-scaled quality of at least one point agreeing
+      // * qss -- phred-scaled quality of start breakpoint
+      // * qse -- phred-scaled quality of end breakpoint
+      attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
+      attrs.add(Joiner.on("").join(tripleQuote("np"), ":", String.valueOf(np)));
+      attrs.add(Joiner.on("").join(tripleQuote("qa"), ":", String.valueOf(qa)));
+      attrs.add(Joiner.on("").join(tripleQuote("qs"), ":", String.valueOf(qs)));
+      attrs.add(Joiner.on("").join(tripleQuote("qss"), ":", String.valueOf(qss)));
+      attrs.add(Joiner.on("").join(tripleQuote("qse"), ":", String.valueOf(qse)));
+    }
+
+    return attrs;
   }
 }
