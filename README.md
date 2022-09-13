@@ -43,8 +43,25 @@ The following fields are considered:
 
 ### Structural Variants / Copy Number Variants
 
-Note that if the `INFO/SVMETHOD` field is missing then you should define `--default-sv-method` as you would otherwise get a problem downstream.
+**Supported Callers and Caller Annotation**
+
+The following variant callers are explicitely supported.
+
+- Delly 2 (SVs)
+- Dragen CNV caller
+- Dragen SV caller
+- Manta
+- GATK gCNV
+- XHMM (deprecated)
+
+In the other cases, VarFish annotator will fall back to a "generic" import where only the per-sample fields `GT`, `FT`, and `GQ` are interpreted.
+Your caller should also write out `INFO/END`, `INFO/SVTYPE`, and `INFO/SVLEN` as defined by VCF4.2
+
+VarFish Annotator will look at the field `INFO/SVMETHOD` to annotate calls with the caller where the call originated from.
+If this field is empty then you should define `--default-sv-method` so you get appropriately labeled output.
 If you have any problem with your data then please tell us by opening a GitHub issue.
+
+**Interpretation of top-level and INFO VCF fields**
 
 The following fields are considered:
 
@@ -70,28 +87,32 @@ The following fields are considered:
   Confidence interval around the end point of the SV.
 - `INFO/SVMETHOD`
   The name of the caller that was used.
-- `FORMAT` and per `SAMPLE`
-  - Common
-    - `GT` Genotype
-    - `FT` Per-genotype filter values
-    - `GQ` Phred-scaled genotype quality
-  - For Delly2
-    - `DR` Reference pairs
-    - `DV` Variant pairs
-    - `RR` Reference junction count
-    - `RV` Variant junction count
-  - For XHMM
-    - `DQ` Diploid Quality
-    - `NDQ` Non-diploid Quality
-    - `RD` Mean normalized read depth over region
-    - `PL` Genotype likelihoods for [diploid, deletion, duplication]
-  - For GATK gCNV
-     - `CN` Copy number
-     - `NP` Number of points in segment
-     - `QA` Phred-scale quality of all points agreeing
-     - `QS` Phred-scaled quality of least one point agreeing
-     - `QSS` Phred-scaled quality of start breakpoint
-     - `QSE` Phred-scaled quality of end breakpoint
+
+**Interpretation of `FORMAT` and per sample fields**
+
+- Common
+  - `GT` Genotype, written as `gt`
+  - `FT` Per-genotype filter values, written as `ft`
+  - `GQ` Phred-scaled genotype quality, written as `gq`
+- Delly2
+  - `DR` Reference pairs, written as `pec = DR + DV`
+  - `DV` Variant pairs, written as `pev`
+  - `RR` Reference junction count, written as `src = RR + RV`
+  - `RV` Variant junction count, written as `srv`
+  - `RDCN` Copy number estimate, written as `cn`
+- Dragen CNV
+  - `SM` Average normalized overage, written as `anc`
+  - `BC` Bucket count, written as point count `pc`
+  - `PE` Discordante read count at start/end, written as `pev = PE[0] + PE[1]`
+- Dragen SV
+  - `PR` Paired read of reference and variant, written as `pec = PR[0] + PR[1]` and `pev = PR[1]`
+  - `SR` Paired read of reference and variant, written as `src = SR[0] + SR[1]` and `srv = SR[1]`
+- For GATK gCNV
+  - `CN` Integer copy number, written as `cn`
+  - `NP` Number of points in segment, written as `np`
+- Manta (equivalent to Dragen SV)
+- For XHMM
+    - `RD` Average normalized coveage, written as `an`
 
 ## Example
 

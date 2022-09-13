@@ -1,0 +1,48 @@
+##fileformat=VCFv4.2
+##DRAGENVersion=<ID=dragen,Version="SW: 07.021.624.3.10.4, HW: 07.021.624">
+##DRAGENCommandLine=<ID=dragen,Date="Mon Mar 21 19:12:43 CET 2022",CommandLineOptions="--ref-dir /staging/human/reference/hs37d5/hs37d5.fa.k_21.f_16.m_149 --fastq-file1 /mnt/smb01-hum/NGSRawData/220318_A01077_0174_AH7JGVDMXY/Data/Intensities/BaseCalls/NA-12878WGS-Genom-size_S1_R1_001.fastq.gz --fastq-file2 /mnt/smb01-hum/NGSRawData/220318_A01077_0174_AH7JGVDMXY/Data/Intensities/BaseCalls/NA-12878WGS-Genom-size_S1_R2_001.fastq.gz --output-directory /staging/output/220318_A01077_0174_AH7JGVDMXY/NA-12878WGSWGS/ --output-file-prefix NA-12878WGSWGS_dragen --RGID WGS --RGSM NA-12878WGSWGS --num-threads 46 --enable-map-align true --enable-map-align-output true --enable-duplicate-marking true --enable-variant-caller true --qc-cross-cont-vcf /opt/edico/config/sample_cross_contamination_resource_GRCh37.vcf.gz --enable-cnv true --cnv-enable-self-normalization true --enable-sv true --qc-coverage-region-1 /staging/human/bed/CDS-v19-ROIs_v2.bed --qc-coverage-reports-1 cov_report full_res --qc-coverage-region-2 /staging/human/bed/Regions_Exomev8.bed --qc-coverage-reports-2 cov_report full_res --qc-coverage-region-3 /staging/human/bed/Padded_Exomev8.bed --qc-coverage-reports-3 cov_report full_res">
+##reference=file:///staging/human/reference/hs37d5/hs37d5.fa.k_21.f_16.m_149
+##contig=<ID=1,length=249250621>
+##contig=<ID=2,length=243199373>
+##contig=<ID=3,length=198022430>
+##contig=<ID=4,length=191154276>
+##contig=<ID=5,length=180915260>
+##contig=<ID=6,length=171115067>
+##contig=<ID=7,length=159138663>
+##contig=<ID=8,length=146364022>
+##contig=<ID=9,length=141213431>
+##contig=<ID=10,length=135534747>
+##contig=<ID=11,length=135006516>
+##contig=<ID=12,length=133851895>
+##contig=<ID=13,length=115169878>
+##contig=<ID=14,length=107349540>
+##contig=<ID=15,length=102531392>
+##contig=<ID=16,length=90354753>
+##contig=<ID=17,length=81195210>
+##contig=<ID=18,length=78077248>
+##contig=<ID=19,length=59128983>
+##contig=<ID=20,length=63025520>
+##contig=<ID=21,length=48129895>
+##contig=<ID=22,length=51304566>
+##contig=<ID=X,length=155270560>
+##ALT=<ID=CNV,Description="Copy number variant region">
+##ALT=<ID=DEL,Description="Deletion relative to the reference">
+##ALT=<ID=DUP,Description="Region of elevated copy number relative to the reference">
+##INFO=<ID=REFLEN,Number=1,Type=Integer,Description="Number of REF positions included in this record">
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Confidence interval around END">
+##FILTER=<ID=cnvLength,Description="CNV with length below 10000">
+##FILTER=<ID=cnvQual,Description="CNV with quality below 10">
+##FILTER=<ID=cnvBinSupportRatio,Description="CNV with low supporting number of bins with respect to event length">
+##FILTER=<ID=cnvCopyRatio,Description="CNV with copy ratio within +/- 0.2 of 1.0">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=SM,Number=1,Type=Float,Description="Linear copy ratio of the segment mean">
+##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Estimated copy number">
+##FORMAT=<ID=BC,Number=1,Type=Integer,Description="Number of bins in the region">
+##FORMAT=<ID=PE,Number=2,Type=Integer,Description="Number of improperly paired end reads at start and stop breakpoints">
+##CoverageUniformity=0.333610
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE
+1	1283844	DRAGEN:LOSS:1:1283845-1284844	N	<DEL>	20	cnvLength	SVLEN=-1000;SVTYPE=CNV;END=1284844;REFLEN=1000	GT:SM:CN:BC:PE	0/1:0.321909:1:1:1,1

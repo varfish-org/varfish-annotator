@@ -1,0 +1,59 @@
+##fileformat=VCFv4.1
+##FILTER=<ID=PASS,Description="All filters passed">
+##ALT=<ID=DIP,Description="Diploid copy number">
+##ALT=<ID=CNV,Description="Copy Number Polymorphism">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##INFO=<ID=AC,Number=2,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">
+##INFO=<ID=AF,Number=2,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End coordinate of this variant">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=TPOS,Number=1,Type=Integer,Description="Start coordinate of target used to genotype this variant">
+##INFO=<ID=TEND,Number=1,Type=Integer,Description="End coordinate of target used to genotype this variant">
+##INFO=<ID=NUMT,Number=1,Type=Integer,Description="Number of targets used to genotype this variant">
+##INFO=<ID=GQT,Number=1,Type=Float,Description="CNV-specific genotyping quality threshold, calculated as the minimal Q_EXACT of discovered CNVs">
+##INFO=<ID=PREVTARGSTART,Number=1,Type=Integer,Description="Start coordinate of target preceding the first target used to genotype this variant">
+##INFO=<ID=PREVTARGEND,Number=1,Type=Integer,Description="End coordinate of target preceding the first target used to genotype this variant">
+##INFO=<ID=POSTTARGSTART,Number=1,Type=Integer,Description="Start coordinate of target following the last target used to genotype this variant">
+##INFO=<ID=POSTTARGEND,Number=1,Type=Integer,Description="End coordinate of target following the last target used to genotype this variant">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=NDQ,Number=1,Type=Float,Description="Phred-scaled quality of =N=on =D=iploidy">
+##FORMAT=<ID=DQ,Number=1,Type=Float,Description="Phred-scaled quality of =D=iploidy">
+##FORMAT=<ID=EQ,Number=2,Type=Float,Description="Phred-scaled qualities of =E=xact CNV event of allele types, in order given in ALT field">
+##FORMAT=<ID=SQ,Number=2,Type=Float,Description="Phred-scaled qualities of =S=ome CNV event of allele types, in order given in ALT field">
+##FORMAT=<ID=NQ,Number=2,Type=Float,Description="Phred-scaled qualities of =N=o CNV event of allele types, in order given in ALT field">
+##FORMAT=<ID=LQ,Number=2,Type=Float,Description="Phred-scaled qualities of =L=eft breakpoint of CNV event of allele types, in order given in ALT field">
+##FORMAT=<ID=RQ,Number=2,Type=Float,Description="Phred-scaled qualities of =R=ight breakpoint of CNV event of allele types, in order given in ALT field">
+##FORMAT=<ID=PL,Number=3,Type=Float,Description="Normalized, Phred-scaled relative likelihoods for DIP,DEL,DUP genotypes, capped at 255">
+##FORMAT=<ID=RD,Number=1,Type=Float,Description="Mean Read Depth over region">
+##FORMAT=<ID=ORD,Number=1,Type=Float,Description="Mean Original (unnormalized) Read Depth over region">
+##FORMAT=<ID=DSCVR,Number=1,Type=Character,Description="Was this CNV locus discovered in this sample? (Y or N)">
+##contig=<ID=1>
+##contig=<ID=2>
+##contig=<ID=3>
+##contig=<ID=4>
+##contig=<ID=5>
+##contig=<ID=6>
+##contig=<ID=7>
+##contig=<ID=8>
+##contig=<ID=9>
+##contig=<ID=10>
+##contig=<ID=11>
+##contig=<ID=12>
+##contig=<ID=13>
+##contig=<ID=14>
+##contig=<ID=15>
+##contig=<ID=16>
+##contig=<ID=17>
+##contig=<ID=18>
+##contig=<ID=19>
+##contig=<ID=20>
+##contig=<ID=21>
+##contig=<ID=22>
+##contig=<ID=X>
+##contig=<ID=Y>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE
+1	586412	1:586412-69696597	N	<DEL>,<DUP>	.	.	AC=0,1;AF=0,0.01;AN=1;END=69696597;IMPRECISE;SVLEN=14860;SVTYPE=CNV;TPOS=586412;TEND=1598580;NUMT=6;GQT=26;PREVTARGSTART=586412;PREVTARGEND=1598580;POSTTARGSTART=586412;POSTTARGEND=1598580	GT:NDQ:DQ:EQ:SQ:NQ:LQ:RQ:PL:RD:ORD:DSCVR	2:68:0:0,26:0,68:97,0:0,25:0,31:68,255,0:3.47:130.54:Y

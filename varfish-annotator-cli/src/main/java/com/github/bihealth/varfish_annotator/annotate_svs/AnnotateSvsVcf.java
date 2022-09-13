@@ -67,10 +67,14 @@ public final class AnnotateSvsVcf {
   /** Pedigree to use for annotation. */
   private Pedigree pedigree;
 
+  /** Helper to use for creating genotypes and feature effects files. */
+  private CallerSupport callerSupport;
+
   /** Construct with the given configuration. */
   public AnnotateSvsVcf(AnnotateSvsArgs args) {
     this.args = args;
     this.pedigree = null;
+    this.callerSupport = CallerSupportFactory.getFor(new File(args.getInputVcf()));
   }
 
   /** UUID counter for sequential UUID generation. */
@@ -236,7 +240,8 @@ public final class AnnotateSvsVcf {
             args.getOptOutFeatures(),
             args.getCaseId(),
             args.getSetId(),
-            pedigree);
+            pedigree,
+            callerSupport);
     final FeatureEffectsRecordBuilder feRecordBuilder =
         new FeatureEffectsRecordBuilder(args.getCaseId(), args.getSetId());
 
