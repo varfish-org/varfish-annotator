@@ -10,4 +10,6 @@ public class SelfTestFailedException extends Exception {
   public SelfTestFailedException(String message) {
     super(message);
   }
+
+  private static final long serialVersionUID = 0;
 }

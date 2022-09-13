@@ -1,6 +1,7 @@
 package com.github.bihealth.varfish_annotator.init_db;
 
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorException;
+import com.github.bihealth.varfish_annotator.db.DbConstants;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -8,9 +9,6 @@ import java.util.List;
 
 /** Store database release infos. */
 public class DbReleaseUpdater {
-
-  /** The name of the table in the database. */
-  public static final String TABLE_NAME = "db_release_info";
 
   /** The JDBC connection. */
   private final Connection conn;
@@ -45,7 +43,7 @@ public class DbReleaseUpdater {
   private void recreateTable() throws VarfishAnnotatorException {
     final String createQuery =
         "CREATE TABLE IF NOT EXISTS "
-            + TABLE_NAME
+            + DbConstants.TABLE_NAME
             + "("
             + "db_name VARCHAR(100) NOT NULL PRIMARY KEY, "
             + "release VARCHAR(100) NOT NULL, "
@@ -60,7 +58,7 @@ public class DbReleaseUpdater {
   /** Update the release information */
   private void updateReleaseInfos() throws VarfishAnnotatorException {
     final String insertQuery =
-        "MERGE INTO " + TABLE_NAME + " (db_name, release)" + " VALUES (?, ?)";
+        "MERGE INTO " + DbConstants.TABLE_NAME + " (db_name, release)" + " VALUES (?, ?)";
 
     for (String line : dbReleaseInfos) {
       String[] arr = line.split(":");

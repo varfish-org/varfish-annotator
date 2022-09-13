@@ -1,4 +1,4 @@
-package com.github.bihealth.varfish_annotator.annotate;
+package com.github.bihealth.varfish_annotator.data;
 
 /** Enumerate known genome versions. */
 public enum GenomeVersion {
