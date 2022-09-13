@@ -2,6 +2,7 @@
 
 ## v0.26-SNAPSHOT
 
+- Removing explicit support for SV2 (#67)
 - Adding end-to-end tests `hg19-chr22` (#61)
 
 ## v0.25
