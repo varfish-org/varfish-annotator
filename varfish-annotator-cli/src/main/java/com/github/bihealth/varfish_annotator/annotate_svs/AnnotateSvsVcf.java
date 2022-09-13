@@ -773,13 +773,10 @@ public final class AnnotateSvsVcf {
         attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", genotype.getGQ()));
       }
 
-      // Additional integer attributes, currently Delly and SV2 only.
+      // Additional integer attributes, currently Delly only.
       boolean looksLikeDelly = ctx.getAttributeAsString("SVMETHOD", "").contains("DELLY");
-      boolean looksLikeSV2 = ctx.getAttributeAsString("SVMETHOD", "").contains("SV2");
       boolean looksLikeXHMM = ctx.getAttributeAsString("SVMETHOD", "").contains("XHMM");
       boolean looksLikeGcnv = ctx.getAttributeAsString("SVMETHOD", "").contains("gcnvkernel");
-      boolean looksLikeCnvettiHomDel =
-          ctx.getAttributeAsString("SVMETHOD", "").contains("cnvetti-homdel");
       if (looksLikeDelly) {
         // * DR -- reference pairs
         // * DV -- variant pairs
@@ -800,64 +797,6 @@ public final class AnnotateSvsVcf {
         attrs.add(Joiner.on("").join(tripleQuote("pev"), ":", String.valueOf(dv)));
         attrs.add(Joiner.on("").join(tripleQuote("src"), ":", String.valueOf(rr + rv)));
         attrs.add(Joiner.on("").join(tripleQuote("srv"), ":", String.valueOf(rv)));
-      } else if (looksLikeSV2) {
-        // * CN -- copy number estimate
-        // * PE -- normalized discordant paired-end count
-        // * SR -- normalized split read count
-        // * NS -- number of SNPs in the locus
-        // * HA -- heterozygous allele ratio
-        // * SQ -- phred-scaled genotype likelihood
-        final float cn;
-        final float pe;
-        final float sr;
-        final int ns;
-        final float ha;
-        final float sq;
-        if ("nan".equals(genotype.getExtendedAttribute("CN", "0.0"))) {
-          cn = 0;
-        } else {
-          cn = Float.parseFloat(genotype.getExtendedAttribute("CN", "0.0").toString());
-        }
-        if ("nan".equals(genotype.getExtendedAttribute("PE", "0.0"))) {
-          pe = 0;
-        } else {
-          pe = Float.parseFloat(genotype.getExtendedAttribute("PE", "0.0").toString());
-        }
-        if ("nan".equals(genotype.getExtendedAttribute("SR", "0.0"))) {
-          sr = 0;
-        } else {
-          sr = Float.parseFloat(genotype.getExtendedAttribute("SR", "0.0").toString());
-        }
-        if ("nan".equals(genotype.getExtendedAttribute("NS", "0.0"))) {
-          ns = 0;
-        } else {
-          ns = Integer.parseInt(genotype.getExtendedAttribute("NS", "0").toString());
-        }
-        if ("nan".equals(genotype.getExtendedAttribute("HA", "0.0"))) {
-          ha = 0;
-        } else {
-          ha = Float.parseFloat(genotype.getExtendedAttribute("HA", "0.0").toString());
-        }
-        if ("nan".equals(genotype.getExtendedAttribute("SQ", "0.0"))) {
-          sq = 0;
-        } else {
-          sq = Float.parseFloat(genotype.getExtendedAttribute("SQ", "0.0").toString());
-        }
-
-        // Attributes to write out.
-        //
-        // * cn  - copy number estimate
-        // * npe - normalized discordant paired-read count
-        // * sre - normalized split read count
-        // * ns  - number of NSPs in the locus
-        // * har - heterozygous allele ratio
-        // * gq  - phred-scaled genotype quality
-        attrs.add(Joiner.on("").join(tripleQuote("cn"), ":", String.valueOf(cn)));
-        attrs.add(Joiner.on("").join(tripleQuote("npe"), ":", String.valueOf(pe)));
-        attrs.add(Joiner.on("").join(tripleQuote("sre"), ":", String.valueOf(sr)));
-        attrs.add(Joiner.on("").join(tripleQuote("ns"), ":", String.valueOf(ns)));
-        attrs.add(Joiner.on("").join(tripleQuote("har"), ":", String.valueOf(ha)));
-        attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", String.valueOf(Math.round(sq))));
       } else if (looksLikeXHMM) {
         // * DQ  -- diploid quality
         // * NDQ -- non-diploid quality
