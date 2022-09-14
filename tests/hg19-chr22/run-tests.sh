@@ -3,7 +3,11 @@
 set -euo pipefail
 set -x
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
+
 JAR=$(ls ../../varfish-annotator-cli/target/varfish-annotator-cli-*.jar | grep -v sources | tail -n 1)
+VERSION=$(basename $JAR .jar | cut -d - -f 4-)
 
 ## prepare
 
@@ -69,6 +73,7 @@ java -jar $JAR annotate \
   --self-test-chr22-only
 
 diff /tmp/Case_1_index.gatk_hc.gts.tsv Case_1_index.gatk_hc.gts.tsv-expected
+perl -p -i -e "s/${VERSION}/VERSION/g" /tmp/Case_1_index.gatk_hc.db-info.tsv
 diff /tmp/Case_1_index.gatk_hc.db-info.tsv Case_1_index.gatk_hc.db-info.tsv-expected
 
 ## step 4: annotate-svs
@@ -87,6 +92,7 @@ java -jar $JAR annotate-svs \
 awk -F $'\t' 'BEGIN { OFS=FS } { if (NR > 1) $17 = "UUID"; print $0; }' /tmp/Case_1_index.delly2.gts.tsv \
 > /tmp/Case_1_index.delly2.gts.tsv.replaced
 diff /tmp/Case_1_index.delly2.gts.tsv.replaced Case_1_index.delly2.gts.tsv-expected
+perl -p -i -e "s/${VERSION}/VERSION/g" /tmp/Case_1_index.delly2.db-info.tsv
 diff /tmp/Case_1_index.delly2.db-info.tsv Case_1_index.delly2.db-info.tsv-expected
 awk -F $'\t' 'BEGIN { OFS=FS } { if (NR > 1) $3 = "UUID"; print $0; }' /tmp/Case_1_index.delly2.feature-effects.tsv \
 > /tmp/Case_1_index.delly2.feature-effects.tsv.replaced
