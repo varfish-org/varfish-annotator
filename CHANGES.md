@@ -1,5 +1,7 @@
 # Changelog
 
+## v0.27 (work in progress)
+
 ## v0.26
 
 - Explicitely model support for SV callers (#68)
