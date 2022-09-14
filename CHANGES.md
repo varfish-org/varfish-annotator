@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.26-SNAPSHOT
+## v0.26
 
 - Explicitely model support for SV callers (#68)
 - Removing explicit support for SV2 (#67)
