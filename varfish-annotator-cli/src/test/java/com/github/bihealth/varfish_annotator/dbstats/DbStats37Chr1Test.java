@@ -35,7 +35,7 @@ public class DbStats37Chr1Test {
   @Test
   void testParseable() throws Exception {
     String text =
-        SystemLambda.tapSystemOut(
+        SystemLambda.tapSystemOutNormalized(
             () -> {
               VarfishAnnotatorCli.main(
                   new String[] {
@@ -69,7 +69,7 @@ public class DbStats37Chr1Test {
   @Test
   void testNonParseable() throws Exception {
     String text =
-        SystemLambda.tapSystemOut(
+        SystemLambda.tapSystemOutNormalized(
             () -> {
               VarfishAnnotatorCli.main(
                   new String[] {

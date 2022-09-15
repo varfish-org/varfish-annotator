@@ -96,8 +96,11 @@ public class AnnotateGatkHcVcf38Chr1Test {
       }
     } else {
       Assertions.assertEquals(
-          expectedDbInfos, FileUtils.readFileToString(outputDbInfoPath, "utf-8"));
-      Assertions.assertEquals(expectedGts, FileUtils.readFileToString(outputGtsPath, "utf-8"));
+          expectedDbInfos,
+          FileUtils.readFileToString(outputDbInfoPath, "utf-8").replaceAll("\\r\\n?", "\n"));
+      Assertions.assertEquals(
+          expectedGts,
+          FileUtils.readFileToString(outputGtsPath, "utf-8").replaceAll("\\r\\n?", "\n"));
     }
   }
 

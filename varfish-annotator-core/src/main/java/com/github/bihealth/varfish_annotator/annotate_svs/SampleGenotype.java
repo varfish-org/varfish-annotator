@@ -7,6 +7,8 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 public final class SampleGenotype {
@@ -87,6 +89,42 @@ public final class SampleGenotype {
       attrs.add(Joiner.on("").join(tripleQuote("pc"), ":", pointCount));
     }
     return Joiner.on("").join(tripleQuote(sampleName), ":{", Joiner.on(",").join(attrs), "}");
+  }
+
+  public Map<String, Object> toMap() {
+    final TreeMap<String, Object> result = new TreeMap<>();
+    result.put("gt", genotype);
+    if (filters != null && !filters.isEmpty()) {
+      result.put("ft", filters);
+    }
+    if (genotypeQuality != null) {
+      result.put("gq", genotypeQuality);
+    }
+    if (pairedEndCoverage != null) {
+      result.put("pec", pairedEndCoverage);
+    }
+    if (pairedEndVariantSupport != null) {
+      result.put("pev", pairedEndVariantSupport);
+    }
+    if (splitReadCoverage != null) {
+      result.put("src", splitReadCoverage);
+    }
+    if (splitReadVariantSupport != null) {
+      result.put("srv", splitReadVariantSupport);
+    }
+    if (averageMappingQuality != null) {
+      result.put("amq", averageMappingQuality);
+    }
+    if (copyNumber != null) {
+      result.put("cn", copyNumber);
+    }
+    if (averageNormalizedCoverage != null) {
+      result.put("anc", averageNormalizedCoverage);
+    }
+    if (pointCount != null) {
+      result.put("pc", pointCount);
+    }
+    return result;
   }
 
   public String getSampleName() {
