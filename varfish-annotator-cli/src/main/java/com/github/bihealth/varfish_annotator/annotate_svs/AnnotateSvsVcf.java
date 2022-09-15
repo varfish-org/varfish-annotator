@@ -247,7 +247,11 @@ public final class AnnotateSvsVcf {
 
     // Write out header.
     try {
-      gtWriter.append(Joiner.on("\t").join(gtRecordBuilder.getHeaders()) + "\n");
+      gtWriter.append(
+          GenotypeRecord.tsvHeader(
+                  !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
+                  !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS))
+              + "\n");
       // Write feature-effects header.
       featureEffectsWriter.append(Joiner.on("\t").join(HEADERS_FEATURE_EFFECTS) + "\n");
     } catch (IOException e) {
@@ -481,10 +485,14 @@ public final class AnnotateSvsVcf {
       }
 
       // Write out record with the genotype.
-      final List<Object> gtOutRec =
+      final GenotypeRecord gtOutRec =
           gtRecordBuilder.buildRecord(variantId, svGenomeVar, ctx, genomeVersion, i);
       try {
-        gtWriter.append(Joiner.on("\t").useForNull(".").join(gtOutRec) + "\n");
+        gtWriter.append(
+            gtOutRec.toTsv(
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS))
+                + "\n");
       } catch (IOException e) {
         throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);
       }

@@ -1,1 +1,3 @@
-../../../../../../tests/hg19-chr22/Case_1_index.delly2.feature-effects.tsv-expected
+case_id	set_id	sv_uuid	refseq_gene_id	refseq_transcript_id	refseq_transcript_coding	refseq_effect	ensembl_gene_id	ensembl_transcript_id	ensembl_transcript_coding	ensembl_effect
+.	.	UUID	51816	NM_017424.2	TRUE	{"transcript_ablation","coding_transcript_variant"}	ENSG00000093072	ENST00000262607.3	TRUE	{"transcript_ablation","coding_transcript_variant"}
+.	.	UUID	128954	NM_001037814.1	TRUE	{"transcript_ablation","coding_transcript_variant"}	ENSG00000215568	ENST00000400588.1	TRUE	{"transcript_ablation","coding_transcript_variant"}

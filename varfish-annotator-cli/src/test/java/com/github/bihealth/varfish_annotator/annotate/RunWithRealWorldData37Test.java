@@ -103,11 +103,11 @@ public class RunWithRealWorldData37Test {
       }
     } else {
       Assertions.assertEquals(
-          FileUtils.readFileToString(expectedDbInfosPath, "utf-8"),
-          FileUtils.readFileToString(outputDbInfoPath, "utf-8"));
+          FileUtils.readFileToString(expectedDbInfosPath, "utf-8").replaceAll("\\r\\n?", "\n"),
+          FileUtils.readFileToString(outputDbInfoPath, "utf-8").replaceAll("\\r\\n?", "\n"));
       Assertions.assertEquals(
-          FileUtils.readFileToString(expectedGtsPath, "utf-8"),
-          FileUtils.readFileToString(outputGtsPath, "utf-8"));
+          FileUtils.readFileToString(expectedGtsPath, "utf-8").replaceAll("\\r\\n?", "\n"),
+          FileUtils.readFileToString(outputGtsPath, "utf-8").replaceAll("\\r\\n?", "\n"));
     }
   }
 

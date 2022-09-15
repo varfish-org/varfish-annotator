@@ -1,5 +1,6 @@
 [![Continuous Integration](https://github.com/bihealth/varfish-annotator/actions/workflows/ci.yml/badge.svg)](https://github.com/bihealth/varfish-annotator/actions?query=workflow%3Acontinuous-integration)
 [![Coverage Status](https://coveralls.io/repos/github/bihealth/varfish-annotator/badge.svg?branch=main)](https://coveralls.io/github/bihealth/varfish-annotator?branch=main)
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/varfish-annotator-cli/README.html)
 
 # VarFish Annotator
 
@@ -174,3 +175,15 @@ The folder `/tests` contains some data sets that are appropriate for system (aka
 You can build the data sets with the `build.sh` script that is available in each folder.
 This script also serves for documenting the test data's provenance.
 The Jannovar software must be available as `jannovar` (e.g., through bioconda) on your `PATH` and you will need `samtools`.
+
+## Using JDK >=18
+
+The **tests** use [junit5-system-exit](https://github.com/tginsberg/junit5-system-exit) for detecting `System.exit()` calls.
+In JDK 18 you have to use the `-Djava.security.manager=allow` flag.
+Issue [tginsberg/junit5-system-exit#10](https://github.com/tginsberg/junit5-system-exit/issues/10) tracks this issue.
+
+## Developing on Windows
+
+There is an issue with removing temporary directories on Windows.
+Apparently, HTSJDK does not properly close files.
+Set `-Djunit.jupiter.tempdir.cleanup.mode.default=NEVER` to work around this issue.
