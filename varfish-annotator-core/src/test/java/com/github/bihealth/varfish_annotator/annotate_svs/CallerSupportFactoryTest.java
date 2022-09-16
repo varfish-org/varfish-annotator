@@ -2,6 +2,7 @@ package com.github.bihealth.varfish_annotator.annotate_svs;
 
 import com.github.bihealth.varfish_annotator.ResourceUtils;
 import java.io.File;
+import java.util.TreeMap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ public class CallerSupportFactoryTest {
   @TempDir public File tmpFolder;
   File vcfFileManta;
   File vcfFileGeneric;
+  CallerSupportFactory factory;
 
   @BeforeEach
   void initEach() {
@@ -19,17 +21,18 @@ public class CallerSupportFactoryTest {
     ResourceUtils.copyResourceToFile("/callers-sv/manta-head.vcf", vcfFileManta);
     vcfFileGeneric = new File(tmpFolder + "/generic-head.vcf");
     ResourceUtils.copyResourceToFile("/callers-sv/generic-head.vcf", vcfFileGeneric);
+    factory = new CallerSupportFactory(new TreeMap<>());
   }
 
   @Test
   void testGetForManta() {
-    CallerSupport callerSupport = CallerSupportFactory.getFor(vcfFileManta);
+    CallerSupport callerSupport = factory.getFor(vcfFileManta);
     Assertions.assertTrue(callerSupport instanceof CallerSupportManta);
   }
 
   @Test
   void testGetForGeneric() {
-    CallerSupport callerSupport = CallerSupportFactory.getFor(vcfFileGeneric);
+    CallerSupport callerSupport = factory.getFor(vcfFileGeneric);
     Assertions.assertTrue(callerSupport instanceof CallerSupportGeneric);
   }
 }

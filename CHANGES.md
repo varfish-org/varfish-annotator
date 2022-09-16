@@ -2,6 +2,9 @@
 
 ## v0.27 (work in progress)
 
+- Writing out proper SV type for Dragen CNV (#76)
+- Adding support for depth of coverage annotation (#73)
+
 ## v0.26
 
 - Explicitely model support for SV callers (#68)

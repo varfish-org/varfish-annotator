@@ -3,9 +3,14 @@ package com.github.bihealth.varfish_annotator.annotate_svs;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.*;
+import java.util.Map;
 
 /** Import SV caller support for XHMM. */
 public class CallerSupportXhmm extends CallerSupport {
+
+  public CallerSupportXhmm(Map<String, CoverageFromMaelstromReader> coverageReaders) {
+    super(coverageReaders);
+  }
 
   public SvCaller getSvCaller() {
     return SvCaller.XHMM;

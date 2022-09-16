@@ -11,6 +11,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.Closer;
 import de.charite.compbio.jannovar.annotation.SVAnnotation;
 import de.charite.compbio.jannovar.annotation.SVAnnotations;
 import de.charite.compbio.jannovar.data.JannovarData;
@@ -36,10 +37,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -67,14 +65,10 @@ public final class AnnotateSvsVcf {
   /** Pedigree to use for annotation. */
   private Pedigree pedigree;
 
-  /** Helper to use for creating genotypes and feature effects files. */
-  private CallerSupport callerSupport;
-
   /** Construct with the given configuration. */
   public AnnotateSvsVcf(AnnotateSvsArgs args) {
     this.args = args;
     this.pedigree = null;
-    this.callerSupport = CallerSupportFactory.getFor(new File(args.getInputVcf()));
   }
 
   /** UUID counter for sequential UUID generation. */
@@ -139,7 +133,8 @@ public final class AnnotateSvsVcf {
                 featureEffectsStream, args.getOutputFeatureEffects());
         Writer dbInfoWriter =
             GzipUtil.maybeOpenGzipOutputStream(dbInfoStream, args.getOutputDbInfos());
-        BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter); ) {
+        BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter);
+        Closer covVcfCloser = Closer.create(); ) {
       // Guess genome version.
       GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
 
@@ -147,11 +142,27 @@ public final class AnnotateSvsVcf {
       new DatabaseSelfTest(conn)
           .selfTest(args.getRelease(), args.isSelfTestChr1Only(), args.isSelfTestChr22Only());
 
+      final Map<String, CoverageFromMaelstromReader> covReaders = new TreeMap<>();
+      for (String covVcf : args.getCoverageVcfs()) {
+        final CoverageFromMaelstromReader covReader =
+            new CoverageFromMaelstromReader(new File(covVcf));
+        covReaders.put(covReader.getSample(), covReader);
+        covVcfCloser.register(covReader);
+      }
+      final CallerSupport callerSupport =
+          new CallerSupportFactory(covReaders).getFor(new File(args.getInputVcf()));
+
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
       annotateSvVcf(
-          genomeVersion, reader, refseqJvData, ensemblJvData, gtWriter, featureEffectsWriter);
+          genomeVersion,
+          reader,
+          refseqJvData,
+          ensemblJvData,
+          callerSupport,
+          gtWriter,
+          featureEffectsWriter);
       new DbInfoWriterHelper()
           .writeDbInfos(conn, dbInfoBufWriter, args.getRelease(), AnnotateVcf.class);
     } catch (SQLException e) {
@@ -217,6 +228,7 @@ public final class AnnotateSvsVcf {
    * @param reader Reader for the input VCF file.
    * @param refseqJv Deserialized RefSeq transcript database for Jannovar.
    * @param ensemblJv Deserialized ENSEMBL transcript database for Jannovar.
+   * @param callerSupport Helper to use for adapting to SV caller.
    * @param gtWriter Writer for variant call ("genotype") TSV file.
    * @param featureEffectsWriter Writer for gene-wise feature effects.
    * @throws VarfishAnnotatorException in case of problems
@@ -226,6 +238,7 @@ public final class AnnotateSvsVcf {
       VCFFileReader reader,
       JannovarData refseqJv,
       JannovarData ensemblJv,
+      CallerSupport callerSupport,
       Writer gtWriter,
       Writer featureEffectsWriter)
       throws VarfishAnnotatorException {

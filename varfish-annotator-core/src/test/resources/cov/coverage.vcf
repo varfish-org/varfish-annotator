@@ -1,0 +1,38 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##fileDate=20200828
+##contig=<ID=one,length=1000>
+##contig=<ID=two,length=1000>
+##ALT=<ID=WINDOW,Description="Record describes a window for read or coverage counting">
+##INFO=<ID=END,Number=1,Type=Integer,Description="Window end">
+##INFO=<ID=MAPQ,Number=1,Type=Float,Description="Mean MAPQ value across samples for approximating mapability">
+##INFO=<ID=GC,Number=1,Type=Float,Description="Reference GC fraction, if reference FASTA file was given">
+##INFO=<ID=GAP,Number=0,Type=Flag,Description="Window overlaps with N in reference (gap)">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=MQ,Number=1,Type=Float,Description="Mean read MAPQ from region">
+##FORMAT=<ID=RCV,Number=1,Type=Float,Description="Raw coverage value">
+##FORMAT=<ID=RCVSD,Number=1,Type=Float,Description="Raw coverage standard deviation">
+##FORMAT=<ID=CV,Number=1,Type=Float,Description="Normalized coverage value">
+##FORMAT=<ID=CVSD,Number=1,Type=Float,Description="Normalized coverage standard deviation">
+##median-coverage=<ID=sample,autosomes=10,_one=0,_two=0>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	sample
+one	1	one:1-100	N	<WINDOW>	0	.	END=100;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+one	101	one:101-200	N	<WINDOW>	0	.	END=200;MAPQ=60	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+one	201	one:201-300	N	<WINDOW>	0	.	END=300;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+one	301	one:301-400	N	<WINDOW>	0	.	END=400;MAPQ=60	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+one	401	one:401-500	N	<WINDOW>	0	.	END=500;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+one	501	one:501-600	N	<WINDOW>	0	.	END=600;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+one	601	one:601-700	N	<WINDOW>	0	.	END=700;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+one	701	one:701-800	N	<WINDOW>	0	.	END=800;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+one	801	one:801-900	N	<WINDOW>	0	.	END=900;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+one	901	one:901-1000	N	<WINDOW>	0	.	END=1000;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+two	1	two:1-100	N	<WINDOW>	0	.	END=100;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+two	101	two:101-200	N	<WINDOW>	0	.	END=200;MAPQ=60	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+two	201	two:201-300	N	<WINDOW>	0	.	END=300;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+two	301	two:301-400	N	<WINDOW>	0	.	END=400;MAPQ=60	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+two	401	two:401-500	N	<WINDOW>	0	.	END=500;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:10:1:40:1.0:0.1
+two	501	two:501-600	N	<WINDOW>	0	.	END=600;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+two	601	two:601-700	N	<WINDOW>	0	.	END=700;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+two	701	two:701-800	N	<WINDOW>	0	.	END=800;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+two	801	two:801-900	N	<WINDOW>	0	.	END=900;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2
+two	901	two:901-1000	N	<WINDOW>	0	.	END=1000;MAPQ=0	GT:RCV:RCVSD:MQ:CV:CVSD	./.:20:2:50:2.0:0.2

@@ -6,9 +6,14 @@ import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFHeaderLine;
+import java.util.Map;
 
 /** Import SV caller support for Manta. */
 public class CallerSupportManta extends CallerSupport {
+
+  public CallerSupportManta(Map<String, CoverageFromMaelstromReader> coverageReaders) {
+    super(coverageReaders);
+  }
 
   public SvCaller getSvCaller() {
     return SvCaller.MANTA;

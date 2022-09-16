@@ -1,6 +1,7 @@
 package com.github.bihealth.varfish_annotator.annotate_svs;
 
 import com.github.bihealth.varfish_annotator.ResourceUtils;
+import com.google.common.collect.ImmutableMap;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 import htsjdk.variant.vcf.VCFHeader;
@@ -14,14 +15,21 @@ public class CallerSupportGenericTest {
 
   @TempDir public File tmpFolder;
   File vcfFile;
-  File otherVcfFile;
+  File coverageVcfFile;
+  File coverageTbiFile;
   CallerSupportGeneric callerSupport;
 
   @BeforeEach
   void initEach() {
     vcfFile = new File(tmpFolder + "/generic-head.vcf");
     ResourceUtils.copyResourceToFile("/callers-sv/generic-head.vcf", vcfFile);
-    callerSupport = new CallerSupportGeneric();
+    coverageVcfFile = new File(tmpFolder + "/example.SAMPLE.cov.vcf.gz");
+    ResourceUtils.copyResourceToFile("/callers-sv/example.SAMPLE.cov.vcf.gz", coverageVcfFile);
+    coverageTbiFile = new File(tmpFolder + "/example.SAMPLE.cov.vcf.gz.tbi");
+    ResourceUtils.copyResourceToFile("/callers-sv/example.SAMPLE.cov.vcf.gz.tbi", coverageTbiFile);
+    callerSupport =
+        new CallerSupportGeneric(
+            ImmutableMap.of("SAMPLE", new CoverageFromMaelstromReader(coverageVcfFile)));
   }
 
   @Test

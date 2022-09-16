@@ -2,6 +2,8 @@ package com.github.bihealth.varfish_annotator.annotate_svs;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * JCommander command for <tt>varfish_annotator annotate-sv</tt>.
@@ -110,6 +112,12 @@ public final class AnnotateSvsArgs {
           "Skip records with this filter value (comma-separated list), default is 'LowQual'")
   private String skipFilters = "LowQual";
 
+  @Parameter(
+      names = "--coverage-vcf",
+      description =
+          "Annotate CNV with coverage and mapping quality from maelstrom-core coverage VCF file")
+  private List<String> coverageVcfs = new ArrayList<>();
+
   public String getRefseqSerPath() {
     return refseqSerPath;
   }
@@ -186,6 +194,10 @@ public final class AnnotateSvsArgs {
     return skipFilters;
   }
 
+  public List<String> getCoverageVcfs() {
+    return coverageVcfs;
+  }
+
   @Override
   public String toString() {
     return "AnnotateSvsArgs{"
@@ -236,16 +248,17 @@ public final class AnnotateSvsArgs {
         + '\''
         + ", sequentialUuids="
         + sequentialUuids
-        + '\''
-        + ", optOutFeatures=\'"
+        + ", optOutFeatures='"
         + optOutFeatures
-        + "\'"
-        + ", writeBndMates=\'"
+        + '\''
+        + ", writeBndMates='"
         + writeBndMates
-        + "\'"
-        + ", skipFilters=\'"
+        + '\''
+        + ", skipFilters='"
         + skipFilters
-        + "\'"
+        + '\''
+        + ", coverageVcfs="
+        + coverageVcfs
         + '}';
   }
 }
