@@ -4,9 +4,14 @@ import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFInfoHeaderLine;
+import java.util.Map;
 
 /** Import SV caller support for generic SV callers. */
 public class CallerSupportGeneric extends CallerSupport {
+
+  public CallerSupportGeneric(Map<String, CoverageFromMaelstromReader> coverageReaders) {
+    super(coverageReaders);
+  }
 
   public SvCaller getSvCaller() {
     return SvCaller.GENERIC;

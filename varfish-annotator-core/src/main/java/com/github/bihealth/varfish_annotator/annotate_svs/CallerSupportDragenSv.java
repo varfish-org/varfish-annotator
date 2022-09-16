@@ -4,9 +4,14 @@ import com.github.bihealth.varfish_annotator.utils.HtsjdkUtils;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.*;
+import java.util.Map;
 
 /** Import SV caller support for Dragen SV. */
 public class CallerSupportDragenSv extends CallerSupport {
+
+  public CallerSupportDragenSv(Map<String, CoverageFromMaelstromReader> coverageReaders) {
+    super(coverageReaders);
+  }
 
   public SvCaller getSvCaller() {
     return SvCaller.DRAGEN_SV;

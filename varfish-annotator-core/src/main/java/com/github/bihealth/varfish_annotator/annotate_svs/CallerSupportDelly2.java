@@ -6,9 +6,14 @@ import htsjdk.variant.vcf.VCFFileReader;
 import htsjdk.variant.vcf.VCFFilterHeaderLine;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFInfoHeaderLine;
+import java.util.Map;
 
 /** Import SV caller support for Delly2. */
 public class CallerSupportDelly2 extends CallerSupport {
+
+  public CallerSupportDelly2(Map<String, CoverageFromMaelstromReader> coverageReaders) {
+    super(coverageReaders);
+  }
 
   public SvCaller getSvCaller() {
     return SvCaller.DELLY2_SV;

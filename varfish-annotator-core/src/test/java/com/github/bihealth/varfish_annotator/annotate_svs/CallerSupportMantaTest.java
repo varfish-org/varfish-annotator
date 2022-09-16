@@ -1,6 +1,7 @@
 package com.github.bihealth.varfish_annotator.annotate_svs;
 
 import com.github.bihealth.varfish_annotator.ResourceUtils;
+import com.google.common.collect.ImmutableMap;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFFileReader;
 import htsjdk.variant.vcf.VCFHeader;
@@ -15,6 +16,8 @@ public class CallerSupportMantaTest {
   @TempDir public File tmpFolder;
   File vcfFile;
   File otherVcfFile;
+  File coverageVcfFile;
+  File coverageTbiFile;
   CallerSupportManta callerSupport;
 
   @BeforeEach
@@ -23,7 +26,13 @@ public class CallerSupportMantaTest {
     ResourceUtils.copyResourceToFile("/callers-sv/manta-head.vcf", vcfFile);
     otherVcfFile = new File(tmpFolder + "/incompatible.vcf");
     ResourceUtils.copyResourceToFile("/callers-sv/delly2-head.vcf", otherVcfFile);
-    callerSupport = new CallerSupportManta();
+    coverageVcfFile = new File(tmpFolder + "/example.SAMPLE.cov.vcf.gz");
+    ResourceUtils.copyResourceToFile("/callers-sv/example.SAMPLE.cov.vcf.gz", coverageVcfFile);
+    coverageTbiFile = new File(tmpFolder + "/example.SAMPLE.cov.vcf.gz.tbi");
+    ResourceUtils.copyResourceToFile("/callers-sv/example.SAMPLE.cov.vcf.gz.tbi", coverageTbiFile);
+    callerSupport =
+        new CallerSupportManta(
+            ImmutableMap.of("SAMPLE", new CoverageFromMaelstromReader(coverageVcfFile)));
   }
 
   @Test
@@ -54,7 +63,7 @@ public class CallerSupportMantaTest {
     final VariantContext vc = vcfReader.iterator().next();
     final SampleGenotype sampleGenotype = callerSupport.buildSampleGenotype(vc, 1, "SAMPLE");
     final String expected =
-        "SampleGenotype{sampleName='SAMPLE', genotype='1/1', filters=[], genotypeQuality=53, pairedEndCoverage=2, pairedEndVariantSupport=2, splitReadCoverage=20, splitReadVariantSupport=20, averageMappingQuality=null, copyNumber=null, averageNormalizedCoverage=null, pointCount=null}";
+        "SampleGenotype{sampleName='SAMPLE', genotype='1/1', filters=[], genotypeQuality=53, pairedEndCoverage=2, pairedEndVariantSupport=2, splitReadCoverage=20, splitReadVariantSupport=20, averageMappingQuality=40, copyNumber=null, averageNormalizedCoverage=1.0, pointCount=null}";
     Assertions.assertEquals(expected, sampleGenotype.toString());
   }
 }

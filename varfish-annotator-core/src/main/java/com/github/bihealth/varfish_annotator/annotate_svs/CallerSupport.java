@@ -12,6 +12,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class CallerSupport {
+  /** Mapping from sample name to {@code CoverageFromMaelstromReader}. */
+  protected final Map<String, CoverageFromMaelstromReader> coverageReaders;
+
+  public CallerSupport(Map<String, CoverageFromMaelstromReader> coverageReaders) {
+    this.coverageReaders = coverageReaders;
+  }
+
   /** @return Name of the used SV caller. */
   public abstract SvCaller getSvCaller();
 
@@ -38,8 +45,27 @@ public abstract class CallerSupport {
     builder.setGenotype(buildGenotype(ctx, alleleNo, sample));
     builder.setFilters(buildFilters(ctx, sample));
     builder.setGenotypeQuality(getGenotypeQuality(ctx, alleleNo, sample));
+    annotateCovMq(builder, ctx, sample);
     buildSampleGenotypeImpl(builder, ctx, alleleNo, sample);
     return builder.build();
+  }
+
+  /** Annotate coverage and mapping quality for sample. */
+  private void annotateCovMq(SampleGenotypeBuilder builder, VariantContext ctx, String sample) {
+    final CoverageFromMaelstromReader reader = coverageReaders.get(sample);
+    if (reader == null) {
+      return;
+    }
+    if (ctx.getAttributeAsString("SVTYPE", "").startsWith("CNV")
+        || ctx.getAttributeAsString("SVTYPE", "").startsWith("DEL")
+        || ctx.getAttributeAsString("SVTYPE", "").startsWith("DUP")) {
+      final CoverageFromMaelstromReader.Result result =
+          reader.read(
+              ctx.getContig(), ctx.getStart(), ctx.getAttributeAsInt("END", ctx.getStart()));
+      builder.setAverageNormalizedCoverage(result.getMedianCoverage());
+      builder.setAverageMappingQuality(
+          Math.toIntExact(Math.round(result.getMedianMappingQuality())));
+    }
   }
 
   protected abstract void buildSampleGenotypeImpl(
