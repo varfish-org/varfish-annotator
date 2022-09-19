@@ -25,6 +25,7 @@
 		<htsjdk.version>2.24.1</htsjdk.version>
 		<jannovar.version>0.41</jannovar.version>
 		<externalsortinginjava.version>0.6.1</externalsortinginjava.version>
+		<json.version>20220320</json.version>
 	</properties>
 
 	<modules>

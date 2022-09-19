@@ -303,7 +303,7 @@ public class GtRecordBuilder {
           Arrays.stream(genotype.getFilters().split(","))
               .map(s -> tripleQuote(s))
               .collect(Collectors.toList());
-      attrs.add(Joiner.on("").join(tripleQuote("ft"), ":{", Joiner.on(",").join(fts), "}"));
+      attrs.add(Joiner.on("").join(tripleQuote("ft"), ":[", Joiner.on(",").join(fts), "]"));
     }
 
     // GQ -- genotype quality

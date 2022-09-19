@@ -4,11 +4,13 @@ import com.ginsberg.junit.exit.FailOnSystemExit;
 import com.github.bihealth.varfish_annotator.ResourceUtils;
 import com.github.bihealth.varfish_annotator.VarfishAnnotatorCli;
 import com.github.bihealth.varfish_annotator.utils.GzipUtil;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +44,7 @@ public class RunWithRealWorldData37Test {
   }
 
   void runTest(
-      String inputFileName,
+      List<String> inputFileNames,
       String inputPath,
       String expectedDbInfosFileName,
       String expectedGtsFileName,
@@ -52,10 +54,12 @@ public class RunWithRealWorldData37Test {
       boolean selfTestChr22Only)
       throws IOException {
     final String gzSuffix = gzipOutput ? ".gz" : "";
-    final File vcfPath = new File(tmpFolder + "/" + inputFileName);
-    final File tbiPath = new File(vcfPath + ".tbi");
-    ResourceUtils.copyResourceToFile("/" + inputPath + "/" + vcfPath.getName(), vcfPath);
-    ResourceUtils.copyResourceToFile("/" + inputPath + "/" + tbiPath.getName(), tbiPath);
+    for (String inputFileName : inputFileNames) {
+      final File vcfPath = new File(tmpFolder + "/" + inputFileName);
+      final File tbiPath = new File(vcfPath + ".tbi");
+      ResourceUtils.copyResourceToFile("/" + inputPath + "/" + vcfPath.getName(), vcfPath);
+      ResourceUtils.copyResourceToFile("/" + inputPath + "/" + tbiPath.getName(), tbiPath);
+    }
 
     final File expectedDbInfosPath = new File(tmpFolder + "/" + expectedDbInfosFileName);
     ResourceUtils.copyResourceToFile(
@@ -81,8 +85,6 @@ public class RunWithRealWorldData37Test {
             "--sequential-uuids",
             "--db-path",
             h2DbFile.toString(),
-            "--input-vcf",
-            vcfPath.toString(),
             "--refseq-ser-path",
             refseqSerFile.toString(),
             "--ensembl-ser-path",
@@ -93,6 +95,10 @@ public class RunWithRealWorldData37Test {
             outputGtsPath.toString(),
             "--output-feature-effects",
             outputFeatureEffectsPath.toString());
+    for (String inputFileName : inputFileNames) {
+      args.add("--input-vcf");
+      args.add(tmpFolder + "/" + inputFileName);
+    }
     if (selfTestChr1Only) {
       args.add("--self-test-chr1-only");
     } else if (selfTestChr22Only) {
@@ -129,7 +135,7 @@ public class RunWithRealWorldData37Test {
   @ValueSource(booleans = {true, false})
   void testDelly2(boolean gzipOutput) throws IOException {
     runTest(
-        "bwa.delly2.Case_1_index-N1-DNA1-WGS1.vcf.gz",
+        ImmutableList.of("bwa.delly2.Case_1_index-N1-DNA1-WGS1.vcf.gz"),
         "input/real-world-37",
         "bwa.delly2.Case_1_index-N1-DNA1-WGS1.db-infos.tsv",
         "bwa.delly2.Case_1_index-N1-DNA1-WGS1.gts.tsv",
@@ -144,7 +150,7 @@ public class RunWithRealWorldData37Test {
   @ValueSource(booleans = {true, false})
   void testGatkGcnv(boolean gzipOutput) throws IOException {
     runTest(
-        "bwa.gcnv.NA12878-N1-DNA1-WGS1.vcf.gz",
+        ImmutableList.of("bwa.gcnv.NA12878-N1-DNA1-WGS1.vcf.gz"),
         "input/real-world-37",
         "bwa.gcnv.NA12878-N1-DNA1-WGS1.db-infos.tsv",
         "bwa.gcnv.NA12878-N1-DNA1-WGS1.gts.tsv",
@@ -159,7 +165,7 @@ public class RunWithRealWorldData37Test {
   @ValueSource(booleans = {true, false})
   void testDragenCnv(boolean gzipOutput) throws IOException {
     runTest(
-        "NA-12878WGS_dragen.cnv.vcf.gz",
+        ImmutableList.of("NA-12878WGS_dragen.cnv.vcf.gz"),
         "input/real-world-37",
         "NA-12878WGS_dragen.cnv.db-infos.tsv",
         "NA-12878WGS_dragen.cnv.gts.tsv",
@@ -174,11 +180,26 @@ public class RunWithRealWorldData37Test {
   @ValueSource(booleans = {true, false})
   void testDragenSv(boolean gzipOutput) throws IOException {
     runTest(
-        "NA-12878WGS_dragen.sv.vcf.gz",
+        ImmutableList.of("NA-12878WGS_dragen.sv.vcf.gz"),
         "input/real-world-37",
         "NA-12878WGS_dragen.sv.db-infos.tsv",
         "NA-12878WGS_dragen.sv.gts.tsv",
         "NA-12878WGS_dragen.sv.feature-effects.tsv",
+        gzipOutput,
+        false,
+        true);
+  }
+
+  @FailOnSystemExit
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testDragenSvAndGcnv(boolean gzipOutput) throws IOException {
+    runTest(
+        ImmutableList.of("NA-12878WGS_dragen.sv.vcf.gz", "bwa.gcnv.NA12878-N1-DNA1-WGS1.vcf.gz"),
+        "input/real-world-37",
+        "NA-12878WGS_dragensv_gcnv.db-infos.tsv",
+        "NA-12878WGS_dragensv_gcnv.gts.tsv",
+        "NA-12878WGS_dragensv_gcnv.feature-effects.tsv",
         gzipOutput,
         false,
         true);

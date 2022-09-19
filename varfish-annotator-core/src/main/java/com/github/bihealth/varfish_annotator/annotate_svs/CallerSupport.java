@@ -19,6 +19,11 @@ public abstract class CallerSupport {
     this.coverageReaders = coverageReaders;
   }
 
+  /** @return String to put into output as "SVMETHOD". */
+  public String getSvMethod(VCFFileReader vcfReader) {
+    return getSvCaller() + "v" + getVersion(vcfReader);
+  }
+
   /** @return Name of the used SV caller. */
   public abstract SvCaller getSvCaller();
 

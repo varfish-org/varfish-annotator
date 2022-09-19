@@ -57,9 +57,12 @@ public final class AnnotateSvsArgs {
 
   @Parameter(
       names = "--input-vcf",
-      description = "Path to input VCF file to annotate",
+      description =
+          "Path to input VCF file to annotate.  You can specify this multiple times to read in files from "
+              + "different callers, for example.  In this case, the variants will be merged based on the "
+              + "--merge-* arguments.",
       required = true)
-  private String inputVcf;
+  private List<String> inputVcf = new ArrayList<>();
 
   @Parameter(
       names = "--input-ped",
@@ -118,6 +121,16 @@ public final class AnnotateSvsArgs {
           "Annotate CNV with coverage and mapping quality from maelstrom-core coverage VCF file")
   private List<String> coverageVcfs = new ArrayList<>();
 
+  @Parameter(
+      names = "--merge-overlap",
+      description = "Reciprocal overlap to require for merging (default: 0.75)")
+  private double mergeOverlap = 0.75;
+
+  @Parameter(
+      names = "--merge-bnd-radius",
+      description = "Merge BNDs within the given radius (default: 50)")
+  private int mergeBndRadius = 50;
+
   public String getRefseqSerPath() {
     return refseqSerPath;
   }
@@ -150,7 +163,7 @@ public final class AnnotateSvsArgs {
     return setId;
   }
 
-  public String getInputVcf() {
+  public List<String> getInputVcf() {
     return inputVcf;
   }
 
@@ -196,6 +209,14 @@ public final class AnnotateSvsArgs {
 
   public List<String> getCoverageVcfs() {
     return coverageVcfs;
+  }
+
+  public double getMergeOverlap() {
+    return mergeOverlap;
+  }
+
+  public int getMergeBndRadius() {
+    return mergeBndRadius;
   }
 
   @Override
@@ -259,6 +280,10 @@ public final class AnnotateSvsArgs {
         + '\''
         + ", coverageVcfs="
         + coverageVcfs
+        + ", mergeOverlap="
+        + mergeOverlap
+        + ", mergeBndRadius="
+        + mergeBndRadius
         + '}';
   }
 }

@@ -4,11 +4,12 @@ import static com.github.bihealth.varfish_annotator.utils.StringUtils.tripleQuot
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
+import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class GenotypeRecord {
   /** Header fields for the SV and genotype file (part 1). */
@@ -140,6 +141,126 @@ public class GenotypeRecord {
     return Joiner.on("\t").join(headers);
   }
 
+  public static GenotypeRecord fromTsv(List<String> values, List<String> headers) {
+    final GenotypeRecordBuilder builder = new GenotypeRecordBuilder();
+    for (int i = 0; i < values.size(); i++) {
+      final String value = values.get(i);
+      final String header = headers.get(i);
+      switch (header) {
+        case "release":
+          builder.setRelease(value);
+          break;
+        case "chromosome":
+          builder.setChromosome(value);
+          break;
+        case "chromosome_no":
+          builder.setChromosomeNo(Integer.parseInt(value));
+          break;
+        case "bin":
+          builder.setBin(Integer.parseInt(value));
+          break;
+        case "chromosome2":
+          builder.setChromosome2(value);
+          break;
+        case "chromosome_no2":
+          builder.setChromosomeNo2(Integer.parseInt(value));
+          break;
+        case "bin2":
+          builder.setBin2(Integer.parseInt(value));
+          break;
+        case "pe_orientation":
+          builder.setPeOrientation(value);
+          break;
+        case "start":
+          builder.setStart(Integer.parseInt(value));
+          break;
+        case "end":
+          builder.setEnd(Integer.parseInt(value));
+          break;
+        case "start_ci_left":
+          builder.setStartCiLeft(Integer.parseInt(value));
+          break;
+        case "start_ci_right":
+          builder.setStartCiRight(Integer.parseInt(value));
+          break;
+        case "end_ci_left":
+          builder.setEndCiLeft(Integer.parseInt(value));
+          break;
+        case "end_ci_right":
+          builder.setEndCiRight(Integer.parseInt(value));
+          break;
+        case "case_id":
+          builder.setCaseId(value);
+          break;
+        case "set_id":
+          builder.setSetId(value);
+          break;
+        case "sv_uuid":
+          builder.setSvUuid(value);
+          break;
+        case "caller":
+          builder.setCaller(value);
+          break;
+        case "sv_type":
+          builder.setSvType(value);
+          break;
+        case "sv_sub_type":
+          builder.setSvSubType(value);
+          break;
+        case "info":
+          builder.setInfo(parseJsonObjectValue(value));
+          break;
+        case "num_hom_alt":
+          builder.setNumHomAlt(Integer.parseInt(value));
+          break;
+        case "num_hom_ref":
+          builder.setNumHomRef(Integer.parseInt(value));
+          break;
+        case "num_het":
+          builder.setNumHet(Integer.parseInt(value));
+          break;
+        case "num_hemi_alt":
+          builder.setNumHemiAlt(Integer.parseInt(value));
+          break;
+        case "num_hemi_ref":
+          builder.setNumHemiRef(Integer.parseInt(value));
+          break;
+        case "genotype":
+          builder.setGenotype(parseJsonObjectValue(value));
+          break;
+        default:
+          throw new RuntimeException("Unknown header: " + header);
+      }
+    }
+    return builder.build();
+  }
+
+  private static Map<String, Object> parseJsonObjectValue(String value) {
+    if (!value.startsWith("{") || !value.endsWith("}")) {
+      throw new RuntimeException("Not a valid JSON object: " + value);
+    }
+    final String jsonValue = value.replace("\"\"\"", "\"");
+    final JSONObject infoObj = new JSONObject(jsonValue);
+    return jsonObjectToMap(infoObj);
+  }
+
+  private static Map<String, Object> jsonObjectToMap(JSONObject jsonObject) {
+    final Map<String, Object> result = new TreeMap<>();
+    for (String key : jsonObject.keySet()) {
+      final Object value = jsonObject.get(key);
+      if (value instanceof Integer || value instanceof Double || value instanceof String) {
+        result.put(key, value);
+      } else if (value instanceof JSONObject) {
+        result.put(key, jsonObjectToMap((JSONObject) value));
+      } else if (value instanceof JSONArray) {
+        result.put(key, ((JSONArray) value).toList());
+      } else {
+        throw new RuntimeException("Cannot handle JSON object: " + value);
+      }
+    }
+    return result;
+  }
+
   public String toTsv(boolean showChrom2Columns, boolean showDbCountColumns) {
     final ImmutableList.Builder builder = ImmutableList.builder();
     builder.add(release, chromosome, chromosomeNo, bin);
@@ -180,7 +301,7 @@ public class GenotypeRecord {
       builder.add(tripleQuote(value.toString()));
     } else if (value instanceof List) {
       final List<Object> valueAsList = (List) value;
-      builder.add("{");
+      builder.add("[");
       boolean first = true;
       for (Object element : valueAsList) {
         if (!first) {
@@ -189,7 +310,7 @@ public class GenotypeRecord {
         pushValue(element, builder);
         first = false;
       }
-      builder.add("}");
+      builder.add("]");
     } else if (value instanceof Map) {
       final Map<String, Object> valueAsMap = (Map) value;
       builder.add("{");
@@ -451,5 +572,18 @@ public class GenotypeRecord {
         numHemiAlt,
         numHemiRef,
         genotype);
+  }
+
+  public static class Compare implements Comparator<GenotypeRecord> {
+
+    @Override
+    public int compare(GenotypeRecord lhs, GenotypeRecord rhs) {
+      return ComparisonChain.start()
+          .compare(lhs.getRelease(), rhs.getRelease())
+          .compare(lhs.getChromosomeNo(), rhs.getChromosomeNo())
+          .compare(lhs.getStart(), rhs.getStart())
+          .compare(lhs.getEnd(), rhs.getEnd())
+          .result();
+    }
   }
 }

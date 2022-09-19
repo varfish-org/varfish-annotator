@@ -32,6 +32,12 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>${json.version}</version>
+		</dependency>
+
+		<dependency>
 			<groupId>de.charite.compbio</groupId>
 			<artifactId>jannovar-core</artifactId>
 			<version>${jannovar.version}</version>
