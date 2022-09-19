@@ -118,16 +118,6 @@ public final class AnnotateSvsArgs {
           "Annotate CNV with coverage and mapping quality from maelstrom-core coverage VCF file")
   private List<String> coverageVcfs = new ArrayList<>();
 
-  @Parameter(
-      names = "--merge-overlap",
-      description = "Reciprocal overlap to require for merging (default: 0.75)")
-  private double mergeOverlap = 0.75;
-
-  @Parameter(
-      names = "--merge-bnd-radius",
-      description = "Merge BNDs within the given radius (default: 50)")
-  private int mergeBndRadius = 50;
-
   public String getRefseqSerPath() {
     return refseqSerPath;
   }
@@ -208,14 +198,6 @@ public final class AnnotateSvsArgs {
     return coverageVcfs;
   }
 
-  public double getMergeOverlap() {
-    return mergeOverlap;
-  }
-
-  public int getMergeBndRadius() {
-    return mergeBndRadius;
-  }
-
   @Override
   public String toString() {
     return "AnnotateSvsArgs{"
@@ -277,10 +259,6 @@ public final class AnnotateSvsArgs {
         + '\''
         + ", coverageVcfs="
         + coverageVcfs
-        + ", mergeOverlap="
-        + mergeOverlap
-        + ", mergeBndRadius="
-        + mergeBndRadius
         + '}';
   }
 }

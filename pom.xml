@@ -24,7 +24,6 @@
 		<h2.version>1.4.197</h2.version>
 		<htsjdk.version>2.24.1</htsjdk.version>
 		<jannovar.version>0.41</jannovar.version>
-		<intervaltree.version>1.0.0</intervaltree.version>
 		<externalsortinginjava.version>0.6.1</externalsortinginjava.version>
 	</properties>
 
