@@ -5,10 +5,7 @@ import static com.github.bihealth.varfish_annotator.utils.StringUtils.tripleQuot
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public final class SampleGenotype {

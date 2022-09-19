@@ -7,6 +7,9 @@ import com.github.bihealth.varfish_annotator.checks.VcfCompatibilityChecker;
 import com.github.bihealth.varfish_annotator.data.GenomeVersion;
 import com.github.bihealth.varfish_annotator.db.DbInfoWriterHelper;
 import com.github.bihealth.varfish_annotator.utils.*;
+import com.google.code.externalsorting.csv.CSVRecordBuffer;
+import com.google.code.externalsorting.csv.CsvExternalSort;
+import com.google.code.externalsorting.csv.CsvSortOptions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -34,12 +37,17 @@ import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.vcf.VCFFileReader;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 
 /** Implementation of the <tt>annotate-svs</tt> command. */
 public final class AnnotateSvsVcf {
@@ -114,6 +122,15 @@ public final class AnnotateSvsVcf {
       }
     }
 
+    Path tmpDir = null;
+    try {
+      tmpDir = Files.createTempDirectory("varfish-annotator");
+    } catch (IOException e) {
+      System.err.println("Could not create temporary directory");
+      System.exit(1);
+    }
+    final Path tmpGtsPath = Paths.get(tmpDir.toString(), "tmp.gts.tsv");
+
     try (Connection conn =
             DriverManager.getConnection(
                 "jdbc:h2:"
@@ -123,11 +140,12 @@ public final class AnnotateSvsVcf {
                 "sa",
                 "");
         VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
-        OutputStream gtsStream = Files.newOutputStream(Paths.get(args.getOutputGts()));
         OutputStream featureEffectsStream =
             Files.newOutputStream(Paths.get(args.getOutputFeatureEffects()));
         OutputStream dbInfoStream = Files.newOutputStream(Paths.get(args.getOutputDbInfos()));
-        Writer gtWriter = GzipUtil.maybeOpenGzipOutputStream(gtsStream, args.getOutputGts());
+        OutputStream tmpGtsStream = Files.newOutputStream(tmpGtsPath);
+        Writer tmpGtsWriter =
+            GzipUtil.maybeOpenGzipOutputStream(tmpGtsStream, tmpGtsPath.toString());
         Writer featureEffectsWriter =
             GzipUtil.maybeOpenGzipOutputStream(
                 featureEffectsStream, args.getOutputFeatureEffects());
@@ -161,8 +179,13 @@ public final class AnnotateSvsVcf {
           refseqJvData,
           ensemblJvData,
           callerSupport,
-          gtWriter,
+          tmpGtsWriter,
           featureEffectsWriter);
+
+      // Finalize genotypes and write out sorted
+      tmpGtsWriter.close();
+      writeSortedGts(tmpGtsPath);
+
       new DbInfoWriterHelper()
           .writeDbInfos(conn, dbInfoBufWriter, args.getRelease(), AnnotateVcf.class);
     } catch (SQLException e) {
@@ -189,6 +212,52 @@ public final class AnnotateSvsVcf {
       System.err.println("Problem with database self-test: " + e.getMessage());
       e.printStackTrace();
       System.exit(1);
+    }
+  }
+
+  /** Finalize and write out sorted files. */
+  private void writeSortedGts(Path tmpGtsPath) throws IOException {
+    // Configuration for sorting
+    final boolean hasChrom2Columns =
+        !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS);
+    final CsvSortOptions sortOptions =
+        new CsvSortOptions.Builder(
+                new VarFishGtsTsvComparator(hasChrom2Columns),
+                CsvExternalSort.DEFAULTMAXTEMPFILES,
+                CsvExternalSort.estimateAvailableMemory())
+            .charset(Charset.defaultCharset())
+            .distinct(false)
+            .numHeader(1)
+            .skipHeader(false)
+            .format(
+                CSVFormat.DEFAULT
+                    .builder()
+                    .setDelimiter('\t')
+                    .setIgnoreSurroundingSpaces(true)
+                    .setQuote((Character) null)
+                    .build())
+            .build();
+
+    // Sort genotypes file and write final file to output.
+    final ArrayList<CSVRecord> gtHeader = new ArrayList<>();
+    final List<File> gtSortInBatch =
+        CsvExternalSort.sortInBatch(tmpGtsPath.toFile(), null, sortOptions, gtHeader);
+    try (OutputStream gtsStream = Files.newOutputStream(Paths.get(args.getOutputGts()));
+        Writer gtsWriter = GzipUtil.maybeOpenGzipOutputStream(gtsStream, args.getOutputGts());
+        BufferedWriter bufWriter = new BufferedWriter(gtsWriter)) {
+      List<CSVRecordBuffer> bfbs = new ArrayList<>();
+      for (File f : gtSortInBatch) {
+        InputStream in = new FileInputStream(f);
+        BufferedReader fbr =
+            new BufferedReader(new InputStreamReader(in, sortOptions.getCharset()));
+        CSVParser parser = new CSVParser(fbr, sortOptions.getFormat());
+        CSVRecordBuffer bfb = new CSVRecordBuffer(parser);
+        bfbs.add(bfb);
+      }
+
+      CsvExternalSort.mergeSortedFiles(bufWriter, sortOptions, bfbs, gtHeader);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException("Problem with external file sort", e);
     }
   }
 

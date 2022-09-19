@@ -4,6 +4,7 @@
 
 - Writing out proper SV type for Dragen CNV (#76)
 - Adding support for depth of coverage annotation (#73)
+- Merge multiple input VCFs in annotate-svs with clustering (#75)
 
 ## v0.26
 
