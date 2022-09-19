@@ -33,6 +33,7 @@ import de.charite.compbio.jannovar.pedigree.PedFileReader;
 import de.charite.compbio.jannovar.pedigree.PedParseException;
 import de.charite.compbio.jannovar.pedigree.Pedigree;
 import de.charite.compbio.jannovar.reference.SVGenomeVariant;
+import htsjdk.samtools.util.IntervalTree;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.variantcontext.VariantContextBuilder;
 import htsjdk.variant.vcf.VCFFileReader;
@@ -130,6 +131,8 @@ public final class AnnotateSvsVcf {
       System.exit(1);
     }
     final Path tmpGtsPath = Paths.get(tmpDir.toString(), "tmp.gts.tsv");
+    final Path tmpFesPath = Paths.get(tmpDir.toString(), "tmp.feature-effects.tsv");
+    final Path tmpSortedGtsPath = Paths.get(tmpDir.toString(), "tmp.gts-sorted.tsv");
 
     try (Connection conn =
             DriverManager.getConnection(
@@ -139,27 +142,27 @@ public final class AnnotateSvsVcf {
                     + "DB_CLOSE_ON_EXIT=FALSE",
                 "sa",
                 "");
-        VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf()));
-        OutputStream featureEffectsStream =
-            Files.newOutputStream(Paths.get(args.getOutputFeatureEffects()));
         OutputStream dbInfoStream = Files.newOutputStream(Paths.get(args.getOutputDbInfos()));
         OutputStream tmpGtsStream = Files.newOutputStream(tmpGtsPath);
+        OutputStream tmpFeStream = Files.newOutputStream(tmpFesPath);
         Writer tmpGtsWriter =
             GzipUtil.maybeOpenGzipOutputStream(tmpGtsStream, tmpGtsPath.toString());
-        Writer featureEffectsWriter =
-            GzipUtil.maybeOpenGzipOutputStream(
-                featureEffectsStream, args.getOutputFeatureEffects());
+        Writer tmpFeatureEffectsWriter =
+            GzipUtil.maybeOpenGzipOutputStream(tmpFeStream, String.valueOf(tmpFesPath));
         Writer dbInfoWriter =
             GzipUtil.maybeOpenGzipOutputStream(dbInfoStream, args.getOutputDbInfos());
         BufferedWriter dbInfoBufWriter = new BufferedWriter(dbInfoWriter);
         Closer covVcfCloser = Closer.create(); ) {
-      // Guess genome version.
-      GenomeVersion genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
+      // Guess genome version, check for compatibility, perform database self-test.
+      final GenomeVersion genomeVersion;
+      try (VCFFileReader reader = new VCFFileReader(new File(args.getInputVcf().get(0))); ) {
+        genomeVersion = new VcfCompatibilityChecker(reader).guessGenomeVersion();
+        new VcfCompatibilityChecker(reader).check(args.getRelease());
+        new DatabaseSelfTest(conn)
+            .selfTest(args.getRelease(), args.isSelfTestChr1Only(), args.isSelfTestChr22Only());
+      }
 
-      new VcfCompatibilityChecker(reader).check(args.getRelease());
-      new DatabaseSelfTest(conn)
-          .selfTest(args.getRelease(), args.isSelfTestChr1Only(), args.isSelfTestChr22Only());
-
+      // Initialize coverage readers.
       final Map<String, CoverageFromMaelstromReader> covReaders = new TreeMap<>();
       for (String covVcf : args.getCoverageVcfs()) {
         final CoverageFromMaelstromReader covReader =
@@ -167,24 +170,49 @@ public final class AnnotateSvsVcf {
         covReaders.put(covReader.getSample(), covReader);
         covVcfCloser.register(covReader);
       }
-      final CallerSupport callerSupport =
-          new CallerSupportFactory(covReaders).getFor(new File(args.getInputVcf()));
 
       System.err.println("Deserializing Jannovar file...");
       JannovarData refseqJvData = new JannovarDataSerializer(args.getRefseqSerPath()).load();
       JannovarData ensemblJvData = new JannovarDataSerializer(args.getEnsemblSerPath()).load();
-      annotateSvVcf(
-          genomeVersion,
-          reader,
-          refseqJvData,
-          ensemblJvData,
-          callerSupport,
-          tmpGtsWriter,
-          featureEffectsWriter);
 
-      // Finalize genotypes and write out sorted
+      // Process each input VCF file.
+      boolean isFirst = true;
+      for (String inputVcf : args.getInputVcf()) {
+        System.err.println("Handling input VCF file: " + inputVcf);
+        try (VCFFileReader reader = new VCFFileReader(new File(inputVcf)); ) {
+          // Initialize per-tool helper for the current VCF file.
+          final CallerSupport callerSupport =
+              new CallerSupportFactory(covReaders).getFor(new File(inputVcf));
+
+          annotateSvVcf(
+              genomeVersion,
+              reader,
+              refseqJvData,
+              ensemblJvData,
+              callerSupport,
+              tmpGtsWriter,
+              tmpFeatureEffectsWriter,
+              isFirst);
+          isFirst = false;
+        }
+      }
+
+      // Finalize genotypes and write out in (chrom, pos, start, end) sorted order.
+      final Set<String> denySvUuid = new HashSet<>(); // SV UUIDs to remove, if any
+      tmpGtsWriter.flush();
       tmpGtsWriter.close();
-      writeSortedGts(tmpGtsPath);
+      if (args.getInputVcf().size() == 1) {
+        // External sort and write to output file.
+        writeSortedGts(tmpGtsPath, Paths.get(args.getOutputGts()));
+      } else {
+        // External sort and write to temporary file.  Merge by tool from there.
+        writeSortedGts(tmpGtsPath, tmpSortedGtsPath);
+        mergeSortedGts(tmpSortedGtsPath, args.getOutputGts(), covReaders, denySvUuid);
+      }
+      // Write out feature effect records, removing those from denySvUuid.
+      tmpFeatureEffectsWriter.flush();
+      tmpFeatureEffectsWriter.close();
+      writeFeatureEffects(tmpFesPath, denySvUuid);
 
       new DbInfoWriterHelper()
           .writeDbInfos(conn, dbInfoBufWriter, args.getRelease(), AnnotateVcf.class);
@@ -215,8 +243,290 @@ public final class AnnotateSvsVcf {
     }
   }
 
-  /** Finalize and write out sorted files. */
-  private void writeSortedGts(Path tmpGtsPath) throws IOException {
+  /**
+   * Merge sorted genotypes from tmpGtsPath to outputGtsPath.
+   *
+   * <p>Build deny set of SV UUIDs denySvUuid on demand.
+   */
+  private void mergeSortedGts(
+      Path tmpGtsPath,
+      String outputGtsPath,
+      Map<String, CoverageFromMaelstromReader> covReaders,
+      Set<String> denySvUuid)
+      throws IOException {
+    InputStream in = new FileInputStream(tmpGtsPath.toFile());
+    BufferedReader fbr = new BufferedReader(new InputStreamReader(in, Charset.defaultCharset()));
+
+    OutputStream outStream = Files.newOutputStream(Paths.get(outputGtsPath));
+    Writer writer = GzipUtil.maybeOpenGzipOutputStream(outStream, args.getOutputGts());
+
+    List<GenotypeRecord> chromRecords = new ArrayList<>();
+    List<String> header = null;
+    String prevContig = null;
+    String line;
+    while ((line = fbr.readLine()) != null) {
+      final GenotypeRecord gtRecord;
+      if (header == null) {
+        header = Arrays.asList(line.split("\t"));
+        writer.write(line);
+        writer.write('\n');
+        continue;
+      }
+      gtRecord = GenotypeRecord.fromTsv(Arrays.asList(line.split("\t")), header);
+      chromRecords.add(gtRecord);
+      if (!gtRecord.getChromosome().equals(prevContig)) {
+        mergeChromRecords(chromRecords, denySvUuid, covReaders);
+        chromRecords.sort(new GenotypeRecord.Compare());
+        writeRecords(chromRecords, writer);
+        chromRecords.clear();
+      }
+      prevContig = gtRecord.getChromosome();
+    }
+
+    if (prevContig != null) {
+      mergeChromRecords(chromRecords, denySvUuid, covReaders);
+      chromRecords.sort(new GenotypeRecord.Compare());
+      writeRecords(chromRecords, writer);
+    }
+  }
+
+  /** Helper class to store record with its index. */
+  private static class GenotypeRecordWithIndex {
+    private GenotypeRecord record;
+    private int index;
+
+    public GenotypeRecordWithIndex(GenotypeRecord record, int index) {
+      this.record = record;
+      this.index = index;
+    }
+
+    public GenotypeRecord getRecord() {
+      return record;
+    }
+
+    public void setRecord(GenotypeRecord record) {
+      this.record = record;
+    }
+
+    public int getIndex() {
+      return index;
+    }
+
+    public void setIndex(int index) {
+      this.index = index;
+    }
+
+    @Override
+    public String toString() {
+      return "GenotypeRecordWithIndex{" + "record=" + record + ", index=" + index + '}';
+    }
+  }
+
+  /** Perform the merging of the records on the chromosome. */
+  private void mergeChromRecords(
+      List<GenotypeRecord> chromRecords,
+      Set<String> denySvUuid,
+      Map<String, CoverageFromMaelstromReader> covReaders) {
+    // 1 First pass: assign to record per input file.
+    // 1.1 Initialize
+    final List<List<GenotypeRecord>> byCaller = new ArrayList<>();
+    final Map<String, Integer> callerToIndex = new TreeMap<>();
+    final List<String> indexToCaller = new ArrayList<>();
+    CallerSupportFactory factory = new CallerSupportFactory(covReaders);
+    for (String inputVcf : args.getInputVcf()) {
+      try (VCFFileReader vcfReader = new VCFFileReader(new File(inputVcf))) {
+        final CallerSupport callerSupport = factory.getFor(new File(inputVcf));
+        final int index = byCaller.size();
+        final String caller = callerSupport.getSvMethod(vcfReader);
+        callerToIndex.put(caller, index);
+        byCaller.add(new ArrayList<>());
+        indexToCaller.add(caller);
+      }
+    }
+    // 1.2 Collect by caller
+    for (GenotypeRecord record : chromRecords) {
+      byCaller.get(callerToIndex.get(record.getCaller())).add(record);
+    }
+
+    // Interlude: clear chromRecords, will write out there.
+    chromRecords.clear();
+
+    // Second pass: iterate over the record, stratified by caller, updating IntervalTree, and
+    // denySvUuid.
+    final IntervalTree<GenotypeRecordWithIndex> intervalTree = new IntervalTree();
+    for (int callerIndex = 0; callerIndex < byCaller.size(); callerIndex++) {
+      for (GenotypeRecord record : byCaller.get(callerIndex)) {
+        if (record.getSvType().equals("BND") || record.getSvType().equals("INS")) {
+          addNonoverlappingBndIns(chromRecords, intervalTree, denySvUuid, record);
+        } else {
+          addNonoverlappingLinear(chromRecords, intervalTree, denySvUuid, record);
+        }
+      }
+    }
+  }
+
+  /**
+   * Add to chromRecords if non-overlapping with any prior one for breakends (BND) and insertions
+   * (INS).
+   */
+  private void addNonoverlappingBndIns(
+      List<GenotypeRecord> chromRecords,
+      IntervalTree<GenotypeRecordWithIndex> intervalTree,
+      Set<String> denySvUuid,
+      GenotypeRecord record) {
+    final int radius = args.getMergeBndRadius();
+    final OverlapCandidate<Integer> bestCandidate = new OverlapCandidate<>(-1, 0);
+    final Iterator<IntervalTree.Node<GenotypeRecordWithIndex>> overlappers =
+        intervalTree.overlappers(record.getStart() - radius, record.getStart() + radius);
+    for (Iterator<IntervalTree.Node<GenotypeRecordWithIndex>> it = overlappers; it.hasNext(); ) {
+      final IntervalTree.Node<GenotypeRecordWithIndex> node = it.next();
+      final GenotypeRecord otherRecord = node.getValue().getRecord();
+      // For BND/INS, type and paired-end orientation must be compatible and the second positions
+      // must be compatible. The type and PE orientation is checked in the if-clause.  We check
+      // for compatibility below and within the body we check overlap of the second point.
+      if (otherRecord.getSvType().equals(record.getSvType())
+          && otherRecord.getPeOrientation().equals(record.getPeOrientation())) {
+        final int startA = record.getEnd() - radius;
+        final int endA = record.getEnd() + radius;
+        final int startB = otherRecord.getEnd() - radius;
+        final int endB = otherRecord.getEnd() + radius;
+        if (record.getChromosomeNo2() != otherRecord.getChromosomeNo2()
+            || !((startA < startB) && (endA > endB))) {
+          continue;
+        }
+
+        final int overlapStart =
+            Math.max(record.getStart() - radius, otherRecord.getStart() - radius);
+        final int overlapEnd = Math.min(record.getEnd() + radius, otherRecord.getEnd() + radius);
+        final int overlapLength = overlapEnd - overlapStart + 1;
+        if (overlapLength > bestCandidate.getOverlap()) {
+          bestCandidate.update(node.getValue().getIndex(), overlapLength);
+        }
+      }
+    }
+    if (bestCandidate.getIndex() > -1) {
+      // This record has an overlap and will not be written out.  We will note down the overlap
+      // by adding the second method there as well (except if it was found twice by the same
+      // caller).
+      final GenotypeRecordBuilder builder = new GenotypeRecordBuilder();
+      builder.init(chromRecords.get(bestCandidate.getIndex()));
+      if (!builder.getCaller().contains(record.getCaller())) {
+        builder.setCaller(builder.getCaller() + ";" + record.getCaller());
+      }
+      chromRecords.set(bestCandidate.getIndex(), builder.build());
+      denySvUuid.add(record.getSvUuid());
+    } else {
+      // This record has no overlap and will be written out.
+      final int index = chromRecords.size();
+      chromRecords.add(record);
+      intervalTree.put(
+          record.getStart() - radius,
+          record.getStart() + radius,
+          new GenotypeRecordWithIndex(record, index));
+    }
+  }
+
+  /** Add to chromRecords if non-overlapping with any prior one (linear, non-BND/non-INS case). */
+  private void addNonoverlappingLinear(
+      List<GenotypeRecord> chromRecords,
+      IntervalTree<GenotypeRecordWithIndex> intervalTree,
+      Set<String> denySvUuid,
+      GenotypeRecord record) {
+    final OverlapCandidate<Double> bestCandidate = new OverlapCandidate<>(-1, 0.0);
+    final Iterator<IntervalTree.Node<GenotypeRecordWithIndex>> overlappers =
+        intervalTree.overlappers(record.getStart() - 1, record.getEnd());
+    for (Iterator<IntervalTree.Node<GenotypeRecordWithIndex>> it = overlappers; it.hasNext(); ) {
+      final IntervalTree.Node<GenotypeRecordWithIndex> node = it.next();
+      final GenotypeRecord otherRecord = node.getValue().getRecord();
+      if (otherRecord.getSvType().equals(record.getSvType())) {
+        final int overlapStart = Math.max(record.getStart(), otherRecord.getStart());
+        final int overlapEnd = Math.min(record.getEnd(), otherRecord.getEnd());
+        final int overlapLength = overlapEnd - overlapStart + 1;
+        final double overlap1 =
+            ((double) overlapLength) / (record.getEnd() - record.getStart() + 1);
+        final double overlap2 =
+            ((double) overlapLength) / (otherRecord.getEnd() - otherRecord.getStart() + 1);
+        final double recOverlap = Math.min(overlap1, overlap2);
+        if (recOverlap > bestCandidate.getOverlap()) {
+          bestCandidate.update(node.getValue().getIndex(), recOverlap);
+        }
+      }
+    }
+    if (bestCandidate.getOverlap() >= args.getMergeOverlap()) {
+      // This record has an overlap and will not be written out.  We will note down the overlap
+      // by adding the second method there as well (except if it was found twice by the same
+      // caller).
+      final GenotypeRecordBuilder builder = new GenotypeRecordBuilder();
+      builder.init(chromRecords.get(bestCandidate.getIndex()));
+      if (!builder.getCaller().contains(record.getCaller())) {
+        builder.setCaller(builder.getCaller() + ";" + record.getCaller());
+      }
+      chromRecords.set(bestCandidate.getIndex(), builder.build());
+      denySvUuid.add(record.getSvUuid());
+    } else {
+      // This record has no overlap and will be written out.
+      final int index = chromRecords.size();
+      chromRecords.add(record);
+      intervalTree.put(
+          record.getStart() - 1, record.getEnd(), new GenotypeRecordWithIndex(record, index));
+    }
+  }
+
+  private static class OverlapCandidate<TOverlap> {
+    private int index = -1;
+    private TOverlap overlap;
+
+    public OverlapCandidate(int index, TOverlap overlap) {
+      this.index = index;
+      this.overlap = overlap;
+    }
+
+    public void update(int bestIndex, TOverlap bestOverlap) {
+      this.index = bestIndex;
+      this.overlap = bestOverlap;
+    }
+
+    public int getIndex() {
+      return index;
+    }
+
+    public TOverlap getOverlap() {
+      return overlap;
+    }
+  }
+
+  private void writeRecords(List<GenotypeRecord> chromRecords, Writer writer) throws IOException {
+    for (GenotypeRecord record : chromRecords) {
+      writer.write(
+          record.toTsv(
+              !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
+              !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS)));
+      writer.write('\n');
+    }
+  }
+
+  /** Write out feature effects record from tmpFesPath if their UUID is not in denySvUuuid. */
+  private void writeFeatureEffects(Path tmpFesPath, Set<String> denySvUuid) throws IOException {
+    try (OutputStream outStream = Files.newOutputStream(Paths.get(args.getOutputFeatureEffects()));
+        Writer writer =
+            GzipUtil.maybeOpenGzipOutputStream(outStream, args.getOutputFeatureEffects());
+        InputStream in = new FileInputStream(tmpFesPath.toFile());
+        BufferedReader fbr =
+            new BufferedReader(new InputStreamReader(in, Charset.defaultCharset())); ) {
+      String line;
+      while ((line = fbr.readLine()) != null) {
+        final String[] arr = line.split("\t");
+        final String svUuid = arr[2];
+        if (!denySvUuid.contains(svUuid)) {
+          writer.write(line);
+          writer.write('\n');
+        }
+      }
+    }
+  }
+
+  /** Write out sorted files, ready for merging (if necessary). */
+  private void writeSortedGts(Path tmpGtsPath, Path toPath) throws IOException {
     // Configuration for sorting
     final boolean hasChrom2Columns =
         !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS);
@@ -242,8 +552,8 @@ public final class AnnotateSvsVcf {
     final ArrayList<CSVRecord> gtHeader = new ArrayList<>();
     final List<File> gtSortInBatch =
         CsvExternalSort.sortInBatch(tmpGtsPath.toFile(), null, sortOptions, gtHeader);
-    try (OutputStream gtsStream = Files.newOutputStream(Paths.get(args.getOutputGts()));
-        Writer gtsWriter = GzipUtil.maybeOpenGzipOutputStream(gtsStream, args.getOutputGts());
+    try (OutputStream gtsStream = Files.newOutputStream(toPath);
+        Writer gtsWriter = GzipUtil.maybeOpenGzipOutputStream(gtsStream, toPath.toString());
         BufferedWriter bufWriter = new BufferedWriter(gtsWriter)) {
       List<CSVRecordBuffer> bfbs = new ArrayList<>();
       for (File f : gtSortInBatch) {
@@ -300,6 +610,7 @@ public final class AnnotateSvsVcf {
    * @param callerSupport Helper to use for adapting to SV caller.
    * @param gtWriter Writer for variant call ("genotype") TSV file.
    * @param featureEffectsWriter Writer for gene-wise feature effects.
+   * @param writeHeader Whether or not to write out header.
    * @throws VarfishAnnotatorException in case of problems
    */
   private void annotateSvVcf(
@@ -309,35 +620,44 @@ public final class AnnotateSvsVcf {
       JannovarData ensemblJv,
       CallerSupport callerSupport,
       Writer gtWriter,
-      Writer featureEffectsWriter)
+      Writer featureEffectsWriter,
+      boolean writeHeader)
       throws VarfishAnnotatorException {
     // Get list of filter values to skip.
     final ImmutableSet skipFilters = ImmutableSet.copyOf(args.getSkipFilters().split(","));
+
+    final String defaultSvMethod;
+    if (callerSupport.getSvCaller() == SvCaller.GENERIC && !args.getDefaultSvMethod().equals(".")) {
+      defaultSvMethod = args.getDefaultSvMethod();
+    } else {
+      defaultSvMethod = callerSupport.getSvMethod(reader);
+    }
 
     // Helpers for building record for `.gts.tsv` and `.feature-effects.tsv` records.
     final GtRecordBuilder gtRecordBuilder =
         new GtRecordBuilder(
             args.getRelease(),
-            args.getDefaultSvMethod(),
+            defaultSvMethod,
             args.getOptOutFeatures(),
             args.getCaseId(),
             args.getSetId(),
             pedigree,
             callerSupport);
-    final FeatureEffectsRecordBuilder feRecordBuilder =
-        new FeatureEffectsRecordBuilder(args.getCaseId(), args.getSetId());
+    final FeRecordBuilder feRecordBuilder = new FeRecordBuilder(args.getCaseId(), args.getSetId());
 
-    // Write out header.
-    try {
-      gtWriter.append(
-          GenotypeRecord.tsvHeader(
-                  !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
-                  !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS))
-              + "\n");
-      // Write feature-effects header.
-      featureEffectsWriter.append(Joiner.on("\t").join(HEADERS_FEATURE_EFFECTS) + "\n");
-    } catch (IOException e) {
-      throw new VarfishAnnotatorException("Could not write out headers", e);
+    if (writeHeader) {
+      // Write out header.
+      try {
+        gtWriter.append(
+            GenotypeRecord.tsvHeader(
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS))
+                + "\n");
+        // Write feature-effects header.
+        featureEffectsWriter.append(Joiner.on("\t").join(HEADERS_FEATURE_EFFECTS) + "\n");
+      } catch (IOException e) {
+        throw new VarfishAnnotatorException("Could not write out headers", e);
+      }
     }
 
     final VariantContextAnnotator refseqAnnotator =
@@ -397,7 +717,7 @@ public final class AnnotateSvsVcf {
   private void maybeWriteOutBndMate(
       GenomeVersion genomeVersion,
       GtRecordBuilder gtRecordBuilder,
-      FeatureEffectsRecordBuilder feRecordBuilder,
+      FeRecordBuilder feRecordBuilder,
       Writer gtWriter,
       Writer featureEffectsWriter,
       VariantContextAnnotator refseqAnnotator,
@@ -535,7 +855,7 @@ public final class AnnotateSvsVcf {
       VariantContext ctx,
       GenomeVersion genomeVersion,
       GtRecordBuilder gtRecordBuilder,
-      FeatureEffectsRecordBuilder feRecordBuilder,
+      FeRecordBuilder feRecordBuilder,
       Writer gtWriter,
       Writer featureEffectsWriter)
       throws VarfishAnnotatorException {
@@ -586,7 +906,7 @@ public final class AnnotateSvsVcf {
       }
 
       // Write one entry for each gene into the feature effect call file.
-      final FeatureEffectsRecordBuilder.Result feResult =
+      final FeRecordBuilder.Result feResult =
           feRecordBuilder.buildAnnosByDb(sortedEnsemblAnnos, sortedRefseqAnnos);
       for (String geneId : feResult.getGeneIds()) {
         List<Object> featureEffectOutRec =

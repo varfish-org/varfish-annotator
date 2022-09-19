@@ -34,6 +34,37 @@ public class GenotypeRecordBuilder {
   private int numHemiRef;
   private Map<String, Object> genotype = new TreeMap();
 
+  public void init(GenotypeRecord record) {
+    release = record.getRelease();
+    chromosome = record.getChromosome();
+    chromosomeNo = record.getChromosomeNo();
+    bin = record.getBin();
+    chromosome2 = record.getChromosome2();
+    bin2 = record.getBin2();
+    peOrientation = record.getPeOrientation();
+    start = record.getStart();
+    end = record.getEnd();
+    startCiLeft = record.getStartCiLeft();
+    startCiRight = record.getStartCiRight();
+    endCiLeft = record.getEndCiLeft();
+    endCiRight = record.getEndCiRight();
+    caseId = record.getCaseId();
+    setId = record.getSetId();
+    svUuid = record.getSvUuid();
+    caller = record.getCaller();
+    svType = record.getSvType();
+    svSubType = record.getSvSubType();
+    info = new TreeMap();
+    info.putAll(record.getInfo());
+    numHomAlt = record.getNumHomAlt();
+    numHomRef = record.getNumHomRef();
+    numHet = record.getNumHet();
+    numHemiAlt = record.getNumHemiAlt();
+    numHemiRef = record.getNumHemiRef();
+    genotype = new TreeMap<>();
+    genotype.putAll(record.getGenotype());
+  }
+
   public GenotypeRecord build() {
     return new GenotypeRecord(
         release,

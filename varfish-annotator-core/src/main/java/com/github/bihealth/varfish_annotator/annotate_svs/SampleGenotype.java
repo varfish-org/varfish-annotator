@@ -56,7 +56,7 @@ public final class SampleGenotype {
     if (filters != null && !filters.isEmpty()) {
       final String fts =
           filters.stream().map(s -> tripleQuote(s)).collect(Collectors.joining(", "));
-      attrs.add(Joiner.on("").join(tripleQuote("ft"), ":{", fts, "}"));
+      attrs.add(Joiner.on("").join(tripleQuote("ft"), ":[", fts, "]"));
     }
     if (genotypeQuality != null) {
       attrs.add(Joiner.on("").join(tripleQuote("gq"), ":", genotypeQuality));

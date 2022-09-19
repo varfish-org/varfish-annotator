@@ -47,7 +47,7 @@ public class SampleGenotypeTest {
             null,
             null);
     Assertions.assertEquals(
-        "\"\"\"SAMPLE\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ft\"\"\":{\"\"\"PASS\"\"\"}}",
+        "\"\"\"SAMPLE\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ft\"\"\":[\"\"\"PASS\"\"\"]}",
         obj.buildStringFragment());
   }
 
@@ -56,7 +56,7 @@ public class SampleGenotypeTest {
     final SampleGenotype obj =
         new SampleGenotype("SAMPLE", "0/1", ImmutableList.of("PASS"), 1, 2, 3, 4, 5, 6, 7, 8.0, 9);
     Assertions.assertEquals(
-        "\"\"\"SAMPLE\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ft\"\"\":{\"\"\"PASS\"\"\"},\"\"\"gq\"\"\":1,\"\"\"pec\"\"\":2,\"\"\"pev\"\"\":3,\"\"\"src\"\"\":4,\"\"\"srv\"\"\":5,\"\"\"amq\"\"\":6,\"\"\"cn\"\"\":7,\"\"\"anc\"\"\":8.0,\"\"\"pc\"\"\":9}",
+        "\"\"\"SAMPLE\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\",\"\"\"ft\"\"\":[\"\"\"PASS\"\"\"],\"\"\"gq\"\"\":1,\"\"\"pec\"\"\":2,\"\"\"pev\"\"\":3,\"\"\"src\"\"\":4,\"\"\"srv\"\"\":5,\"\"\"amq\"\"\":6,\"\"\"cn\"\"\":7,\"\"\"anc\"\"\":8.0,\"\"\"pc\"\"\":9}",
         obj.buildStringFragment());
   }
 }
