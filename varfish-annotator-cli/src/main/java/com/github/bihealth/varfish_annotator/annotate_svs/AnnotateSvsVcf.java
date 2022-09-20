@@ -500,7 +500,8 @@ public final class AnnotateSvsVcf {
       writer.write(
           record.toTsv(
               !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
-              !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS)));
+              !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS),
+              !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CALLERS_ARRAY)));
       writer.write('\n');
     }
   }
@@ -587,7 +588,8 @@ public final class AnnotateSvsVcf {
         ImmutableList.of(
             GtRecordBuilder.FEATURE_CHROM2_COLUMNS,
             GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS,
-            GtRecordBuilder.FEATURE_SUPPRESS_CARRIER_COUNTS);
+            GtRecordBuilder.FEATURE_SUPPRESS_CARRIER_COUNTS,
+            GtRecordBuilder.FEATURE_CALLERS_ARRAY);
     final String features[] = args.getOptOutFeatures().split(",");
     boolean allGood = true;
     for (String feature : features) {
@@ -651,7 +653,8 @@ public final class AnnotateSvsVcf {
         gtWriter.append(
             GenotypeRecord.tsvHeader(
                     !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
-                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS))
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS),
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CALLERS_ARRAY))
                 + "\n");
         // Write feature-effects header.
         featureEffectsWriter.append(Joiner.on("\t").join(HEADERS_FEATURE_EFFECTS) + "\n");
@@ -893,7 +896,8 @@ public final class AnnotateSvsVcf {
         gtWriter.append(
             gtOutRec.toTsv(
                     !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CHROM2_COLUMNS),
-                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS))
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_DBCOUNTS_COLUMNS),
+                    !args.getOptOutFeatures().contains(GtRecordBuilder.FEATURE_CALLERS_ARRAY))
                 + "\n");
       } catch (IOException e) {
         throw new VarfishAnnotatorException("Problem writing to genotypes call file.", e);

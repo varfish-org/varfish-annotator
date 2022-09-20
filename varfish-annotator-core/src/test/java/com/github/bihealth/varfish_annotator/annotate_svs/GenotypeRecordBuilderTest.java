@@ -1,5 +1,6 @@
 package com.github.bihealth.varfish_annotator.annotate_svs;
 
+import com.google.common.collect.ImmutableList;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ public class GenotypeRecordBuilderTest {
     builder.setSvUuid("svuuid");
     builder.setSetId("setid");
     builder.setCaller("caller");
+    builder.setCallers(ImmutableList.of("caller"));
     builder.setSvType("svtype");
     builder.setSvSubType("svtype:subtype");
     final TreeMap<String, Object> info = new TreeMap();
@@ -45,7 +47,7 @@ public class GenotypeRecordBuilderTest {
     builder.setGenotype(genotype);
 
     final String expected =
-        "GenotypeRecordBuilder{release='GRCh37', chromosome='chr1', chromosomeNo=1, bin=2, chromosome2='chr2', chromosomeNo2=3, bin2=4, peOrientation='3to5', start=123, end=456, startCiLeft=5, startCiRight=6, endCiLeft=7, endCiRight=8, caseId='caseid', setId='setid', svUuid='svuuid', caller='caller', svType='svtype', svSubType='svtype:subtype', info={xxx=yyy}, numHomAlt=10, numHomRef=11, numHet=12, numHemiAlt=13, numHemiRef=14, genotype={sample={gt=0/1}}}";
+        "GenotypeRecordBuilder{release='GRCh37', chromosome='chr1', chromosomeNo=1, bin=2, chromosome2='chr2', chromosomeNo2=3, bin2=4, peOrientation='3to5', start=123, end=456, startCiLeft=5, startCiRight=6, endCiLeft=7, endCiRight=8, caseId='caseid', setId='setid', svUuid='svuuid', caller='caller', callers='[caller]', svType='svtype', svSubType='svtype:subtype', info={xxx=yyy}, numHomAlt=10, numHomRef=11, numHet=12, numHemiAlt=13, numHemiRef=14, genotype={sample={gt=0/1}}}";
     Assertions.assertEquals(expected, builder.toString());
 
     Assertions.assertEquals("GRCh37", builder.getRelease());
@@ -65,6 +67,7 @@ public class GenotypeRecordBuilderTest {
     Assertions.assertEquals("caseid", builder.getCaseId());
     Assertions.assertEquals("svuuid", builder.getSvUuid());
     Assertions.assertEquals("caller", builder.getCaller());
+    Assertions.assertEquals("[caller]", builder.getCallers().toString());
     Assertions.assertEquals("svtype", builder.getSvType());
     Assertions.assertEquals("svtype:subtype", builder.getSvSubType());
     Assertions.assertEquals("{xxx=yyy}", builder.getInfo().toString());
