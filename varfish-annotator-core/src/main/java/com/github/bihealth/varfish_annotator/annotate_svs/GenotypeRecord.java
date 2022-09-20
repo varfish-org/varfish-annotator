@@ -8,6 +8,10 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -19,7 +23,7 @@ public class GenotypeRecord {
   private static final ImmutableList<String> HEADERS_GT_PART_2 =
       ImmutableList.of("chromosome2", "chromosome_no2", "bin2", "pe_orientation");
   /** Header fields for the SV and genotype file (part 3). */
-  private static final ImmutableList<String> HEADERS_GT_PART_3 =
+  private static final ImmutableList<String> HEADERS_GT_PART_3_1 =
       ImmutableList.of(
           "start",
           "end",
@@ -29,11 +33,10 @@ public class GenotypeRecord {
           "end_ci_right",
           "case_id",
           "set_id",
-          "sv_uuid",
-          "caller",
-          "sv_type",
-          "sv_sub_type",
-          "info");
+          "sv_uuid");
+
+  private static final ImmutableList<String> HEADERS_GT_PART_3_2 =
+      ImmutableList.of("sv_type", "sv_sub_type", "info");
   /** Header fields for the SV and genotype file (part 4, optional). */
   private static final ImmutableList<String> HEADERS_GT_PART_4 =
       ImmutableList.of("num_hom_alt", "num_hom_ref", "num_het", "num_hemi_alt", "num_hemi_ref");
@@ -58,6 +61,7 @@ public class GenotypeRecord {
   private final String setId;
   private final String svUuid;
   private final String caller;
+  private final ImmutableList<String> callers;
   private final String svType;
   private final String svSubType;
   private final ImmutableMap<String, Object> info;
@@ -88,6 +92,7 @@ public class GenotypeRecord {
       String setId,
       String svUuid,
       String caller,
+      Collection<String> callers,
       String svType,
       String svSubType,
       Map<String, Object> info,
@@ -115,6 +120,7 @@ public class GenotypeRecord {
     this.setId = setId;
     this.svUuid = svUuid;
     this.caller = caller;
+    this.callers = ImmutableList.copyOf(callers);
     this.svType = svType;
     this.svSubType = svSubType;
     this.info = ImmutableMap.copyOf(info);
@@ -126,14 +132,21 @@ public class GenotypeRecord {
     this.genotype = ImmutableMap.copyOf(genotype);
   }
 
-  public static String tsvHeader(boolean showChrom2Columns, boolean showDbCountColumns) {
+  public static String tsvHeader(
+      boolean showChrom2Columns, boolean showDbCountColumns, boolean showCallersArrayColumn) {
     // (Conditionally) write genotype header.
     final List<java.lang.String> headers = new ArrayList<>();
     headers.addAll(HEADERS_GT_PART_1);
     if (showChrom2Columns) {
       headers.addAll(HEADERS_GT_PART_2);
     }
-    headers.addAll(HEADERS_GT_PART_3);
+    headers.addAll(HEADERS_GT_PART_3_1);
+    if (showCallersArrayColumn) {
+      headers.add("callers");
+    } else {
+      headers.add("caller");
+    }
+    headers.addAll(HEADERS_GT_PART_3_2);
     if (showDbCountColumns) {
       headers.addAll(HEADERS_GT_PART_4);
     }
@@ -201,6 +214,9 @@ public class GenotypeRecord {
         case "caller":
           builder.setCaller(value);
           break;
+        case "callers":
+          builder.setCallers(parseArray(value));
+          break;
         case "sv_type":
           builder.setSvType(value);
           break;
@@ -232,7 +248,35 @@ public class GenotypeRecord {
           throw new RuntimeException("Unknown header: " + header);
       }
     }
+
+    // Handle the case that either case/cases is empty and the other is not.
+    if ((builder.getCaller() == null || ".".equals(builder.getCaller()))
+        && !builder.getCallers().isEmpty()) {
+      builder.setCaller(Joiner.on(";").join(builder.getCallers()));
+    } else if ((builder.getCaller() != null && !".".equals(builder.getCaller()))
+        && builder.getCallers().isEmpty()) {
+      builder.setCallers(Arrays.asList(builder.getCaller().split(";")));
+    }
+
     return builder.build();
+  }
+
+  private static List<String> parseArray(String value) {
+    if (!value.startsWith("{") || !value.endsWith("}")) {
+      throw new RuntimeException("Could not parse postgres array from: " + value);
+    } else {
+      final List<String> result = new ArrayList<>();
+      final String[] split = value.substring(1, value.length() - 1).split(",");
+      for (int i = 0; i < split.length; i++) {
+        final String s = split[i];
+        if (s.startsWith("\"")) {
+          result.add(s.substring(1, s.length() - 1));
+        } else {
+          result.add(s);
+        }
+      }
+      return result;
+    }
   }
 
   private static Map<String, Object> parseJsonObjectValue(String value) {
@@ -261,25 +305,34 @@ public class GenotypeRecord {
     return result;
   }
 
-  public String toTsv(boolean showChrom2Columns, boolean showDbCountColumns) {
+  public String toTsv(
+      boolean showChrom2Columns, boolean showDbCountColumns, boolean showCallersArrayColumn) {
     final ImmutableList.Builder builder = ImmutableList.builder();
     builder.add(release, chromosome, chromosomeNo, bin);
     if (showChrom2Columns) {
       builder.add(chromosome2, chromosomeNo2, bin2, peOrientation);
     }
     builder.add(
-        start,
-        end,
-        startCiLeft,
-        startCiRight,
-        endCiLeft,
-        endCiRight,
-        caseId,
-        setId,
-        svUuid,
-        caller,
-        svType,
-        svSubType);
+        start, end, startCiLeft, startCiRight, endCiLeft, endCiRight, caseId, setId, svUuid);
+    if (showCallersArrayColumn) {
+      final ImmutableList.Builder<String> innerBuilder = ImmutableList.builder();
+      innerBuilder.add("{");
+      boolean first = true;
+      for (String caller : callers) {
+        if (!first) {
+          innerBuilder.add(",");
+        }
+        innerBuilder.add("\"");
+        innerBuilder.add(caller);
+        innerBuilder.add("\"");
+        first = false;
+      }
+      innerBuilder.add("}");
+      builder.add(Joiner.on("").join(innerBuilder.build()));
+    } else {
+      builder.add(caller);
+    }
+    builder.add(svType, svSubType);
     builder.add(convert(info));
     if (showDbCountColumns) {
       builder.add(numHomAlt, numHomRef, numHet, numHemiAlt, numHemiRef);
@@ -402,6 +455,10 @@ public class GenotypeRecord {
     return caller;
   }
 
+  public ImmutableList<String> getCallers() {
+    return callers;
+  }
+
   public String getSvType() {
     return svType;
   }
@@ -485,6 +542,9 @@ public class GenotypeRecord {
         + ", caller='"
         + caller
         + '\''
+        + ", callers='"
+        + callers
+        + '\''
         + ", svType='"
         + svType
         + '\''
@@ -536,6 +596,7 @@ public class GenotypeRecord {
         && Objects.equal(getSetId(), that.getSetId())
         && Objects.equal(getSvUuid(), that.getSvUuid())
         && Objects.equal(getCaller(), that.getCaller())
+        && Objects.equal(getCallers(), that.getCallers())
         && Objects.equal(getSvType(), that.getSvType())
         && Objects.equal(getSvSubType(), that.getSvSubType())
         && Objects.equal(getInfo(), that.getInfo())
@@ -563,6 +624,7 @@ public class GenotypeRecord {
         getSetId(),
         getSvUuid(),
         getCaller(),
+        callers,
         getSvType(),
         getSvSubType(),
         getInfo(),

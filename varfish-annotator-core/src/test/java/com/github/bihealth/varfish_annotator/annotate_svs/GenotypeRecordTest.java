@@ -1,5 +1,6 @@
 package com.github.bihealth.varfish_annotator.annotate_svs;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
@@ -31,6 +32,7 @@ public class GenotypeRecordTest {
             "setid",
             "svuuid",
             "caller",
+            ImmutableList.of("caller"),
             "svtype",
             "svtype:subtype",
             info,
@@ -58,6 +60,7 @@ public class GenotypeRecordTest {
     Assertions.assertEquals("caseid", record.getCaseId());
     Assertions.assertEquals("svuuid", record.getSvUuid());
     Assertions.assertEquals("caller", record.getCaller());
+    Assertions.assertEquals("[caller]", record.getCallers().toString());
     Assertions.assertEquals("svtype", record.getSvType());
     Assertions.assertEquals("svtype:subtype", record.getSvSubType());
     Assertions.assertEquals("{xxx=yyy}", record.getInfo().toString());
@@ -69,35 +72,35 @@ public class GenotypeRecordTest {
     Assertions.assertEquals("{sample={gt=0/1}}", record.getGenotype().toString());
 
     Assertions.assertEquals(
-        "GRCh37\tchr1\t1\t2\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\tcaller\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
-        record.toTsv(false, false));
+        "GRCh37\tchr1\t1\t2\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\t{\"caller\"}\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
+        record.toTsv(false, false, true));
     Assertions.assertEquals(
-        "GRCh37\tchr1\t1\t2\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\tcaller\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t10\t11\t12\t13\t14\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
-        record.toTsv(false, true));
+        "GRCh37\tchr1\t1\t2\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\t{\"caller\"}\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t10\t11\t12\t13\t14\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
+        record.toTsv(false, true, true));
     Assertions.assertEquals(
-        "GRCh37\tchr1\t1\t2\tchr2\t3\t4\t3to5\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\tcaller\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
-        record.toTsv(true, false));
+        "GRCh37\tchr1\t1\t2\tchr2\t3\t4\t3to5\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\t{\"caller\"}\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
+        record.toTsv(true, false, true));
     Assertions.assertEquals(
-        "GRCh37\tchr1\t1\t2\tchr2\t3\t4\t3to5\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\tcaller\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t10\t11\t12\t13\t14\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
-        record.toTsv(true, true));
+        "GRCh37\tchr1\t1\t2\tchr2\t3\t4\t3to5\t123\t456\t5\t6\t7\t8\tcaseid\tsetid\tsvuuid\t{\"caller\"}\tsvtype\tsvtype:subtype\t{\"\"\"xxx\"\"\":\"\"\"yyy\"\"\"}\t10\t11\t12\t13\t14\t{\"\"\"sample\"\"\":{\"\"\"gt\"\"\":\"\"\"0/1\"\"\"}}",
+        record.toTsv(true, true, true));
 
     Assertions.assertTrue(record.equals(record));
-    Assertions.assertEquals(record.hashCode(), -1471834423);
+    Assertions.assertEquals(record.hashCode(), 1311944769);
   }
 
   @Test
   void testGetHeaders() {
     Assertions.assertEquals(
-        "release\tchromosome\tchromosome_no\tbin\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcaller\tsv_type\tsv_sub_type\tinfo\tgenotype",
-        GenotypeRecord.tsvHeader(false, false));
+        "release\tchromosome\tchromosome_no\tbin\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcallers\tsv_type\tsv_sub_type\tinfo\tgenotype",
+        GenotypeRecord.tsvHeader(false, false, true));
     Assertions.assertEquals(
-        "release\tchromosome\tchromosome_no\tbin\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcaller\tsv_type\tsv_sub_type\tinfo\tnum_hom_alt\tnum_hom_ref\tnum_het\tnum_hemi_alt\tnum_hemi_ref\tgenotype",
-        GenotypeRecord.tsvHeader(false, true));
+        "release\tchromosome\tchromosome_no\tbin\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcallers\tsv_type\tsv_sub_type\tinfo\tnum_hom_alt\tnum_hom_ref\tnum_het\tnum_hemi_alt\tnum_hemi_ref\tgenotype",
+        GenotypeRecord.tsvHeader(false, true, true));
     Assertions.assertEquals(
-        "release\tchromosome\tchromosome_no\tbin\tchromosome2\tchromosome_no2\tbin2\tpe_orientation\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcaller\tsv_type\tsv_sub_type\tinfo\tgenotype",
-        GenotypeRecord.tsvHeader(true, false));
+        "release\tchromosome\tchromosome_no\tbin\tchromosome2\tchromosome_no2\tbin2\tpe_orientation\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcallers\tsv_type\tsv_sub_type\tinfo\tgenotype",
+        GenotypeRecord.tsvHeader(true, false, true));
     Assertions.assertEquals(
-        "release\tchromosome\tchromosome_no\tbin\tchromosome2\tchromosome_no2\tbin2\tpe_orientation\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcaller\tsv_type\tsv_sub_type\tinfo\tnum_hom_alt\tnum_hom_ref\tnum_het\tnum_hemi_alt\tnum_hemi_ref\tgenotype",
-        GenotypeRecord.tsvHeader(true, true));
+        "release\tchromosome\tchromosome_no\tbin\tchromosome2\tchromosome_no2\tbin2\tpe_orientation\tstart\tend\tstart_ci_left\tstart_ci_right\tend_ci_left\tend_ci_right\tcase_id\tset_id\tsv_uuid\tcallers\tsv_type\tsv_sub_type\tinfo\tnum_hom_alt\tnum_hom_ref\tnum_het\tnum_hemi_alt\tnum_hemi_ref\tgenotype",
+        GenotypeRecord.tsvHeader(true, true, true));
   }
 }

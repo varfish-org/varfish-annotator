@@ -1,7 +1,6 @@
 package com.github.bihealth.varfish_annotator.annotate_svs;
 
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /** Helper for building {@code GenotypeRecord} objects. */
 public class GenotypeRecordBuilder {
@@ -23,6 +22,7 @@ public class GenotypeRecordBuilder {
   private String setId;
   private String svUuid;
   private String caller;
+  private List<String> callers = new ArrayList<>();
   private String svType;
   private String svSubType;
   private Map<String, Object> info = new TreeMap();
@@ -85,6 +85,7 @@ public class GenotypeRecordBuilder {
         setId,
         svUuid,
         caller,
+        callers,
         svType,
         svSubType,
         info,
@@ -236,8 +237,17 @@ public class GenotypeRecordBuilder {
     return caller;
   }
 
+  public List<String> getCallers() {
+    return callers;
+  }
+
   public void setCaller(String caller) {
     this.caller = caller;
+  }
+
+  public void setCallers(Collection<String> callers) {
+    this.callers = new ArrayList<>();
+    this.callers.addAll(callers);
   }
 
   public String getSvType() {
@@ -360,6 +370,9 @@ public class GenotypeRecordBuilder {
         + '\''
         + ", caller='"
         + caller
+        + '\''
+        + ", callers='"
+        + callers
         + '\''
         + ", svType='"
         + svType
