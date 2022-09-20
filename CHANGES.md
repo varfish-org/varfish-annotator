@@ -5,6 +5,7 @@
 - Writing out proper SV type for Dragen CNV (#76)
 - Adding support for depth of coverage annotation (#73)
 - Ensure output files are sorted by chromosomes (#79)
+- Write out SV callers as array (#81)
 
 ## v0.26
 
