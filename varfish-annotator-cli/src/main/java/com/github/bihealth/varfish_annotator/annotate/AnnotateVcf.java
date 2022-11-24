@@ -828,6 +828,14 @@ public final class AnnotateVcf {
         gts.put(sample, Joiner.on("/").join(gtList));
       }
       final int[] ad = ctx.getGenotype(sample).getAD();
+      int gq = ctx.getGenotype(sample).getGQ();
+      if (gq == -1) {
+        gq = Integer.parseInt((String) ctx.getGenotype(sample).getExtendedAttribute("SQ", "0"));
+      }
+      int dp = ctx.getGenotype(sample).getDP();
+      if (dp == -1) {
+        dp = 0;
+      }
       mappings.add(
           Joiner.on("")
               .join(
@@ -839,15 +847,15 @@ public final class AnnotateVcf {
                   ",",
                   tripleQuote("ad"),
                   ":",
-                  String.valueOf(ad == null ? -1 : (alleleNo >= ad.length ? -1 : ad[alleleNo])),
+                  String.valueOf(ad == null ? 0 : (alleleNo >= ad.length ? -1 : ad[alleleNo])),
                   ",",
                   tripleQuote("dp"),
                   ":",
-                  String.valueOf(ctx.getGenotype(sample).getDP()),
+                  String.valueOf(dp),
                   ",",
                   tripleQuote("gq"),
                   ":",
-                  String.valueOf(ctx.getGenotype(sample).getGQ()),
+                  String.valueOf(gq),
                   "}"));
     }
     return "{" + Joiner.on(",").join(mappings) + "}";
