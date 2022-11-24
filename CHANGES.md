@@ -1,5 +1,7 @@
 # Changelog
 
+## v0.29 (work in progress)
+
 ## v0.28
 
 - Write out `FORMAT/SQ` in the case that is present and `FORMAT/GQ` is not (#84).
