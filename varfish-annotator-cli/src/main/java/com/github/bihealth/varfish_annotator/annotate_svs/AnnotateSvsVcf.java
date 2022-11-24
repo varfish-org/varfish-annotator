@@ -768,6 +768,26 @@ public final class AnnotateSvsVcf {
       return true;
     }
 
+    if ("BND".equals(ctx.getCommonInfo().getAttributeAsString("SVTYPE", ""))) {
+      final Pattern BND_PATTERN =
+          Pattern.compile(
+              "^(?<leadingBases>\\w*)(?<firstBracket>[\\[\\]])(?<targetContig>[^:]+):(?<targetPos>\\w+)"
+                  + "(?<secondBracket>[\\[\\]])(?<trailingBases>\\w*)$");
+      final String altStr = ctx.getAlternateAllele(0).toString();
+      final Matcher matcher = BND_PATTERN.matcher(altStr);
+      if (!matcher.matches()) {
+        System.err.println(altStr);
+      }
+      final String targetContig = matcher.group("targetContig");
+      if (skippedContigs.contains(targetContig)) {
+        return true; // skip silently
+      } else if (!targetContig.matches(args.getContigRegex())) {
+        System.err.println("Skipping targetContig " + targetContig);
+        skippedContigs.add(targetContig);
+        return true;
+      }
+    }
+
     return false;
   }
 
