@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.28 (work in progress)
+## v0.28
 
 - Write out `FORMAT/SQ` in the case that is present and `FORMAT/GQ` is not (#84).
   If neither is set, then write out `0`.
