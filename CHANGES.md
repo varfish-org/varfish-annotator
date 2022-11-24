@@ -2,6 +2,9 @@
 
 ## v0.28 (work in progress)
 
+- Suppress BND records that point to non-allow-listed contigs (#85).
+  This is required for processing Manta and Delly2 results, for example.
+
 ## v0.27
 
 **IMPORTANT COMPATIBILITY NOTE:**
