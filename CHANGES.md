@@ -1,6 +1,8 @@
 # Changelog
 
-## v0.29 (work in progress)
+## v0.29
+
+- Fix with merging SV annotation files from Delly2 SV (#88).
 
 ## v0.28
 
