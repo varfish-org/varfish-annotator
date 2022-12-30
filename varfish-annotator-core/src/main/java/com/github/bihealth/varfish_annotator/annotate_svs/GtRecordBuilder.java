@@ -19,7 +19,7 @@ public class GtRecordBuilder {
   public static final String FEATURE_CALLERS_ARRAY = "callers-array";
 
   private final String release;
-  private final String defaultSvMethod;
+  private final String svMethod;
   private final String optOutFeatures;
   private final String caseId;
   private final String setId;
@@ -28,14 +28,14 @@ public class GtRecordBuilder {
 
   public GtRecordBuilder(
       String release,
-      String defaultSvMethod,
+      String svMethod,
       String optOutFeatures,
       String caseId,
       String setId,
       Pedigree pedigree,
       CallerSupport callerSupport) {
     this.release = release;
-    this.defaultSvMethod = defaultSvMethod;
+    this.svMethod = svMethod;
     this.optOutFeatures = optOutFeatures;
     this.caseId = caseId;
     this.setId = setId;
@@ -88,10 +88,6 @@ public class GtRecordBuilder {
     builder.setSetId(setId);
     builder.setSvUuid(variantId.toString());
 
-    String svMethod = ctx.getCommonInfo().getAttributeAsString("SVMETHOD", null);
-    if (svMethod == null) {
-      svMethod = defaultSvMethod == null ? "." : defaultSvMethod;
-    }
     builder.setCaller(svMethod);
     if (!".".equals(svMethod)) {
       builder.setCallers(ImmutableList.of(svMethod));
