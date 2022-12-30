@@ -628,18 +628,18 @@ public final class AnnotateSvsVcf {
     // Get list of filter values to skip.
     final ImmutableSet skipFilters = ImmutableSet.copyOf(args.getSkipFilters().split(","));
 
-    final String defaultSvMethod;
+    final String svMethod;
     if (callerSupport.getSvCaller() == SvCaller.GENERIC && !args.getDefaultSvMethod().equals(".")) {
-      defaultSvMethod = args.getDefaultSvMethod();
+      svMethod = args.getDefaultSvMethod();
     } else {
-      defaultSvMethod = callerSupport.getSvMethod(reader);
+      svMethod = callerSupport.getSvMethod(reader);
     }
 
     // Helpers for building record for `.gts.tsv` and `.feature-effects.tsv` records.
     final GtRecordBuilder gtRecordBuilder =
         new GtRecordBuilder(
             args.getRelease(),
-            defaultSvMethod,
+            svMethod,
             args.getOptOutFeatures(),
             args.getCaseId(),
             args.getSetId(),
