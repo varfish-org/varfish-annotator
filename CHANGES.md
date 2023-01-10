@@ -2,6 +2,8 @@
 
 ## v0.30 (work in progress)
 
+- Adding support for MELT (#91).
+
 ## v0.29
 
 - Fix with merging SV annotation files from Delly2 SV (#88).

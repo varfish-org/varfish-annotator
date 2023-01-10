@@ -204,4 +204,19 @@ public class RunWithRealWorldData37Test {
         false,
         true);
   }
+
+  @FailOnSystemExit
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testMelt(boolean gzipOutput) throws IOException {
+    runTest(
+        ImmutableList.of("bwa.melt.NA12878.vcf.gz"),
+        "input/real-world-37",
+        "NA12878_melt.db-infos.tsv",
+        "NA12878_melt.gts.tsv",
+        "NA12878_melt.feature-effects.tsv",
+        gzipOutput,
+        false,
+        true);
+  }
 }

@@ -8,5 +8,6 @@ public enum SvCaller {
   GATK_GCNV,
   GENERIC,
   MANTA,
+  MELT,
   XHMM,
 }
