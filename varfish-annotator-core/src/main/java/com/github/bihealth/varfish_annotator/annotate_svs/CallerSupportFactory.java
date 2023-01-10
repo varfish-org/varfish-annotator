@@ -12,6 +12,7 @@ public class CallerSupportFactory {
   public CallerSupportFactory(Map<String, CoverageFromMaelstromReader> coverageReaders) {
     this.callerSupports =
         ImmutableList.of(
+            new CallerSupportMelt(coverageReaders),
             new CallerSupportManta(coverageReaders),
             new CallerSupportDelly2(coverageReaders),
             new CallerSupportDragenCnv(coverageReaders),
