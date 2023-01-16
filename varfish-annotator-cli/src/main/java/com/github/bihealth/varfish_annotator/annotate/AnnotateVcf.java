@@ -829,8 +829,12 @@ public final class AnnotateVcf {
       }
       final int[] ad = ctx.getGenotype(sample).getAD();
       int gq = ctx.getGenotype(sample).getGQ();
+      double sq = -1.0;
       if (gq == -1) {
-        gq = Integer.parseInt((String) ctx.getGenotype(sample).getExtendedAttribute("SQ", "0"));
+        sq = Double.parseDouble((String) ctx.getGenotype(sample).getExtendedAttribute("SQ", "0"));
+        if (sq == 0.0) {
+          gq = 0; // write out as int
+        }
       }
       int dp = ctx.getGenotype(sample).getDP();
       if (dp == -1) {
@@ -855,7 +859,7 @@ public final class AnnotateVcf {
                   ",",
                   tripleQuote("gq"),
                   ":",
-                  String.valueOf(gq),
+                  (gq == -1 ? String.valueOf(sq) : String.valueOf(gq)),
                   "}"));
     }
     return "{" + Joiner.on(",").join(mappings) + "}";
