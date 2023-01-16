@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.31 (work in progress)
+## v0.31
 
 - Interpret `FORMAT/SQ` as Float (#93).
 
