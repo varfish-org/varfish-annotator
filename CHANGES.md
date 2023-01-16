@@ -2,6 +2,8 @@
 
 ## v0.31 (work in progress)
 
+- Interpret `FORMAT/SQ` as Float (#93).
+
 ## v0.30
 
 - Adding support for MELT (#91).
@@ -15,7 +17,7 @@
 - Write out `FORMAT/SQ` in the case that is present and `FORMAT/GQ` is not (#84).
   If neither is set, then write out `0`.
   Write out `0` for `AD` and `DP` as well if missing.
-  This improves compatibility with Manta.
+  This improves compatibility with DRAGEN.
 - Suppress BND records that point to non-allow-listed contigs (#85).
   This is required for processing Manta and Delly2 results, for example.
 
