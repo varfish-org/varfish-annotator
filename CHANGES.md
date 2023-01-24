@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.32 (work in progress)
+## v0.32
 
 - Fixing bug when annotating MELT with missing AD (#95).
 
