@@ -52,7 +52,8 @@ public class CallerSupportMelt extends CallerSupport {
       SampleGenotypeBuilder builder, VariantContext ctx, int alleleNo, String sample) {
     final Genotype genotype = ctx.getGenotype(sample);
     final int dp = genotype.getDP();
-    final int ad = genotype.getAD().length > 0 ? genotype.getAD()[0] : 0;
+    final int ad =
+        (genotype.getAD() != null && genotype.getAD().length > 0) ? genotype.getAD()[0] : 0;
     builder.setPairedEndCoverage(dp);
     builder.setPairedEndVariantSupport(ad);
     builder.setSplitReadCoverage(0);

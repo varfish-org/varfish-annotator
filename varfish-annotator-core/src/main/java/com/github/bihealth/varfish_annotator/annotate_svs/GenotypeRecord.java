@@ -7,6 +7,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -292,14 +293,21 @@ public class GenotypeRecord {
     final Map<String, Object> result = new TreeMap<>();
     for (String key : jsonObject.keySet()) {
       final Object value = jsonObject.get(key);
-      if (value instanceof Integer || value instanceof Double || value instanceof String) {
+      if (value instanceof Integer
+          || value instanceof Double
+          || value instanceof Float
+          || value instanceof String) {
         result.put(key, value);
+      } else if (value instanceof BigDecimal) {
+        final BigDecimal bdValue = (BigDecimal) value;
+        result.put(key, bdValue.doubleValue());
       } else if (value instanceof JSONObject) {
         result.put(key, jsonObjectToMap((JSONObject) value));
       } else if (value instanceof JSONArray) {
         result.put(key, ((JSONArray) value).toList());
       } else {
-        throw new RuntimeException("Cannot handle JSON object: " + value);
+        throw new RuntimeException(
+            "Cannot handle JSON object: " + value + " of type " + value.getClass());
       }
     }
     return result;
