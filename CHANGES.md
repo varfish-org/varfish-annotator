@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.32 (work in progress)
+
+- Fixing bug when annotating MELT with missing AD (#95).
+
 ## v0.31
 
 - Interpret `FORMAT/SQ` as Float (#93).

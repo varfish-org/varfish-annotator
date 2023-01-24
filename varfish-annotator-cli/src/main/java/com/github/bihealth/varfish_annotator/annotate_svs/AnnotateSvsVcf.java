@@ -288,6 +288,9 @@ public final class AnnotateSvsVcf {
       chromRecords.sort(new GenotypeRecord.Compare());
       writeRecords(chromRecords, writer);
     }
+
+    writer.flush();
+    writer.close();
   }
 
   /** Helper class to store record with its index. */
@@ -523,6 +526,7 @@ public final class AnnotateSvsVcf {
           writer.write('\n');
         }
       }
+      writer.flush();
     }
   }
 
