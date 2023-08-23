@@ -79,7 +79,7 @@ public class VcfCompatibilityChecker {
           } else if (seqRecord.getSequenceLength() == CHR1_HG38_LENGTH) {
             return seqRecord.getSequenceName().startsWith("chr")
                 ? GenomeVersion.HG38
-                : GenomeVersion.GRCH37;
+                : GenomeVersion.GRCH38;
           }
         }
       }
