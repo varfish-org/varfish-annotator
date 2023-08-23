@@ -1,6 +1,8 @@
 # Changelog
 
-## v0.33 (work in progress)
+## v0.33
+
+- Fixing bug triggered for GRCh38 without chr prefix (#98).
 
 ## v0.32
 
