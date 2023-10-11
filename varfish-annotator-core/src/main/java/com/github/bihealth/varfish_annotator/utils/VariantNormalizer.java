@@ -72,7 +72,7 @@ public final class VariantNormalizer {
     while (anyChange) {
       anyChange = false;
 
-      // Trim left-most nucletoide
+      // Trim right-most nucletoide
       if (ref.length() > 0
           && alt.length() > 0
           && ref.charAt(ref.length() - 1) == alt.charAt(alt.length() - 1)) {
@@ -103,6 +103,7 @@ public final class VariantNormalizer {
       if (ref.length() > minSize && alt.length() > minSize && ref.charAt(0) == alt.charAt(0)) {
         ref = ref.substring(1);
         alt = alt.substring(1);
+        start += 1;
       } else {
         break;
       }
