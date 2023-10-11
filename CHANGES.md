@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.34
+
+- Fixing problem with left-trimming variants (#99).
+
 ## v0.33
 
 - Fixing bug triggered for GRCh38 without chr prefix (#98).
