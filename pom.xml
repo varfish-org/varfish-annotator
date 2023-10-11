@@ -4,7 +4,7 @@
 	<groupId>com.github.bihealth</groupId>
 	<artifactId>VarfishAnnotator</artifactId>
 	<packaging>pom</packaging>
-	<version>0.34</version>
+	<version>0.35-SNAPSHOT</version>
 
 	<name>${project.groupId}:${project.artifactId}</name>
 	<description>Variant annotation for Varfish</description>
